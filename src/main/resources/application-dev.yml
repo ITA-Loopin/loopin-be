@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/meta_db
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show-sql: true      # SQL 쿼리 로깅 (개발 중에만 true)
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+    mongodb:
+      uri: mongodb://admin:admin@localhost:27017/meta_db?authSource=admin
+      database: meta_db
+  kafka:
+    bootstrap-servers: localhost:9092
+  flyway:
+    enabled: true   # 처음 실행할 때는 false, 이후에 true로 변경(flyway 인덱스 생성)
+    baseline-on-migrate: true   # 그냥 놔둬도됨
+    baseline-version: 0   # V0 스킵, V1부터 마이그레이션
+
+fcm:
+  service-account-file: classpath:fcm-service-account.json
+  project-id: 30409426097
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+    config-url: /v3/api-docs/swagger-config
+    url: /v3/api-docs
+    groups-order: DESC
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.iEdu: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
