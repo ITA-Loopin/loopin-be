@@ -151,16 +151,21 @@ resource "aws_iam_role_policy_attachment" "s3_full_access" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-# EC2 역할에 AmazonEC2RoleforSSM 정책을 부착
+# (변경) SSM 접근 권장 정책으로 교체
 resource "aws_iam_role_policy_attachment" "ec2_ssm" {
   role       = aws_iam_role.ec2_role_1.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" # <- 변경
 }
 
 # IAM 인스턴스 프로파일 생성
 resource "aws_iam_instance_profile" "instance_profile_1" {
   name = "${var.prefix}-instance-profile-1"
   role = aws_iam_role.ec2_role_1.name
+}
+
+# ---------------- AMI: 최신 Amazon Linux 2 를 SSM에서 조회 (추가) ----------------
+data "aws_ssm_parameter" "al2_latest" {
+  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2" # AL2 x86_64
 }
 
 locals {
@@ -194,32 +199,22 @@ END_OF_FILE
 
 # EC2 인스턴스 생성
 resource "aws_instance" "ec2_1" {
-  # 사용할 AMI ID
-  ami = "ami-00c3b1bcb76fefc89"
-  # EC2 인스턴스 유형
-  instance_type = "t4g.micro"
-  # 사용할 서브넷 ID
-  subnet_id = aws_subnet.subnet_1.id
-  # 적용할 보안 그룹 ID
+  # (변경) 하드코딩 AMI -> SSM 파라미터 값 사용
+  ami                    = data.aws_ssm_parameter.al2_latest.value
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.subnet_1.id
   vpc_security_group_ids = [aws_security_group.sg_1.id]
-  # 퍼블릭 IP 연결 설정
   associate_public_ip_address = true
 
-  # 인스턴스에 IAM 역할 연결
   iam_instance_profile = aws_iam_instance_profile.instance_profile_1.name
 
-  # 인스턴스에 태그 설정
-  tags = {
-    Name = "${var.prefix}-ec2-1"
-  }
+  tags = { Name = "${var.prefix}-ec2-1" }
 
-  # 루트 볼륨 설정
   root_block_device {
     volume_type = "gp3"
-    volume_size = 30  # 볼륨 크기를 30GB로 설정
+    volume_size = 30
   }
 
-  # User data script for ec2_1
   user_data = <<-EOF
 ${local.ec2_user_data_base}
 EOF
