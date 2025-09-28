@@ -1,6 +1,6 @@
 variable "prefix" {
   description = "Prefix for all resources"
-  default     = "iedu"
+  default     = "loopin"
 }
 
 variable "region" {
