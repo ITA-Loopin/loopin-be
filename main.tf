@@ -197,7 +197,7 @@ resource "aws_instance" "ec2_1" {
   # 사용할 AMI ID
   ami = "ami-04c596dcf23eb98d8"
   # EC2 인스턴스 유형
-  instance_type = "t2.micro"
+  instance_type = "t4g.micro"
   # 사용할 서브넷 ID
   subnet_id = aws_subnet.subnet_1.id
   # 적용할 보안 그룹 ID
