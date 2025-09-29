@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 
-import com.letzgo.LetzgoBe.domain.account.auth.service.RefreshTokenService;
+import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

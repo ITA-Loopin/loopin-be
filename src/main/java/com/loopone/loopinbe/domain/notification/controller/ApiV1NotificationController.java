@@ -1,12 +1,12 @@
 package com.loopone.loopinbe.domain.notification.controller;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUser;
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.notification.dto.req.NotificationRequest;
-import com.letzgo.LetzgoBe.domain.notification.dto.res.NotificationResponse;
-import com.letzgo.LetzgoBe.domain.notification.entity.NotificationPage;
-import com.letzgo.LetzgoBe.domain.notification.service.NotificationService;
-import com.letzgo.LetzgoBe.global.common.response.ApiResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
+import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
+import com.loopone.loopinbe.domain.notification.entity.NotificationPage;
+import com.loopone.loopinbe.domain.notification.service.NotificationService;
+import com.loopone.loopinbe.global.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;

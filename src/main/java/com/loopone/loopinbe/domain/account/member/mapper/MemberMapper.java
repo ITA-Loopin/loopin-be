@@ -1,13 +1,16 @@
 package com.loopone.loopinbe.domain.account.member.mapper;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.DetailMemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.SimpleMemberDto;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollow;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollowReq;
-import org.mapstruct.*;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
+import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
+import com.loopone.loopinbe.domain.account.member.dto.res.SimpleMemberDto;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 import java.util.stream.Collectors;

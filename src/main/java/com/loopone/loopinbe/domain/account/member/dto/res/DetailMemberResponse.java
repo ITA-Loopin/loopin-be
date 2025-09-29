@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.account.member.dto.res;
 
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
 import lombok.Builder;
 import lombok.Data;
 

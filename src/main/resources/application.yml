@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: iEdu-application
+    name: loopin-application
   output:
     ansi:
       enabled: ALWAYS
@@ -20,7 +20,7 @@ spring:
       region:
         static: ap-northeast-2  # AWS 서울 리전
       s3:
-        bucket: iedu-bucket-v1 # S3 버킷명
+        bucket: loopin-bucket-v1 # S3 버킷명
 
 custom:
   jwt:
@@ -28,4 +28,21 @@ custom:
   accessToken:
     expiration: "#{60 * 60 * 1000}"   # 1시간
   refreshToken:
-    expiration: "#{60 * 60 * 24 * 7 * 1000}"   # 7일
+    expiration: "#{30 * 7 * 24 * 60 * 60 * 1000}"   # 1달
+
+mail:
+  host: smtp.gmail.com
+  port: 587
+  username: capstone2025letzgo@gmail.com
+  password: ${MAIL_APP_PASSWORD}
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: true
+          required: true
+        connection-timeout: 5000
+        timeout: 5000
+        write-timeout: 5000
+  code-expiration-millis: 600000  #코드 만료기간: 10분
