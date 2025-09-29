@@ -1,9 +1,9 @@
 package com.loopone.loopinbe.domain.account.auth.currentUser;
 
-import com.letzgo.LetzgoBe.domain.account.member.mapper.MemberMapper;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberRepository;
-import com.letzgo.LetzgoBe.global.exception.ReturnCode;
-import com.letzgo.LetzgoBe.global.exception.ServiceException;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;

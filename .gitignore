@@ -38,6 +38,7 @@ out/
 .vscode/
 
 ### Custom ###
+dockerProjects
 src/main/resources/application-secret.yml
 .env
 fcm-service-account.json

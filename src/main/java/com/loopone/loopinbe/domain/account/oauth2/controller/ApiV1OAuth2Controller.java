@@ -1,14 +1,14 @@
 package com.loopone.loopinbe.domain.account.oauth2.controller;
 
-import com.letzgo.LetzgoBe.domain.account.auth.dto.req.LoginRequest;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.res.LoginResponse;
-import com.letzgo.LetzgoBe.domain.account.auth.service.AuthService;
-import com.letzgo.LetzgoBe.domain.account.member.dto.req.MemberRequest;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberRepository;
-import com.letzgo.LetzgoBe.domain.account.member.service.MemberService;
-import com.letzgo.LetzgoBe.domain.account.oauth2.service.OAuth2Service;
-import com.letzgo.LetzgoBe.global.common.response.ApiResponse;
+import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
+import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberRequest;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.domain.account.oauth2.service.OAuth2Service;
+import com.loopone.loopinbe.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;

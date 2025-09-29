@@ -1,8 +1,8 @@
 package com.loopone.loopinbe.domain.account.auth.currentUser;
 
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollow;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollowReq;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
 import lombok.Builder;
 import lombok.Data;
 

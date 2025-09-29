@@ -74,6 +74,7 @@ public class RedisConfig {
                 .build();
     }
 
+    // Object 전용 RedisTemplate
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         GenericJackson2JsonRedisSerializer serializer =
@@ -85,6 +86,20 @@ public class RedisConfig {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
         template.setHashValueSerializer(serializer);
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    // Integer 전용 RedisTemplate
+    @Bean(name = "integerRedisTemplate")
+    public RedisTemplate<String, Integer> integerRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Integer> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        // 정수 값 직렬화: 숫자에 최적화된 ToString 또는 Jackson 사용 가능
+        template.setValueSerializer(new org.springframework.data.redis.serializer.GenericToStringSerializer<>(Integer.class));
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new org.springframework.data.redis.serializer.GenericToStringSerializer<>(Integer.class));
         template.afterPropertiesSet();
         return template;
     }

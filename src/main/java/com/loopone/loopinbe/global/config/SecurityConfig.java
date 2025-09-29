@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.global.config;
 
-import com.letzgo.LetzgoBe.domain.account.auth.security.JwtAuthenticationFilter;
-import com.letzgo.LetzgoBe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
+import com.loopone.loopinbe.domain.account.auth.security.JwtAuthenticationFilter;
+import com.loopone.loopinbe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +40,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/rest-api/v1/auth/login",
+                        .requestMatchers(
+                                "/api/v1/health-check",
+                                "/rest-api/v1/auth/login",
                                 "/rest-api/v1/oauth2/**",
                                 "/map-api/**",
                                 "/rest-api/v1/member",

@@ -1,10 +1,10 @@
 package com.loopone.loopinbe.domain.fcm.controller;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUser;
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.fcm.dto.req.FcmTokenRequest;
-import com.letzgo.LetzgoBe.domain.fcm.service.FcmTokenService;
-import com.letzgo.LetzgoBe.global.common.response.ApiResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.fcm.dto.req.FcmTokenRequest;
+import com.loopone.loopinbe.domain.fcm.service.FcmTokenService;
+import com.loopone.loopinbe.global.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
