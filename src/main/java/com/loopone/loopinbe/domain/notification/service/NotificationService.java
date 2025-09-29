@@ -1,10 +1,10 @@
 package com.loopone.loopinbe.domain.notification.service;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.notification.dto.req.NotificationRequest;
-import com.letzgo.LetzgoBe.domain.notification.dto.res.NotificationResponse;
-import com.letzgo.LetzgoBe.domain.notification.entity.Notification;
-import com.letzgo.LetzgoBe.global.common.response.PageResponse;
+import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
+import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
+import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
 public interface NotificationService {

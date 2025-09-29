@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.notification.dto.res;
 
-import com.letzgo.LetzgoBe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.notification.entity.Notification;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

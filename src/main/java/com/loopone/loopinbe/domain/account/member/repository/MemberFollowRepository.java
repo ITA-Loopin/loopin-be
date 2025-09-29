@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.account.member.repository;
 
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollow;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

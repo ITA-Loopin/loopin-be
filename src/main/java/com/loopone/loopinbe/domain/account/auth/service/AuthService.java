@@ -1,8 +1,8 @@
 package com.loopone.loopinbe.domain.account.auth.service;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.req.LoginRequest;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
+import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
 
 public interface AuthService {
     // 로그인

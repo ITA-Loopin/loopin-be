@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.global.config;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;

@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.notification.entity;
 
-import com.letzgo.LetzgoBe.global.jpa.BaseEntity;
+import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

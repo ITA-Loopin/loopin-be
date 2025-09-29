@@ -1,11 +1,11 @@
 package com.loopone.loopinbe.domain.account.member.service;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.member.dto.req.MemberRequest;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.DetailMemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.global.common.response.PageResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberRequest;
+import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
+import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 

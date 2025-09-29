@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.account.oauth2.serviceImpl;
 
-import com.letzgo.LetzgoBe.domain.account.oauth2.dto.res.OAuth2WebPropertiesDto;
-import com.letzgo.LetzgoBe.domain.account.oauth2.service.OAuth2Service;
+import com.loopone.loopinbe.domain.account.oauth2.dto.res.OAuth2WebPropertiesDto;
+import com.loopone.loopinbe.domain.account.oauth2.service.OAuth2Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;

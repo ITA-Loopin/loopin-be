@@ -1,21 +1,10 @@
 package com.loopone.loopinbe.global.initData.utils;
 
-import com.iEdu.domain.studentRecord.attendance.entity.PeriodAttendance;
-import com.iEdu.global.common.enums.Semester;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Component
 public class NotProdUtils {
@@ -68,59 +57,5 @@ public class NotProdUtils {
     // 관리자 랜덤 ID 생성
     public long generateRandom9DigitAccountId() {
         return Long.parseLong(String.format("%09d", ThreadLocalRandom.current().nextLong(1_000_000_000L)));
-    }
-
-    // 범위내 랜덤 숫자 생성
-    public List<Integer> getRandomUniqueNumbers(int start, int end, int count) {
-        List<Integer> numbers = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
-        Collections.shuffle(numbers);
-        return numbers.subList(0, count);
-    }
-
-    // 점수 데이터 생성
-    public double generateScore() {
-        double score;
-        double rand = random.nextDouble();
-        if (rand < 0.6) {
-            score = 70 + random.nextDouble() * 20;
-        } else if (rand < 0.8) {
-            score = 60 + random.nextDouble() * 10;
-        } else {
-            score = 91 + random.nextDouble() * 9;
-        }
-        return BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP).doubleValue();
-    }
-
-    // 학기별 수업일 계산
-    public List<LocalDate> getSchoolDaysForSemester(int baseYear, Semester semester) {
-        LocalDate start = semester == Semester.FIRST_SEMESTER
-                ? LocalDate.of(baseYear, 3, 2)
-                : LocalDate.of(baseYear, 9, 1);
-        LocalDate end = semester == Semester.FIRST_SEMESTER
-                ? LocalDate.of(baseYear, 7, 15)
-                : LocalDate.of(baseYear, 12, 31);
-        List<LocalDate> schoolDays = new ArrayList<>();
-        LocalDate date = start;
-
-        while (!date.isAfter(end)) {
-            DayOfWeek day = date.getDayOfWeek();
-            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
-                schoolDays.add(date);
-            }
-            date = date.plusDays(1);
-        }
-        return schoolDays;
-    }
-
-    // 출석 상태 랜덤 생성
-    public PeriodAttendance.State generateRandomState() {
-        double rand = Math.random();
-        if (rand < 0.95) return PeriodAttendance.State.출석;
-        int pick = (int) (Math.random() * 3);
-        return switch (pick) {
-            case 0 -> PeriodAttendance.State.결석;
-            case 1 -> PeriodAttendance.State.지각;
-            default -> PeriodAttendance.State.조퇴;
-        };
     }
 }

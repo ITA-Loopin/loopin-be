@@ -102,6 +102,10 @@ public enum ReturnCode {
     COMMENT_NOT_FOUND(404, "COMMENT_001", "댓글을 찾을 수 없습니다."),
     COMMENT_ALREADY_LIKED(409, "COMMENT_002", "이미 좋아요를 누른 댓글입니다."),
 
+    // Goal
+    MAIN_GOAL_NOT_FOUND(404, "GOAL_001", "상위목표를 찾을 수 없습니다."),
+    SUB_GOAL_NOT_FOUND(404, "GOAL_002", "하위목표를 찾을 수 없습니다."),
+
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
     REQUEST_NOT_FOUND(404, "FOLLOW_002", "팔로우 요청을 찾을 수 없습니다."),

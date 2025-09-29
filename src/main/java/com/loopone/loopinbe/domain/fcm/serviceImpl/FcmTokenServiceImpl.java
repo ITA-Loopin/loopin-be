@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.fcm.serviceImpl;
 
-import com.letzgo.LetzgoBe.domain.fcm.service.FcmTokenService;
+import com.loopone.loopinbe.domain.fcm.service.FcmTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

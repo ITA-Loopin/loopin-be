@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.account.member.repository;
 
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -22,7 +22,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByEmail(String email);
 
     // 회원 검색하기
-    @Query("SELECT new com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse(" +
+    @Query("SELECT new com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse(" +
             "m.id, m.name, m.nickname, m.profileImageUrl, " +
             "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id)) " +
             "FROM Member m " +
