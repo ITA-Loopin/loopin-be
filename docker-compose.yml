@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:latest
-    container_name: iEdu-postgres_container
+    container_name: loopin-postgres
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
@@ -15,7 +15,7 @@ services:
 
   redis:
     image: redis:latest
-    container_name: iEdu-redis_container
+    container_name: loopin-redis
     restart: always
     ports:
       - "6379:6379"
@@ -24,7 +24,7 @@ services:
 
   redpanda-0:
     image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: redpanda-0
+    container_name: loopin-redpanda
     command:
       - redpanda
       - start
@@ -73,7 +73,7 @@ volumes:
 #services:
 #  redis:
 #    image: redis:latest
-#    container_name: redis_container
+#    container_name: loopin-redis
 #    volumes:
 #      - redis-data:/data
 #    command: >
@@ -86,31 +86,88 @@ volumes:
 #      retries: 5
 #      start_period: 3s
 #    networks:
-#      - ec2-user_default
+#      - loopin-backend
+#
+#  postgres:
+#    image: ankane/pgvector:latest
+#    container_name: loopin-postgres
+#    restart: always
+#    environment:
+#      POSTGRES_USER: loopinAdmin
+#      POSTGRES_PASSWORD: loopinAdmin0906
+#      POSTGRES_DB: meta_db
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - postgres-data:/var/lib/postgresql/data
+#    networks:
+#      - loopin-backend
+#
+#  redpanda:
+#    image: docker.redpanda.com/redpandadata/redpanda:latest
+#    container_name: loopin-redpanda
+#    restart: unless-stopped
+#    command:
+#      - redpanda
+#      - start
+#      - --mode
+#      - dev-container
+#      - --smp
+#      - "1"
+#      - --memory
+#      - 256M
+#      - --reserve-memory
+#      - 128M
+#      - --default-log-level=warn
+#      - --kafka-addr
+#      - PLAINTEXT://0.0.0.0:9092
+#      - --advertise-kafka-addr
+#      - PLAINTEXT://loopin-redpanda:9092
+#      - --pandaproxy-addr
+#      - 0.0.0.0:8082
+#      - --advertise-pandaproxy-addr
+#      - loopin-redpanda:8082
+#      - --schema-registry-addr
+#      - 0.0.0.0:8081
+#      - --rpc-addr
+#      - 0.0.0.0:33145
+#      - --advertise-rpc-addr
+#      - loopin-redpanda:33145
+#    ports:
+#      - "9092:9092"     # Kafka API
+#      - "8081:8081"     # Schema Registry
+#      - "8082:8082"     # PandaProxy
+#      - "9644:9644"     # Admin API
+#    volumes:
+#      - redpanda_data:/var/lib/redpanda/data
+#    networks:
+#      - loopin-backend
 #
 #  app:
-#    image: junhui9789/iedu-app:latest
-#    container_name: iedu-app
+#    image: junhui9789/loopin-app:latest
+#    container_name: loopin-app
 #    ports:
 #      - "8080:8080"
 #    env_file:
-#      - ./env/.env
+#      - ./app/.env
 #    environment:
 #      - SPRING_PROFILES_ACTIVE=prod
-#      - DOTENV_PATH=/app/env
+#      - DOTENV_PATH=/app
 #    volumes:
-#      - ./env/.env:/app/.env
-#      - ./env/fcm-service-account.json:/app/fcm-service-account.json
+#      - ./app/.env:/app/.env
+#      - ./app/fcm-private-key.json:/app/fcm-private-key.json
 #    depends_on:
 #      redis:
 #        condition: service_healthy  # Redis가 정상 작동할 때까지 대기
+#      postgres:
+#        condition: service_started  # Postgres가 정상 작동할 때까지 대기
 #    networks:
-#      - ec2-user_default
-#      - proxy-network
+#      - loopin-backend
+#      - loopin-proxy
 #
 #  nginx-proxy-manager:
 #    image: 'jc21/nginx-proxy-manager:latest'
-#    container_name: nginx-proxy-manager
+#    container_name: loopin-npm
 #    restart: unless-stopped
 #    ports:
 #      - '80:80'    # HTTP 포트
@@ -120,7 +177,7 @@ volumes:
 #      - ./data:/data
 #      - ./letsencrypt:/etc/letsencrypt
 #    networks:
-#      - proxy-network
+#      - loopin-proxy
 #
 #  influxdb:
 #    image: influxdb:1.8
@@ -130,7 +187,7 @@ volumes:
 #      - INFLUXDB_HTTP_AUTH_ENABLED=false
 #      - INFLUXDB_DB=k6
 #    networks:
-#      - monitor-network
+#      - loopin-monitor
 #
 #  grafana:
 #    image: grafana/grafana:latest
@@ -144,16 +201,18 @@ volumes:
 #      - ./grafana/provisioning:/etc/grafana/provisioning
 #      - grafana-storage:/var/lib/grafana
 #    networks:
-#      - monitor-network
+#      - loopin-monitor
 #
 #volumes:
 #  redis-data:
+#  redpanda-data:
+#  postgres-data:
 #  grafana-storage:
 #
 #networks:
-#  ec2-user_default:
+#  loopin-backend:
 #    driver: bridge
-#  proxy-network:
+#  loopin-proxy:
 #    driver: bridge
-#  monitor-network:
+#  loopin-monitor:
 #    driver: bridge

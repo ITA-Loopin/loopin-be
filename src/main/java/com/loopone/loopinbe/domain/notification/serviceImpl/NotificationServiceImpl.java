@@ -1,15 +1,15 @@
 package com.loopone.loopinbe.domain.notification.serviceImpl;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberPage;
-import com.letzgo.LetzgoBe.domain.notification.dto.req.NotificationRequest;
-import com.letzgo.LetzgoBe.domain.notification.dto.res.NotificationResponse;
-import com.letzgo.LetzgoBe.domain.notification.entity.Notification;
-import com.letzgo.LetzgoBe.domain.notification.repository.NotificationRepository;
-import com.letzgo.LetzgoBe.domain.notification.service.NotificationService;
-import com.letzgo.LetzgoBe.global.common.response.PageResponse;
-import com.letzgo.LetzgoBe.global.exception.ReturnCode;
-import com.letzgo.LetzgoBe.global.exception.ServiceException;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
+import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
+import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
+import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.notification.repository.NotificationRepository;
+import com.loopone.loopinbe.domain.notification.service.NotificationService;
+import com.loopone.loopinbe.global.common.response.PageResponse;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

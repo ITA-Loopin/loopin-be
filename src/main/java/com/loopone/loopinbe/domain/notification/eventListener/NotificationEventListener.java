@@ -1,12 +1,12 @@
 package com.loopone.loopinbe.domain.notification.eventListener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.letzgo.LetzgoBe.domain.fcm.dto.res.FcmMessageResponse;
-import com.letzgo.LetzgoBe.domain.fcm.service.FcmService;
-import com.letzgo.LetzgoBe.domain.fcm.service.FcmTokenService;
-import com.letzgo.LetzgoBe.domain.notification.dto.res.NotificationResponse;
-import com.letzgo.LetzgoBe.domain.notification.entity.Notification;
-import com.letzgo.LetzgoBe.domain.notification.service.NotificationService;
+import com.loopone.loopinbe.domain.fcm.dto.res.FcmMessageResponse;
+import com.loopone.loopinbe.domain.fcm.service.FcmService;
+import com.loopone.loopinbe.domain.fcm.service.FcmTokenService;
+import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
+import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

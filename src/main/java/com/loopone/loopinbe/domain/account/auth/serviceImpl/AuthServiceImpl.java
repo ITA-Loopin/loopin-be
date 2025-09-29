@@ -1,15 +1,15 @@
 package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.req.LoginRequest;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.res.LoginResponse;
-import com.letzgo.LetzgoBe.domain.account.auth.security.JwtTokenProvider;
-import com.letzgo.LetzgoBe.domain.account.auth.service.AuthService;
-import com.letzgo.LetzgoBe.domain.account.auth.service.RefreshTokenService;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberRepository;
-import com.letzgo.LetzgoBe.global.exception.ReturnCode;
-import com.letzgo.LetzgoBe.global.exception.ServiceException;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
+import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

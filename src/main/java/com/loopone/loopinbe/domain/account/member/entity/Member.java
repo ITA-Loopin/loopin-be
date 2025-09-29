@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.account.member.entity;
 
-import com.letzgo.LetzgoBe.global.jpa.BaseEntity;
+import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

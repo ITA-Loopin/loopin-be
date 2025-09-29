@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.account.auth.security;
 
-import com.letzgo.LetzgoBe.domain.account.auth.service.RefreshTokenService;
+import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

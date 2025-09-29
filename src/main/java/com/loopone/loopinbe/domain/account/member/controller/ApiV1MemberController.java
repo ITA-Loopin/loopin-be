@@ -1,13 +1,13 @@
 package com.loopone.loopinbe.domain.account.member.controller;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUser;
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.member.dto.req.MemberRequest;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.DetailMemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberPage;
-import com.letzgo.LetzgoBe.domain.account.member.service.MemberService;
-import com.letzgo.LetzgoBe.global.common.response.ApiResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberRequest;
+import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
+import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
+import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
+import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.global.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;

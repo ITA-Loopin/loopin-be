@@ -1,11 +1,11 @@
 package com.loopone.loopinbe.domain.account.auth.controller;
 
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUser;
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.req.LoginRequest;
-import com.letzgo.LetzgoBe.domain.account.auth.dto.res.LoginResponse;
-import com.letzgo.LetzgoBe.domain.account.auth.service.AuthService;
-import com.letzgo.LetzgoBe.global.common.response.ApiResponse;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
+import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.global.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

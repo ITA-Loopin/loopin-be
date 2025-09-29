@@ -2,29 +2,25 @@ package com.loopone.loopinbe.domain.account.member.serviceImpl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.letzgo.LetzgoBe.domain.account.auth.currentUser.CurrentUserDto;
-import com.letzgo.LetzgoBe.domain.account.auth.service.AuthService;
-import com.letzgo.LetzgoBe.domain.account.member.dto.req.MemberRequest;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.DetailMemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.dto.res.MemberResponse;
-import com.letzgo.LetzgoBe.domain.account.member.entity.Member;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollow;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberFollowReq;
-import com.letzgo.LetzgoBe.domain.account.member.entity.MemberPage;
-import com.letzgo.LetzgoBe.domain.account.member.mapper.MemberMapper;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberFollowRepository;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberFollowReqRepository;
-import com.letzgo.LetzgoBe.domain.account.member.repository.MemberRepository;
-import com.letzgo.LetzgoBe.domain.account.member.service.MemberService;
-import com.letzgo.LetzgoBe.domain.chat.chatMessage.service.ChatMessageService;
-import com.letzgo.LetzgoBe.domain.chat.chatRoom.service.ChatRoomService;
-import com.letzgo.LetzgoBe.domain.community.comment.service.CommentService;
-import com.letzgo.LetzgoBe.domain.community.post.service.PostService;
-import com.letzgo.LetzgoBe.domain.notification.entity.Notification;
-import com.letzgo.LetzgoBe.global.common.response.PageResponse;
-import com.letzgo.LetzgoBe.global.exception.ReturnCode;
-import com.letzgo.LetzgoBe.global.exception.ServiceException;
-import com.letzgo.LetzgoBe.global.s3.S3Service;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberRequest;
+import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
+import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
+import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
+import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.account.member.repository.MemberFollowRepository;
+import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepository;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.global.common.response.PageResponse;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -45,10 +41,6 @@ public class MemberServiceImpl implements MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
-    private final PostService postService;
-    private final CommentService commentService;
-    private final ChatMessageService chatMessageService;
-    private final ChatRoomService chatRoomService;
     private final MemberFollowReqRepository memberFollowReqRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final S3Service s3Service;
@@ -124,7 +116,7 @@ public class MemberServiceImpl implements MemberService {
             // 기존 이미지 없으면 바로 새로운 이미지 저장
             if (imageUrl != null && !imageUrl.isEmpty()) s3Service.deleteFile(imageUrl);
             try {
-                imageUrl = s3Service.uploadFile(imageFile, "profile-image");
+                imageUrl = s3Service.uploadImageFile(imageFile, "profile-image");
             } catch (IOException e) {
                 throw new ServiceException(ReturnCode.INTERNAL_ERROR);
             }
@@ -158,10 +150,6 @@ public class MemberServiceImpl implements MemberService {
         Member memberEntity = memberRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 연관된 데이터 삭제
-        commentService.deleteMembersAllComments(currentUser.getId());
-        postService.deleteMembersAllPosts(currentUser.getId());
-        chatMessageService.deleteMembersAllChatMessages(currentUser.getId());
-        chatRoomService.leaveAllChatRooms(currentUser.getId());
 
         memberRepository.delete(memberEntity);
     }
