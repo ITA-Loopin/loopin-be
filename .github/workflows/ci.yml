@@ -21,18 +21,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Create Firebase Service Account File
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > src/main/resources/firebase-service-account.json
-
       - name: Build JAR
         run: |
           chmod +x ./gradlew
           ./gradlew clean bootJar
-
-      - name: Clean up sensitive files
-        run: |
-          rm -f src/main/resources/firebase-service-account.json
 
       - name: DockerHub 로그인
         uses: docker/login-action@v2
