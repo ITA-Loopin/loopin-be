@@ -33,4 +33,13 @@ public class PageMeta {
                 p.hasNext()
         );
     }
+
+    public static PageMeta empty() {
+        return new PageMeta(
+                0, 0, 0, 0,
+                true,  // first
+                true,  // last
+                false  // hasNext
+        );
+    }
 }
