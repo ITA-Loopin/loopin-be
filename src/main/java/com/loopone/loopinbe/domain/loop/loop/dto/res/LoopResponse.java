@@ -14,5 +14,6 @@ public class LoopResponse {
     private String content;
     private LocalDate loopDate;
     private double progress;
+    //TODO: 체크리스트 목록으로 응답해줘야함.
     //private List<LoopChecklistResponseDTO> checklists;
 }

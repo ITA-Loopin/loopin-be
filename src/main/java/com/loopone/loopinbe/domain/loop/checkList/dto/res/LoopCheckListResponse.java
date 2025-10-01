@@ -11,7 +11,5 @@ public class LoopCheckListResponse {
     private Long id;
     private Long loopId;
     private String content;
-    private String dDay;
-    private Boolean checked;
-    private LocalDateTime createdAt;
+    private Boolean completed;
 }

@@ -172,7 +172,7 @@ public class LoopServiceImpl implements LoopService {
                 .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())
                 .dDay(calculateDDay(loopChecklist.getDeadline()))
-                .checked(loopChecklist.getChecked())
+                .checked(loopChecklist.getCompleted())
                 .createdAt(loopChecklist.getCreatedAt())
                 .build();
     }

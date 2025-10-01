@@ -27,10 +27,9 @@ public class LoopCheckList extends BaseEntity {
     @JoinColumn(name = "loop_id", nullable = false)
     private Loop loop;
 
-    @Column(length = 500)
+    @Column(nullable = false, length = 200)
     private String content;
 
-    private LocalDate deadline;
-
-    private Boolean checked;
+    @Column(nullable = false)
+    private Boolean completed = false; //완료 여부
 }

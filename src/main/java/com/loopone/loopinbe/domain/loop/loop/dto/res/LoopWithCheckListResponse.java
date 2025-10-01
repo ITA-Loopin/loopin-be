@@ -10,5 +10,5 @@ import java.util.List;
 @Builder
 public class LoopWithCheckListResponse {
     private LoopResponse loop;
-    private List<LoopCheckListResponse> subGoals;
+    private List<LoopCheckListResponse> checkList;
 }

@@ -35,8 +35,7 @@ public class LoopCheckListServiceImpl implements LoopCheckListService {
                 .member(memberMapper.toMember(currentUser))
                 .loop(loop)
                 .content(loopCheckListRequest.getContent())
-                .deadline(loopCheckListRequest.getDeadline())
-                .checked(loopCheckListRequest.getChecked())
+                .completed(loopCheckListRequest.getCompleted())
                 .build();
         LoopCheckListRepository.save(loopChecklist);
     }
@@ -52,11 +51,8 @@ public class LoopCheckListServiceImpl implements LoopCheckListService {
         if (loopCheckListRequest.getContent() != null) {
             loopChecklist.setContent(loopCheckListRequest.getContent());
         }
-        if (loopCheckListRequest.getDeadline() != null) {
-            loopChecklist.setDeadline(loopCheckListRequest.getDeadline());
-        }
-        if (loopCheckListRequest.getChecked() != null) { // Boolean 래퍼 타입이어야 null 체크 가능
-            loopChecklist.setChecked(loopCheckListRequest.getChecked());
+        if (loopCheckListRequest.getCompleted() != null) { // Boolean 래퍼 타입이어야 null 체크 가능
+            loopChecklist.setCompleted(loopCheckListRequest.getCompleted());
         }
         LoopCheckListRepository.save(loopChecklist);
     }

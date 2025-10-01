@@ -14,6 +14,5 @@ import java.time.LocalDate;
 public class LoopCheckListRequest {
     private Long loopId;
     private String content;
-    private LocalDate deadline;
-    private Boolean checked;
+    private Boolean completed;
 }
