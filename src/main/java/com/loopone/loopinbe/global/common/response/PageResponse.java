@@ -21,4 +21,11 @@ public class PageResponse<T> {
                 PageMeta.of(page)
         );
     }
+
+    public static <T> PageResponse<T> of(List<T> content) {
+        return new PageResponse<>(
+                content,
+                PageMeta.empty() // PageMeta에 "빈" 값 넣는 팩토리 메서드 필요
+        );
+    }
 }

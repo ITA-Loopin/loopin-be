@@ -41,15 +41,12 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/health-check",
                                 "/rest-api/v1/auth/login",
+                                "/swagger-ui",
+                                "/v3/api-docs",
                                 "/rest-api/v1/oauth2/**",
-                                "/map-api/**",
-                                "/rest-api/v1/member",
-                                "/api/**",
-                                "/rest-api/v1/post/**",
                                 "/find-password/**",
-                                "/ws/**").permitAll()
+                                "/api/v1/health-check").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
