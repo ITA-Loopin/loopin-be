@@ -51,21 +51,6 @@ fcm:
   service-account-file: classpath:fcm-service-account.json
   project-id: 30409426097
 
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui
-    config-url: /v3/api-docs/swagger-config
-    url: /v3/api-docs
-    groups-order: DESC
-    operations-sorter: method
-    tags-sorter: alpha
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
-
 logging:
   level:
     org.springframework.web: DEBUG

@@ -42,8 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/rest-api/v1/auth/login",
-                                "/swagger-ui",
-                                "/v3/api-docs",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
                                 "/rest-api/v1/oauth2/**",
                                 "/find-password/**",
                                 "/api/v1/health-check").permitAll()
