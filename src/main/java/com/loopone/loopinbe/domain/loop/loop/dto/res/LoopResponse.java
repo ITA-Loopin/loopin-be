@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class MainGoalResponse {
+public class LoopResponse {
     private Long id;
     private String content;
     private String dDay;

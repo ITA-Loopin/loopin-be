@@ -3,7 +3,7 @@ package com.loopone.loopinbe.domain.loop.subGoal.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
-import com.loopone.loopinbe.domain.loop.loop.repository.MainGoalRepository;
+import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.subGoal.dto.req.SubGoalRequest;
 import com.loopone.loopinbe.domain.loop.subGoal.entity.SubGoal;
 import com.loopone.loopinbe.domain.loop.subGoal.repository.SubGoalRepository;
@@ -22,14 +22,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubGoalServiceImpl implements SubGoalService {
     private final SubGoalRepository subGoalRepository;
-    private final MainGoalRepository mainGoalRepository;
+    private final LoopRepository loopRepository;
     private final MemberMapper memberMapper;
 
     // 하위목표 생성
     @Override
     @Transactional
     public void addSubGoal(SubGoalRequest subGoalRequest, CurrentUserDto currentUser){
-        Loop loop = mainGoalRepository.findById(subGoalRequest.getMainGoalId())
+        Loop loop = loopRepository.findById(subGoalRequest.getLoopId())
                 .orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
         SubGoal subGoal = SubGoal.builder()
                 .member(memberMapper.toMember(currentUser))
@@ -75,8 +75,8 @@ public class SubGoalServiceImpl implements SubGoalService {
     // 상위목표 내의 하위목표 전체 삭제
     @Override
     @Transactional
-    public void deleteAllSubGoal(Long mainGoalId){
-        List<SubGoal> subGoals = subGoalRepository.findByMainGoalId(mainGoalId);
+    public void deleteAllSubGoal(Long loopId){
+        List<SubGoal> subGoals = subGoalRepository.findByLoopId(loopId);
         subGoalRepository.deleteAll(subGoals);
     }
 

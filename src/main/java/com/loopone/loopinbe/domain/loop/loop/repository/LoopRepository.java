@@ -9,8 +9,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface MainGoalRepository extends JpaRepository<Loop, Long> {
-    // 멤버가 작성한 모든 목표
+public interface LoopRepository extends JpaRepository<Loop, Long> {
+    // 멤버가 작성한 모든 루프
     @Query("""
         SELECT m
         FROM Loop m
@@ -19,7 +19,7 @@ public interface MainGoalRepository extends JpaRepository<Loop, Long> {
     """)
     Page<Loop> findByMemberIdWithOrder(@Param("memberId") Long memberId, Pageable pageable);
 
-    // 멤버가 작성한 미완료 목표
+    // 멤버가 작성한 미완료 루프
     @Query("""
     select mg from Loop mg
     where mg.member.id = :memberId

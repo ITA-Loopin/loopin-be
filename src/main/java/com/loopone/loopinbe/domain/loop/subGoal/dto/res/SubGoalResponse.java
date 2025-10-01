@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class SubGoalResponse {
     private Long id;
-    private Long mainGoalId;
+    private Long loopId;
     private String content;
     private String dDay;
     private Boolean checked;

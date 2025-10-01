@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MainGoalRequest {
+public class LoopRequest {
     private String content;
     private LocalDate deadline;
     private Boolean checked;

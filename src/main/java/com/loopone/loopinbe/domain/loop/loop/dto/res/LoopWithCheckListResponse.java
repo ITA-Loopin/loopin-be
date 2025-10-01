@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 @Builder
-public class MainGoalWithSubGoalsResponse {
-    private MainGoalResponse mainGoal;
+public class LoopWithCheckListResponse {
+    private LoopResponse loop;
     private List<SubGoalResponse> subGoals;
 }

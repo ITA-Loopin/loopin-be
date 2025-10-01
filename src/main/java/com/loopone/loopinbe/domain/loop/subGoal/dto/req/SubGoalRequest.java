@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubGoalRequest {
-    private Long mainGoalId;
+    private Long loopId;
     private String content;
     private LocalDate deadline;
     private Boolean checked;

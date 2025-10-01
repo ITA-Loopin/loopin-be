@@ -14,5 +14,5 @@ public interface SubGoalService {
     void deleteSubGoal(Long subGoalId, CurrentUserDto currentUser);
 
     // 상위목표 내의 하위목표 전체 삭제
-    void deleteAllSubGoal(Long mainGoalId);
+    void deleteAllSubGoal(Long loopId);
 }

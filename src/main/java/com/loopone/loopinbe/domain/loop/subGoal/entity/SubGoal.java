@@ -24,7 +24,7 @@ public class SubGoal extends BaseEntity {
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mainGoal_id", nullable = false)
+    @JoinColumn(name = "loop_id", nullable = false)
     private Loop loop;
 
     @Column(length = 500)
