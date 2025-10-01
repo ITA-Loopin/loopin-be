@@ -40,7 +40,7 @@ public class LoopServiceImpl implements LoopService {
     private final LoopCheckListService loopCheckListService;
     private final MemberMapper memberMapper;
 
-    // 목표 생성
+    // 루프 생성
     @Override
     @Transactional
     public void addLoop(LoopRequest loopRequest, CurrentUserDto currentUser){
@@ -65,25 +65,25 @@ public class LoopServiceImpl implements LoopService {
         loopRepository.save(loop);
     }
 
-    // 목표 전체 리스트 조회
+    // 루프 전체 리스트 조회
     @Override
     @Transactional(readOnly = true)
     public PageResponse<LoopWithCheckListResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
 
-        // 1) 메인 목표 페이지 조회 (DB에서 NULLS LAST 처리)
+        // 1) 루프 페이지 조회 (DB에서 NULLS LAST 처리)
         Page<Loop> mainPage = loopRepository.findByMemberIdWithOrder(currentUser.getId(), pageable);
 
-        // 2) 해당 페이지에 포함된 메인 목표 ID 추출
+        // 2) 해당 페이지에 포함된 루프 ID 추출
         List<Long> mainIds = mainPage.getContent().stream()
                 .map(Loop::getId)
                 .toList();
-        // 3) 하위 목표 벌크 조회 (DB에서 loop.id ASC, deadline ASC NULLS LAST 처리)
+        // 3) 체크리스트 벌크 조회 (DB에서 loop.id ASC, deadline ASC NULLS LAST 처리)
         List<LoopCheckList> loopCheckLists = mainIds.isEmpty()
                 ? List.of()
-                : loopCheckListRepository.findByLoopIdInWithOrder(mainIds);
+                : loopCheckListRepository.findByLoopIdIn(mainIds);
 
-        // 4) 하위 목표들을 loopId 기준으로 그룹핑
+        // 4) 체크리스트를 loopId 기준으로 그룹핑
         Map<Long, List<LoopCheckList>> subByMainId = new LinkedHashMap<>();
         for (LoopCheckList sg : loopCheckLists) {
             Long mid = sg.getLoop().getId();
@@ -95,18 +95,17 @@ public class LoopServiceImpl implements LoopService {
             LoopResponse mainDto = convertToLoopResponse(mg);
             List<LoopCheckListResponse> subDtos = subByMainId.getOrDefault(mg.getId(), List.of())
                     .stream()
-                    .map(this::convertToSubGoalResponse)
+                    .map(this::convertToCheckListResponse)
                     .toList();
             content.add(LoopWithCheckListResponse.builder()
                     .loop(mainDto)
-                    .subGoals(subDtos)
                     .build());
         }
         // 6) Page로 감싸서 반환
         return PageResponse.of(new PageImpl<>(content, mainPage.getPageable(), mainPage.getTotalElements()));
     }
 
-    // 목표 수정
+    // 루프 수정
     @Override
     @Transactional
     public void updateLoop(Long loopId, LoopRequest loopRequest, CurrentUserDto currentUser){
@@ -124,7 +123,7 @@ public class LoopServiceImpl implements LoopService {
         loopRepository.save(loop);
     }
 
-    // 목표 삭제
+    // 루프 삭제
     @Override
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
@@ -145,7 +144,7 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-    // 목표 작성자 검증
+    // 루프 작성자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.getId())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
@@ -165,15 +164,13 @@ public class LoopServiceImpl implements LoopService {
                 .build();
     }
 
-    // SubGoal를 SubGoalResponse로 변환
-    private LoopCheckListResponse convertToSubGoalResponse(LoopCheckList loopChecklist) {
+    // LoopCheckList를 LoopCheckListResponse 변환
+    private LoopCheckListResponse convertToCheckListResponse(LoopCheckList loopChecklist) {
         return LoopCheckListResponse.builder()
                 .id(loopChecklist.getId())
                 .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())
-                .dDay(calculateDDay(loopChecklist.getDeadline()))
-                .checked(loopChecklist.getCompleted())
-                .createdAt(loopChecklist.getCreatedAt())
+                .completed(loopChecklist.getCompleted())
                 .build();
     }
 

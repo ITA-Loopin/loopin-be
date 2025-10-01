@@ -102,7 +102,7 @@ public enum ReturnCode {
     COMMENT_NOT_FOUND(404, "COMMENT_001", "댓글을 찾을 수 없습니다."),
     COMMENT_ALREADY_LIKED(409, "COMMENT_002", "이미 좋아요를 누른 댓글입니다."),
 
-    // Goal
+    // Loop
     LOOP_NOT_FOUND(404, "LOOP_001", "루프를 찾을 수 없습니다."),
     CHECK_LIST_NOT_FOUND(404, "LOOP_002", "체크리스트를 찾을 수 없습니다."),
 

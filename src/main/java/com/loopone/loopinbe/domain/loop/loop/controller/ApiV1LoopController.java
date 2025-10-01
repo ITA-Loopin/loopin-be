@@ -42,7 +42,7 @@ public class ApiV1LoopController {
 
     // 루프 수정
     @PutMapping("/{loopId}")
-    @Operation(summary = "상위목표 수정")
+    @Operation(summary = "루프 수정")
     public ApiResponse<Void> updateLoop(@PathVariable("loopId") Long loopId,
                                         @RequestBody @Valid LoopRequest loopRequest, @CurrentUser CurrentUserDto currentUser){
         loopService.updateLoop(loopId, loopRequest, currentUser);

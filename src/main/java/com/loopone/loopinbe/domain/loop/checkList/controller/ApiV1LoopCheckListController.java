@@ -26,7 +26,7 @@ public class ApiV1LoopCheckListController {
         return ApiResponse.success();
     }
 
-    // 하위목표 수정
+    // 체크리스트 수정
     @PutMapping("/{loopCheckListId}")
     @Operation(summary = "체크리스트 수정")
     public ApiResponse<Void> updateLoopCheckList(@PathVariable("loopCheckListId") Long loopCheckListId,
@@ -35,7 +35,7 @@ public class ApiV1LoopCheckListController {
         return ApiResponse.success();
     }
 
-    // 하위목표 삭제
+    // 체크리스트 삭제
     @DeleteMapping("/{loopCheckListId}")
     @Operation(summary = "체크리스트 삭제")
     public ApiResponse<Void> deleteLoopCheckList(@PathVariable("loopCheckListId") Long loopCheckListId, @CurrentUser CurrentUserDto currentUser){

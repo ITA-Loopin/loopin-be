@@ -57,7 +57,7 @@ public class LoopCheckListServiceImpl implements LoopCheckListService {
         LoopCheckListRepository.save(loopChecklist);
     }
 
-    // 하위목표 삭제
+    // 체크리스트 삭제
     @Override
     @Transactional
     public void deleteLoopCheckList(Long checkListId, CurrentUserDto currentUser) {
@@ -79,7 +79,7 @@ public class LoopCheckListServiceImpl implements LoopCheckListService {
     }
 
     // ----------------- 헬퍼 메서드 -----------------
-    // 목표 작성자 검증
+    // 체크리스트 작성자 검증
     public static void validateLoopCheckListOwner(LoopCheckList loopChecklist, CurrentUserDto currentUser) {
         if (!loopChecklist.getMember().getId().equals(currentUser.getId())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
