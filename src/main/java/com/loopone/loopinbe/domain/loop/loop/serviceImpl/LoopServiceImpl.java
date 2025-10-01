@@ -9,10 +9,10 @@ import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
-import com.loopone.loopinbe.domain.loop.subGoal.dto.res.SubGoalResponse;
-import com.loopone.loopinbe.domain.loop.subGoal.entity.LoopChecklist;
-import com.loopone.loopinbe.domain.loop.subGoal.repository.SubGoalRepository;
-import com.loopone.loopinbe.domain.loop.subGoal.service.SubGoalService;
+import com.loopone.loopinbe.domain.loop.checkList.dto.res.LoopCheckListResponse;
+import com.loopone.loopinbe.domain.loop.checkList.entity.LoopCheckList;
+import com.loopone.loopinbe.domain.loop.checkList.repository.LoopCheckListRepository;
+import com.loopone.loopinbe.domain.loop.checkList.service.LoopCheckListService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
@@ -36,8 +36,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
-    private final SubGoalRepository subGoalRepository;
-    private final SubGoalService subGoalService;
+    private final LoopCheckListRepository loopCheckListRepository;
+    private final LoopCheckListService loopCheckListService;
     private final MemberMapper memberMapper;
 
     // 목표 생성
@@ -79,13 +79,13 @@ public class LoopServiceImpl implements LoopService {
                 .map(Loop::getId)
                 .toList();
         // 3) 하위 목표 벌크 조회 (DB에서 loop.id ASC, deadline ASC NULLS LAST 처리)
-        List<LoopChecklist> loopChecklists = mainIds.isEmpty()
+        List<LoopCheckList> loopCheckLists = mainIds.isEmpty()
                 ? List.of()
-                : subGoalRepository.findByLoopIdInWithOrder(mainIds);
+                : loopCheckListRepository.findByLoopIdInWithOrder(mainIds);
 
         // 4) 하위 목표들을 loopId 기준으로 그룹핑
-        Map<Long, List<LoopChecklist>> subByMainId = new LinkedHashMap<>();
-        for (LoopChecklist sg : loopChecklists) {
+        Map<Long, List<LoopCheckList>> subByMainId = new LinkedHashMap<>();
+        for (LoopCheckList sg : loopCheckLists) {
             Long mid = sg.getLoop().getId();
             subByMainId.computeIfAbsent(mid, k -> new ArrayList<>()).add(sg);
         }
@@ -93,7 +93,7 @@ public class LoopServiceImpl implements LoopService {
         List<LoopWithCheckListResponse> content = new ArrayList<>(mainPage.getNumberOfElements());
         for (Loop mg : mainPage.getContent()) {
             LoopResponse mainDto = convertToLoopResponse(mg);
-            List<SubGoalResponse> subDtos = subByMainId.getOrDefault(mg.getId(), List.of())
+            List<LoopCheckListResponse> subDtos = subByMainId.getOrDefault(mg.getId(), List.of())
                     .stream()
                     .map(this::convertToSubGoalResponse)
                     .toList();
@@ -110,7 +110,7 @@ public class LoopServiceImpl implements LoopService {
     @Override
     @Transactional
     public void updateLoop(Long loopId, LoopRequest loopRequest, CurrentUserDto currentUser){
-        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
         // 작성자 검증 아닌 경우 예외 처리
         validateLoopOwner(loop, currentUser);
@@ -128,7 +128,7 @@ public class LoopServiceImpl implements LoopService {
     @Override
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
-        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
         // 작성자 검증 아닌 경우 예외 처리
         validateLoopOwner(loop, currentUser);
@@ -166,8 +166,8 @@ public class LoopServiceImpl implements LoopService {
     }
 
     // SubGoal를 SubGoalResponse로 변환
-    private SubGoalResponse convertToSubGoalResponse(LoopChecklist loopChecklist) {
-        return SubGoalResponse.builder()
+    private LoopCheckListResponse convertToSubGoalResponse(LoopCheckList loopChecklist) {
+        return LoopCheckListResponse.builder()
                 .id(loopChecklist.getId())
                 .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())

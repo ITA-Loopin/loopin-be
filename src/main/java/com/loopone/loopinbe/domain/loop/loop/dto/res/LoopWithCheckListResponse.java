@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.loop.loop.dto.res;
 
-import com.loopone.loopinbe.domain.loop.subGoal.dto.res.SubGoalResponse;
+import com.loopone.loopinbe.domain.loop.checkList.dto.res.LoopCheckListResponse;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,5 +10,5 @@ import java.util.List;
 @Builder
 public class LoopWithCheckListResponse {
     private LoopResponse loop;
-    private List<SubGoalResponse> subGoals;
+    private List<LoopCheckListResponse> subGoals;
 }

@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.loop.subGoal.dto.req;
+package com.loopone.loopinbe.domain.loop.checkList.dto.req;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubGoalRequest {
+public class LoopCheckListRequest {
     private Long loopId;
     private String content;
     private LocalDate deadline;

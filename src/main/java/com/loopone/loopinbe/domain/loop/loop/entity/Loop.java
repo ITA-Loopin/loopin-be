@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.entity;
 
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.loop.subGoal.entity.LoopChecklist;
+import com.loopone.loopinbe.domain.loop.checkList.entity.LoopCheckList;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -35,11 +35,11 @@ public class Loop extends BaseEntity {
     private String content; //루프 설명 (메모 또는 부가정보)
 
     @OneToMany(mappedBy = "loop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<LoopChecklist> loopChecklists = new ArrayList<>();
+    private List<LoopCheckList> loopCheckLists = new ArrayList<>();
 
     //연관관계 편의 메서드
-    public void addChecklist(LoopChecklist checklist) {
-        this.loopChecklists.add(checklist);
+    public void addChecklist(LoopCheckList checklist) {
+        this.loopCheckLists.add(checklist);
         checklist.setLoop(this);
     }
 }

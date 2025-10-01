@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.loop.subGoal.entity;
+package com.loopone.loopinbe.domain.loop.checkList.entity;
 
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class LoopChecklist extends BaseEntity {
+public class LoopCheckList extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
