@@ -36,10 +36,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 인증이 필요 없는 URL 리스트
         return path.startsWith("/rest-api/v1/auth/login")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
                 || path.startsWith("/rest-api/v1/oauth2")
-                || path.startsWith("/api/**")
-                || path.startsWith("/find-password/")
-                || path.startsWith("/ws")
+                || path.startsWith("/find-password")
                 || path.startsWith("/api/v1/health-check");
     }
 
