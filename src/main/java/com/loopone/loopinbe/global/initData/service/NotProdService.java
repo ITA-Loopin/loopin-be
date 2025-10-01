@@ -34,8 +34,8 @@ public class NotProdService {
 //        notProdMemberService.followChild(allStudentIds, allParentIds);
 //        notProdMemberService.createTeachers(teacherIds, teacherPasswords);
 //        notProdMemberService.createAdmin(adminIdHolder, adminPwHolder);
-        this.adminAccountId = adminIdHolder.get(0);
-        this.adminPassword = adminPwHolder.get(0);
+//        this.adminAccountId = adminIdHolder.get(0);
+//        this.adminPassword = adminPwHolder.get(0);
     }
 
     // 2) 트랜잭션 커밋 후 가데이터 정보 출력
