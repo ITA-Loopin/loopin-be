@@ -6,13 +6,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoopRequest {
+    private String title;
+    private LocalDate loopDate;
     private String content;
-    private LocalDate deadline;
-    private Boolean checked;
+    private List<String> checklists;
 }

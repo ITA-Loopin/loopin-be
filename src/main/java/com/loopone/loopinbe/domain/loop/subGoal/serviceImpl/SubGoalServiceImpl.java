@@ -5,7 +5,7 @@ import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.subGoal.dto.req.SubGoalRequest;
-import com.loopone.loopinbe.domain.loop.subGoal.entity.SubGoal;
+import com.loopone.loopinbe.domain.loop.subGoal.entity.LoopChecklist;
 import com.loopone.loopinbe.domain.loop.subGoal.repository.SubGoalRepository;
 import com.loopone.loopinbe.domain.loop.subGoal.service.SubGoalService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -31,60 +31,60 @@ public class SubGoalServiceImpl implements SubGoalService {
     public void addSubGoal(SubGoalRequest subGoalRequest, CurrentUserDto currentUser){
         Loop loop = loopRepository.findById(subGoalRequest.getLoopId())
                 .orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
-        SubGoal subGoal = SubGoal.builder()
+        LoopChecklist loopChecklist = LoopChecklist.builder()
                 .member(memberMapper.toMember(currentUser))
                 .loop(loop)
                 .content(subGoalRequest.getContent())
                 .deadline(subGoalRequest.getDeadline())
                 .checked(subGoalRequest.getChecked())
                 .build();
-        subGoalRepository.save(subGoal);
+        subGoalRepository.save(loopChecklist);
     }
 
     // 하위목표 수정
     @Override
     @Transactional
     public void updateSubGoal(Long subGoalId, SubGoalRequest subGoalRequest, CurrentUserDto currentUser){
-        SubGoal subGoal = subGoalRepository.findById(subGoalId)
+        LoopChecklist loopChecklist = subGoalRepository.findById(subGoalId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.SUB_GOAL_NOT_FOUND));
         // 작성자 검증 아닌 경우 예외 처리
-        validateSubGoalOwner(subGoal, currentUser);
+        validateSubGoalOwner(loopChecklist, currentUser);
         if (subGoalRequest.getContent() != null) {
-            subGoal.setContent(subGoalRequest.getContent());
+            loopChecklist.setContent(subGoalRequest.getContent());
         }
         if (subGoalRequest.getDeadline() != null) {
-            subGoal.setDeadline(subGoalRequest.getDeadline());
+            loopChecklist.setDeadline(subGoalRequest.getDeadline());
         }
         if (subGoalRequest.getChecked() != null) { // Boolean 래퍼 타입이어야 null 체크 가능
-            subGoal.setChecked(subGoalRequest.getChecked());
+            loopChecklist.setChecked(subGoalRequest.getChecked());
         }
-        subGoalRepository.save(subGoal);
+        subGoalRepository.save(loopChecklist);
     }
 
     // 하위목표 삭제
     @Override
     @Transactional
     public void deleteSubGoal(Long subGoalId, CurrentUserDto currentUser) {
-        SubGoal subGoal = subGoalRepository.findById(subGoalId)
+        LoopChecklist loopChecklist = subGoalRepository.findById(subGoalId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.SUB_GOAL_NOT_FOUND));
         // 작성자 검증 아닌 경우 예외 처리
-        validateSubGoalOwner(subGoal, currentUser);
-        subGoalRepository.delete(subGoal);
+        validateSubGoalOwner(loopChecklist, currentUser);
+        subGoalRepository.delete(loopChecklist);
     }
 
     // 상위목표 내의 하위목표 전체 삭제
     @Override
     @Transactional
     public void deleteAllSubGoal(Long loopId){
-        List<SubGoal> subGoals = subGoalRepository.findByLoopId(loopId);
-        subGoalRepository.deleteAll(subGoals);
+        List<LoopChecklist> loopChecklists = subGoalRepository.findByLoopId(loopId);
+        subGoalRepository.deleteAll(loopChecklists);
     }
 
     // ----------------- 헬퍼 메서드 -----------------
 
     // 목표 작성자 검증
-    public static void validateSubGoalOwner(SubGoal subGoal, CurrentUserDto currentUser) {
-        if (!subGoal.getMember().getId().equals(currentUser.getId())) {
+    public static void validateSubGoalOwner(LoopChecklist loopChecklist, CurrentUserDto currentUser) {
+        if (!loopChecklist.getMember().getId().equals(currentUser.getId())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
     }

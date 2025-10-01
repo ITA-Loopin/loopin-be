@@ -10,7 +10,7 @@ import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.subGoal.dto.res.SubGoalResponse;
-import com.loopone.loopinbe.domain.loop.subGoal.entity.SubGoal;
+import com.loopone.loopinbe.domain.loop.subGoal.entity.LoopChecklist;
 import com.loopone.loopinbe.domain.loop.subGoal.repository.SubGoalRepository;
 import com.loopone.loopinbe.domain.loop.subGoal.service.SubGoalService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
@@ -46,10 +46,22 @@ public class LoopServiceImpl implements LoopService {
     public void addLoop(LoopRequest loopRequest, CurrentUserDto currentUser){
         Loop loop = Loop.builder()
                 .member(memberMapper.toMember(currentUser))
+                .title(loopRequest.getTitle())
                 .content(loopRequest.getContent())
-                .deadline(loopRequest.getDeadline())
-                .checked(loopRequest.getChecked())
+                .loopDate(loopRequest.getLoopDate())
                 .build();
+
+/*        // 요청받은 checklist 내용으로 LoopChecklist 엔티티 생성 및 연관관계 설정
+        if (loopRequest.getChecklists() != null) {
+            for (String checklistContent : loopRequest.getChecklists()) {
+                LoopChecklist checklist = LoopChecklist.builder()
+                        .content(checklistContent)
+                        .completed(false) // 생성 시 기본값은 false
+                        .build();
+                loop.addChecklist(checklist); // 연관관계 편의 메서드 사용
+            }
+        }*/
+
         loopRepository.save(loop);
     }
 
@@ -67,13 +79,13 @@ public class LoopServiceImpl implements LoopService {
                 .map(Loop::getId)
                 .toList();
         // 3) 하위 목표 벌크 조회 (DB에서 loop.id ASC, deadline ASC NULLS LAST 처리)
-        List<SubGoal> subGoals = mainIds.isEmpty()
+        List<LoopChecklist> loopChecklists = mainIds.isEmpty()
                 ? List.of()
                 : subGoalRepository.findByLoopIdInWithOrder(mainIds);
 
         // 4) 하위 목표들을 loopId 기준으로 그룹핑
-        Map<Long, List<SubGoal>> subByMainId = new LinkedHashMap<>();
-        for (SubGoal sg : subGoals) {
+        Map<Long, List<LoopChecklist>> subByMainId = new LinkedHashMap<>();
+        for (LoopChecklist sg : loopChecklists) {
             Long mid = sg.getLoop().getId();
             subByMainId.computeIfAbsent(mid, k -> new ArrayList<>()).add(sg);
         }
@@ -99,17 +111,16 @@ public class LoopServiceImpl implements LoopService {
     @Transactional
     public void updateLoop(Long loopId, LoopRequest loopRequest, CurrentUserDto currentUser){
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
+
         // 작성자 검증 아닌 경우 예외 처리
         validateLoopOwner(loop, currentUser);
-        if (loopRequest.getContent() != null) {
-            loop.setContent(loopRequest.getContent());
-        }
-        if (loopRequest.getDeadline() != null) {
-            loop.setDeadline(loopRequest.getDeadline());
-        }
-        if (loopRequest.getChecked() != null) {
-            loop.setChecked(loopRequest.getChecked());
-        }
+
+        if (loopRequest.getTitle() != null) loop.setTitle(loopRequest.getTitle());
+        if (loopRequest.getContent() != null) loop.setContent(loopRequest.getContent());
+        if (loopRequest.getLoopDate() != null) loop.setLoopDate(loopRequest.getLoopDate());
+
+        //TODO: 체크리스트 업데이트 로직
+
         loopRepository.save(loop);
     }
 
@@ -118,19 +129,14 @@ public class LoopServiceImpl implements LoopService {
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.MAIN_GOAL_NOT_FOUND));
+
         // 작성자 검증 아닌 경우 예외 처리
         validateLoopOwner(loop, currentUser);
-        deleteSubGoals(loopId);
+
         loopRepository.delete(loop);
     }
 
-    // 해당 목표의 모든 하위 목표 삭제
-    private void deleteSubGoals(Long loopId) {
-        subGoalService.deleteAllSubGoal(loopId);
-    }
-
     // ----------------- 헬퍼 메서드 -----------------
-
     // 요청 페이지 수 제한
     private void checkPageSize(int pageSize) {
         int maxPageSize = LoopPage.getMaxPageSize();
@@ -148,24 +154,26 @@ public class LoopServiceImpl implements LoopService {
 
     // Loop를 LoopResponse로 변환
     private LoopResponse convertToLoopResponse(Loop loop) {
+        //TODO: 진행률 계산
+        //TODO: 체크리스트 DTO로 변환
+
         return LoopResponse.builder()
                 .id(loop.getId())
+                .title(loop.getTitle())
                 .content(loop.getContent())
-                .dDay(calculateDDay(loop.getDeadline()))
-                .checked(loop.getChecked())
-                .createdAt(loop.getCreatedAt())
+                .loopDate(loop.getLoopDate())
                 .build();
     }
 
     // SubGoal를 SubGoalResponse로 변환
-    private SubGoalResponse convertToSubGoalResponse(SubGoal subGoal) {
+    private SubGoalResponse convertToSubGoalResponse(LoopChecklist loopChecklist) {
         return SubGoalResponse.builder()
-                .id(subGoal.getId())
-                .loopId(subGoal.getLoop().getId())
-                .content(subGoal.getContent())
-                .dDay(calculateDDay(subGoal.getDeadline()))
-                .checked(subGoal.getChecked())
-                .createdAt(subGoal.getCreatedAt())
+                .id(loopChecklist.getId())
+                .loopId(loopChecklist.getLoop().getId())
+                .content(loopChecklist.getContent())
+                .dDay(calculateDDay(loopChecklist.getDeadline()))
+                .checked(loopChecklist.getChecked())
+                .createdAt(loopChecklist.getCreatedAt())
                 .build();
     }
 
