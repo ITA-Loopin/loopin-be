@@ -47,6 +47,10 @@ fcm:
   service-account-file: file:/app/fcm-private-key.json
   project-id: 30409426097
 
+openai:
+  api:
+    key: ${GPT_API_KEY}
+
 logging:
   level:
     org.springframework.web: INFO
