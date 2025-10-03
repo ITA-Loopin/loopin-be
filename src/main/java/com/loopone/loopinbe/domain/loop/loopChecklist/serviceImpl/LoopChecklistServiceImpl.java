@@ -4,7 +4,9 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
+import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistRequest;
+import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.service.LoopChecklistService;
@@ -23,48 +25,56 @@ import java.util.List;
 public class LoopChecklistServiceImpl implements LoopChecklistService {
     private final LoopChecklistRepository LoopChecklistRepository;
     private final LoopRepository loopRepository;
-    private final MemberMapper memberMapper;
 
     // 체크리스트 생성
     @Override
     @Transactional
-    public void addLoopChecklist(LoopChecklistRequest loopChecklistRequest, CurrentUserDto currentUser){
-        Loop loop = loopRepository.findById(loopChecklistRequest.getLoopId())
+    public void addLoopChecklist(Long loopId, LoopChecklistCreateRequest loopChecklistCreateRequest, CurrentUserDto currentUser){
+        //부모 루프 찾기
+        Loop loop = loopRepository.findById(loopId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
-        LoopChecklist loopChecklist = LoopChecklist.builder()
-                .member(memberMapper.toMember(currentUser))
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop,currentUser);
+
+        //체크리스트 엔티티를 생성
+        LoopChecklist checklist = LoopChecklist.builder()
+                .content(loopChecklistCreateRequest.content())
                 .loop(loop)
-                .content(loopChecklistRequest.getContent())
-                .completed(loopChecklistRequest.getCompleted())
                 .build();
-        LoopChecklistRepository.save(loopChecklist);
+
+        LoopChecklistRepository.save(checklist);
     }
 
-    // 체크리스트 수정
+    //체크리스트 수정
     @Override
     @Transactional
-    public void updateLoopChecklist(Long checkListId, LoopChecklistRequest loopChecklistRequest, CurrentUserDto currentUser){
+    public void updateLoopChecklist(Long checkListId, LoopChecklistUpdateRequest loopChecklistUpdateRequest, CurrentUserDto currentUser){
+        //수정할 체크리스트를 찾기
         LoopChecklist loopChecklist = LoopChecklistRepository.findById(checkListId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHECK_LIST_NOT_FOUND));
-        // 작성자 검증 아닌 경우 예외 처리
+
+        //체크리스트의 소유자가 현재 사용자인지 확인
         validateLoopChecklistOwner(loopChecklist, currentUser);
-        if (loopChecklistRequest.getContent() != null) {
-            loopChecklist.setContent(loopChecklistRequest.getContent());
+
+        //체크리스트 수정
+        if (loopChecklistUpdateRequest.content() != null) {
+            loopChecklist.setContent(loopChecklistUpdateRequest.content());
         }
-        if (loopChecklistRequest.getCompleted() != null) { // Boolean 래퍼 타입이어야 null 체크 가능
-            loopChecklist.setCompleted(loopChecklistRequest.getCompleted());
+        if (loopChecklistUpdateRequest.completed() != null) {
+            loopChecklist.setCompleted(loopChecklistUpdateRequest.completed());
         }
-        LoopChecklistRepository.save(loopChecklist);
     }
 
     // 체크리스트 삭제
     @Override
     @Transactional
     public void deleteLoopChecklist(Long checkListId, CurrentUserDto currentUser) {
+        //삭제할 체크리스트를 찾기
         LoopChecklist loopChecklist = LoopChecklistRepository.findById(checkListId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHECK_LIST_NOT_FOUND));
 
-        // 작성자 검증 아닌 경우 예외 처리
+        //체크리스트의 소유자가 현재 사용자인지 확인
         validateLoopChecklistOwner(loopChecklist, currentUser);
 
         LoopChecklistRepository.delete(loopChecklist);
@@ -78,11 +88,17 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         LoopChecklistRepository.deleteAll(loopChecklists);
     }
 
-    // ----------------- 헬퍼 메서드 -----------------
-    // 체크리스트 작성자 검증
+    // ========== 검증 메서드 ==========
+    //체크리스트 사용자 검증
     public static void validateLoopChecklistOwner(LoopChecklist loopChecklist, CurrentUserDto currentUser) {
-        if (!loopChecklist.getMember().getId().equals(currentUser.getId())) {
-            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        if (!loopChecklist.getLoop().getMember().getId().equals(currentUser.getId())) {
+            throw new ServiceException(ReturnCode.CHECKLIST_ACCESS_DENIED);
+        }
+    }
+    //루프 사용자 검증
+    public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
+        if (!loop.getMember().getId().equals(currentUser.getId())) {
+            throw new ServiceException(ReturnCode.LOOP_ACCESS_DENIED);
         }
     }
 }
