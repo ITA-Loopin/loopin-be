@@ -1,11 +1,9 @@
 package com.loopone.loopinbe.domain.loop.loopChecklist.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
-import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;

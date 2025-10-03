@@ -1,6 +1,5 @@
 package com.loopone.loopinbe.domain.loop.loopChecklist.entity;
 
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
