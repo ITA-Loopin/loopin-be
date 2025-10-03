@@ -17,9 +17,6 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @SuperBuilder
 public class LoopChecklist extends BaseEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loop_id", nullable = false)
@@ -29,5 +26,5 @@ public class LoopChecklist extends BaseEntity {
     private String content;
 
     @Column(nullable = false)
-    private Boolean completed = false; //완료 여부
+    private Boolean completed = false; //완료 여부 (기본값 false)
 }
