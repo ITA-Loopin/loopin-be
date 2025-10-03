@@ -66,7 +66,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         }
     }
 
-    // 체크리스트 삭제
+    //체크리스트 삭제
     @Override
     @Transactional
     public void deleteLoopChecklist(Long checkListId, CurrentUserDto currentUser) {
@@ -80,7 +80,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         LoopChecklistRepository.delete(loopChecklist);
     }
 
-    // 루프 내의 체크리스트 전체 삭제
+    //루프 내의 체크리스트 전체 삭제
     @Override
     @Transactional
     public void deleteAllChecklist(Long loopId){

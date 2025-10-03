@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class ApiV1LoopChecklistController {
     private final LoopChecklistService loopChecklistService;
 
-    // 체크리스트 생성
+    //체크리스트 생성
     @PostMapping("/loops/{loopId}/checklists")
     @Operation(summary = "체크리스트 생성")
     public ApiResponse<Void> addLoopChecklist(
@@ -31,7 +31,9 @@ public class ApiV1LoopChecklistController {
         return ApiResponse.success();
     }
 
-    // 체크리스트 수정
+    //TODO: 체크리스트 단일 조회
+
+    //체크리스트 수정
     @PutMapping("/checklists/{checklistId}")
     @Operation(summary = "체크리스트 수정")
     public ApiResponse<Void> updateLoopChecklist(
@@ -43,7 +45,7 @@ public class ApiV1LoopChecklistController {
         return ApiResponse.success();
     }
 
-    // 체크리스트 삭제
+    //체크리스트 삭제
     @DeleteMapping("/checklists/{checklistId}")
     @Operation(summary = "체크리스트 삭제")
     public ApiResponse<Void> deleteLoopChecklist(

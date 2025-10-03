@@ -148,7 +148,6 @@ public class LoopServiceImpl implements LoopService {
     private LoopChecklistResponse convertToChecklistResponse(LoopChecklist loopChecklist) {
         return LoopChecklistResponse.builder()
                 .id(loopChecklist.getId())
-                .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())
                 .completed(loopChecklist.getCompleted())
                 .build();
