@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
+import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse;
@@ -35,8 +36,8 @@ import java.util.stream.Collectors;
 public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
     private final LoopChecklistRepository loopChecklistRepository;
-    private final LoopChecklistService loopChecklistService;
     private final MemberMapper memberMapper;
+    private final LoopMapper loopMapper;
 
     // 루프 생성
     @Override
@@ -79,9 +80,7 @@ public class LoopServiceImpl implements LoopService {
                 .collect(Collectors.groupingBy(cl -> cl.getLoop().getId())); // Stream의 groupingBy를 사용해 한 줄로 그룹핑
 
         // 3. 엔티티 페이지를 DTO 페이지로 직접 변환
-        Page<LoopSimpleResponse> simpleDtoPage = loopPage.map(loop ->
-                convertToSimpleResponse(loop, checklistsMap.getOrDefault(loop.getId(), List.of()))
-        );
+        Page<LoopSimpleResponse> simpleDtoPage = loopPage.map(loopMapper::toSimpleResponse);
 
         return PageResponse.of(simpleDtoPage);
     }
@@ -130,40 +129,6 @@ public class LoopServiceImpl implements LoopService {
         if (!loop.getMember().getId().equals(currentUser.getId())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
-    }
-
-    // Loop를 LoopResponse로 변환
-    private LoopSimpleResponse convertToLoopResponse(Loop loop) {
-        //TODO: 진행률 계산
-        //TODO: 체크리스트 DTO로 변환
-
-        return LoopSimpleResponse.builder()
-                .id(loop.getId())
-                .title(loop.getTitle())
-                .loopDate(loop.getLoopDate())
-                .build();
-    }
-
-    // LoopChecklist를 LoopChecklistResponse로 변환
-    private LoopChecklistResponse convertToChecklistResponse(LoopChecklist loopChecklist) {
-        return LoopChecklistResponse.builder()
-                .id(loopChecklist.getId())
-                .content(loopChecklist.getContent())
-                .completed(loopChecklist.getCompleted())
-                .build();
-    }
-
-    // Loop를 LoopSimpleResponseDTO로 변환
-    private LoopSimpleResponse convertToSimpleResponse(Loop loop, List<LoopChecklist> checklists) {
-        long completedCount = checklists.stream().filter(LoopChecklist::getCompleted).count();
-        double progress = checklists.isEmpty() ? 0.0 : ((double) completedCount / checklists.size()) * 100.0;
-
-        return LoopSimpleResponse.builder()
-                .id(loop.getId())
-                .title(loop.getTitle())
-                .loopDate(loop.getLoopDate())
-                .progress(progress)
-                .build();
     }
 
     // D-Day 계산 함수

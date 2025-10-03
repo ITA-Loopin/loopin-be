@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistUpdat
 import com.loopone.loopinbe.domain.loop.loopChecklist.service.LoopChecklistService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class ApiV1LoopChecklistController {
     public ApiResponse<Void> addLoopChecklist(
             @PathVariable Long loopId,
             @RequestBody @Valid LoopChecklistCreateRequest loopChecklistCreateRequest,
-            @CurrentUser CurrentUserDto currentUser
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopChecklistService.addLoopChecklist(loopId, loopChecklistCreateRequest, currentUser);
         return ApiResponse.success();
@@ -39,7 +40,7 @@ public class ApiV1LoopChecklistController {
     public ApiResponse<Void> updateLoopChecklist(
             @PathVariable("loopChecklistId") Long loopChecklistId,
             @RequestBody @Valid LoopChecklistUpdateRequest loopChecklistUpdateRequest,
-            @CurrentUser CurrentUserDto currentUser
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopChecklistService.updateLoopChecklist(loopChecklistId, loopChecklistUpdateRequest, currentUser);
         return ApiResponse.success();
@@ -50,7 +51,7 @@ public class ApiV1LoopChecklistController {
     @Operation(summary = "체크리스트 삭제")
     public ApiResponse<Void> deleteLoopChecklist(
             @PathVariable("loopChecklistId") Long loopChecklistId,
-            @CurrentUser CurrentUserDto currentUser
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopChecklistService.deleteLoopChecklist(loopChecklistId, currentUser);
         return ApiResponse.success();
