@@ -1,13 +1,11 @@
-package com.loopone.loopinbe.domain.loop.checkList.dto.res;
+package com.loopone.loopinbe.domain.loop.loopChecklist.dto.res;
 
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
-public class LoopCheckListResponse {
+public class LoopChecklistResponse {
     private Long id;
     private Long loopId;
     private String content;

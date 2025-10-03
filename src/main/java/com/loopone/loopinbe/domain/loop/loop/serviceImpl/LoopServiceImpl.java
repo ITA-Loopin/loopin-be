@@ -5,30 +5,26 @@ import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
-import com.loopone.loopinbe.domain.loop.checkList.dto.res.LoopCheckListResponse;
-import com.loopone.loopinbe.domain.loop.checkList.entity.LoopCheckList;
-import com.loopone.loopinbe.domain.loop.checkList.repository.LoopCheckListRepository;
-import com.loopone.loopinbe.domain.loop.checkList.service.LoopCheckListService;
+import com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse;
+import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
+import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
+import com.loopone.loopinbe.domain.loop.loopChecklist.service.LoopChecklistService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,8 +34,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
-    private final LoopCheckListRepository loopCheckListRepository;
-    private final LoopCheckListService loopCheckListService;
+    private final LoopChecklistRepository loopChecklistRepository;
+    private final LoopChecklistService loopChecklistService;
     private final MemberMapper memberMapper;
 
     // 루프 생성
@@ -78,7 +74,7 @@ public class LoopServiceImpl implements LoopService {
         List<Long> loopIds = loopPage.stream().map(Loop::getId).toList();
 
         // 2. 모든 체크리스트를 한 번에 조회해서 Map으로 그룹핑
-        Map<Long, List<LoopCheckList>> checklistsMap = loopCheckListRepository.findByLoopIdIn(loopIds)
+        Map<Long, List<LoopChecklist>> checklistsMap = loopChecklistRepository.findByLoopIdIn(loopIds)
                 .stream()
                 .collect(Collectors.groupingBy(cl -> cl.getLoop().getId())); // Stream의 groupingBy를 사용해 한 줄로 그룹핑
 
@@ -148,9 +144,9 @@ public class LoopServiceImpl implements LoopService {
                 .build();
     }
 
-    // LoopCheckList를 LoopCheckListResponse로 변환
-    private LoopCheckListResponse convertToCheckListResponse(LoopCheckList loopChecklist) {
-        return LoopCheckListResponse.builder()
+    // LoopChecklist를 LoopChecklistResponse로 변환
+    private LoopChecklistResponse convertToChecklistResponse(LoopChecklist loopChecklist) {
+        return LoopChecklistResponse.builder()
                 .id(loopChecklist.getId())
                 .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())
@@ -159,8 +155,8 @@ public class LoopServiceImpl implements LoopService {
     }
 
     // Loop를 LoopSimpleResponseDTO로 변환
-    private LoopSimpleResponse convertToSimpleResponse(Loop loop, List<LoopCheckList> checklists) {
-        long completedCount = checklists.stream().filter(LoopCheckList::getCompleted).count();
+    private LoopSimpleResponse convertToSimpleResponse(Loop loop, List<LoopChecklist> checklists) {
+        long completedCount = checklists.stream().filter(LoopChecklist::getCompleted).count();
         double progress = checklists.isEmpty() ? 0.0 : ((double) completedCount / checklists.size()) * 100.0;
 
         return LoopSimpleResponse.builder()
