@@ -20,14 +20,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(value="/rest-api/v1/loop")
+@RequestMapping(value="/rest-api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Loop", description = "루프 API")
 public class ApiV1LoopController {
     private final LoopService loopService;
 
-    // 루프 생성
-    @PostMapping
+    //루프 생성
+    @PostMapping("/loops")
     @Operation(summary = "루프 생성")
     public ApiResponse<Void> addLoop(
             @RequestBody @Valid LoopCreateRequest loopCreateRequest,
@@ -41,8 +41,8 @@ public class ApiV1LoopController {
 
     //TODO: 루프 날짜별 리스트 조회 API 구현
 
-    // 루프 전체 리스트 조회
-    @GetMapping
+    //루프 전체 리스트 조회
+    @GetMapping("/loops")
     @Operation(summary = "루프 리스트 조회")
     public ApiResponse<List<LoopSimpleResponse>> getAllLoop(
             @ModelAttribute LoopPage loopPage,
@@ -52,8 +52,8 @@ public class ApiV1LoopController {
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
     }
 
-    // 루프 수정
-    @PutMapping("/{loopId}")
+    //루프 수정
+    @PutMapping("/loops/{loopId}")
     @Operation(summary = "루프 수정")
     public ApiResponse<Void> updateLoop(
             @PathVariable("loopId") Long loopId,
@@ -64,8 +64,8 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    // 루프 삭제
-    @DeleteMapping("/{loopId}")
+    //루프 삭제
+    @DeleteMapping("/loops/{loopId}")
     @Operation(summary = "루프 삭제")
     public ApiResponse<Void> deleteLoop(
             @PathVariable("loopId") Long loopId,
