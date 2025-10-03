@@ -2,7 +2,8 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
@@ -43,17 +44,17 @@ public class LoopServiceImpl implements LoopService {
     // 루프 생성
     @Override
     @Transactional
-    public void addLoop(LoopRequest loopRequest, CurrentUserDto currentUser){
+    public void addLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser){
         Loop loop = Loop.builder()
                 .member(memberMapper.toMember(currentUser))
-                .title(loopRequest.getTitle())
-                .content(loopRequest.getContent())
-                .loopDate(loopRequest.getLoopDate())
+                .title(loopCreateRequest.title())
+                .content(loopCreateRequest.content())
+                .loopDate(loopCreateRequest.loopDate())
                 .build();
 
 /*        // 요청받은 checklist 내용으로 LoopChecklist 엔티티 생성 및 연관관계 설정
-        if (loopRequest.getChecklists() != null) {
-            for (String checklistContent : loopRequest.getChecklists()) {
+        if (loopCreateRequest.getChecklists() != null) {
+            for (String checklistContent : loopCreateRequest.getChecklists()) {
                 LoopChecklist checklist = LoopChecklist.builder()
                         .content(checklistContent)
                         .completed(false) // 생성 시 기본값은 false
@@ -108,15 +109,15 @@ public class LoopServiceImpl implements LoopService {
     // 루프 수정
     @Override
     @Transactional
-    public void updateLoop(Long loopId, LoopRequest loopRequest, CurrentUserDto currentUser){
+    public void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser){
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
         // 작성자 검증 아닌 경우 예외 처리
         validateLoopOwner(loop, currentUser);
 
-        if (loopRequest.getTitle() != null) loop.setTitle(loopRequest.getTitle());
-        if (loopRequest.getContent() != null) loop.setContent(loopRequest.getContent());
-        if (loopRequest.getLoopDate() != null) loop.setLoopDate(loopRequest.getLoopDate());
+        if (loopUpdateRequest.title() != null) loop.setTitle(loopUpdateRequest.title());
+        if (loopUpdateRequest.content() != null) loop.setContent(loopUpdateRequest.content());
+        if (loopUpdateRequest.loopDate() != null) loop.setLoopDate(loopUpdateRequest.loopDate());
 
         //TODO: 체크리스트 업데이트 로직
 

@@ -2,7 +2,8 @@ package com.loopone.loopinbe.domain.loop.loop.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
@@ -27,8 +28,8 @@ public class ApiV1LoopController {
     // 루프 생성
     @PostMapping
     @Operation(summary = "루프 생성")
-    public ApiResponse<Void> addLoop(@RequestBody @Valid LoopRequest loopRequest, @CurrentUser CurrentUserDto currentUser){
-        loopService.addLoop(loopRequest, currentUser);
+    public ApiResponse<Void> addLoop(@RequestBody @Valid LoopCreateRequest loopCreateRequest, @CurrentUser CurrentUserDto currentUser){
+        loopService.addLoop(loopCreateRequest, currentUser);
         return ApiResponse.success();
     }
 
@@ -44,8 +45,8 @@ public class ApiV1LoopController {
     @PutMapping("/{loopId}")
     @Operation(summary = "루프 수정")
     public ApiResponse<Void> updateLoop(@PathVariable("loopId") Long loopId,
-                                        @RequestBody @Valid LoopRequest loopRequest, @CurrentUser CurrentUserDto currentUser){
-        loopService.updateLoop(loopId, loopRequest, currentUser);
+                                        @RequestBody @Valid LoopUpdateRequest loopUpdateRequest, @CurrentUser CurrentUserDto currentUser){
+        loopService.updateLoop(loopId, loopUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
