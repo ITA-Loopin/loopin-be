@@ -3,7 +3,8 @@ package com.loopone.loopinbe.domain.loop.loop.service;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -12,7 +13,7 @@ public interface LoopService {
     void addLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser);
 
     // 루프 전체 리스트 조회
-    PageResponse<LoopWithCheckListResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser);
+    PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser);
 
     // 루프 수정
     void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser);
