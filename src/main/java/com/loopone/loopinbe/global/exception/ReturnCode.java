@@ -105,6 +105,8 @@ public enum ReturnCode {
     // Loop
     LOOP_NOT_FOUND(404, "LOOP_001", "루프를 찾을 수 없습니다."),
     CHECK_LIST_NOT_FOUND(404, "LOOP_002", "체크리스트를 찾을 수 없습니다."),
+    LOOP_ACCESS_DENIED(403, "LOOP_003", "해당 루프에 대한 권한이 없습니다."),
+    CHECKLIST_ACCESS_DENIED(403, "LOOP_004", "해당 체크리스트에 대한 권한이 없습니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
