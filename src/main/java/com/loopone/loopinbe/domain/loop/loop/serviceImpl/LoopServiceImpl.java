@@ -4,8 +4,8 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopResponse;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -69,41 +70,24 @@ public class LoopServiceImpl implements LoopService {
     // 루프 전체 리스트 조회
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<LoopWithCheckListResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser) {
+    public PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
 
-        // 1) 루프 페이지 조회 (DB에서 NULLS LAST 처리)
-        Page<Loop> mainPage = loopRepository.findByMemberIdWithOrder(currentUser.getId(), pageable);
+        // 1. Loop 엔티티 페이지를 DB에서 조회
+        Page<Loop> loopPage = loopRepository.findByMemberIdWithOrder(currentUser.getId(), pageable);
+        List<Long> loopIds = loopPage.stream().map(Loop::getId).toList();
 
-        // 2) 해당 페이지에 포함된 루프 ID 추출
-        List<Long> mainIds = mainPage.getContent().stream()
-                .map(Loop::getId)
-                .toList();
-        // 3) 체크리스트 벌크 조회 (DB에서 loop.id ASC, deadline ASC NULLS LAST 처리)
-        List<LoopCheckList> loopCheckLists = mainIds.isEmpty()
-                ? List.of()
-                : loopCheckListRepository.findByLoopIdIn(mainIds);
+        // 2. 모든 체크리스트를 한 번에 조회해서 Map으로 그룹핑
+        Map<Long, List<LoopCheckList>> checklistsMap = loopCheckListRepository.findByLoopIdIn(loopIds)
+                .stream()
+                .collect(Collectors.groupingBy(cl -> cl.getLoop().getId())); // Stream의 groupingBy를 사용해 한 줄로 그룹핑
 
-        // 4) 체크리스트를 loopId 기준으로 그룹핑
-        Map<Long, List<LoopCheckList>> subByMainId = new LinkedHashMap<>();
-        for (LoopCheckList sg : loopCheckLists) {
-            Long mid = sg.getLoop().getId();
-            subByMainId.computeIfAbsent(mid, k -> new ArrayList<>()).add(sg);
-        }
-        // 5) DTO 변환
-        List<LoopWithCheckListResponse> content = new ArrayList<>(mainPage.getNumberOfElements());
-        for (Loop mg : mainPage.getContent()) {
-            LoopResponse mainDto = convertToLoopResponse(mg);
-            List<LoopCheckListResponse> subDtos = subByMainId.getOrDefault(mg.getId(), List.of())
-                    .stream()
-                    .map(this::convertToCheckListResponse)
-                    .toList();
-            content.add(LoopWithCheckListResponse.builder()
-                    .loop(mainDto)
-                    .build());
-        }
-        // 6) Page로 감싸서 반환
-        return PageResponse.of(new PageImpl<>(content, mainPage.getPageable(), mainPage.getTotalElements()));
+        // 3. 엔티티 페이지를 DTO 페이지로 직접 변환
+        Page<LoopSimpleResponse> simpleDtoPage = loopPage.map(loop ->
+                convertToSimpleResponse(loop, checklistsMap.getOrDefault(loop.getId(), List.of()))
+        );
+
+        return PageResponse.of(simpleDtoPage);
     }
 
     // 루프 수정
@@ -153,25 +137,37 @@ public class LoopServiceImpl implements LoopService {
     }
 
     // Loop를 LoopResponse로 변환
-    private LoopResponse convertToLoopResponse(Loop loop) {
+    private LoopSimpleResponse convertToLoopResponse(Loop loop) {
         //TODO: 진행률 계산
         //TODO: 체크리스트 DTO로 변환
 
-        return LoopResponse.builder()
+        return LoopSimpleResponse.builder()
                 .id(loop.getId())
                 .title(loop.getTitle())
-                .content(loop.getContent())
                 .loopDate(loop.getLoopDate())
                 .build();
     }
 
-    // LoopCheckList를 LoopCheckListResponse 변환
+    // LoopCheckList를 LoopCheckListResponse로 변환
     private LoopCheckListResponse convertToCheckListResponse(LoopCheckList loopChecklist) {
         return LoopCheckListResponse.builder()
                 .id(loopChecklist.getId())
                 .loopId(loopChecklist.getLoop().getId())
                 .content(loopChecklist.getContent())
                 .completed(loopChecklist.getCompleted())
+                .build();
+    }
+
+    // Loop를 LoopSimpleResponseDTO로 변환
+    private LoopSimpleResponse convertToSimpleResponse(Loop loop, List<LoopCheckList> checklists) {
+        long completedCount = checklists.stream().filter(LoopCheckList::getCompleted).count();
+        double progress = checklists.isEmpty() ? 0.0 : ((double) completedCount / checklists.size()) * 100.0;
+
+        return LoopSimpleResponse.builder()
+                .id(loop.getId())
+                .title(loop.getTitle())
+                .loopDate(loop.getLoopDate())
+                .progress(progress)
                 .build();
     }
 
