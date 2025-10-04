@@ -89,13 +89,13 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
     // ========== 검증 메서드 ==========
     //체크리스트 사용자 검증
     public static void validateLoopChecklistOwner(LoopChecklist loopChecklist, CurrentUserDto currentUser) {
-        if (!loopChecklist.getLoop().getMember().getId().equals(currentUser.getId())) {
+        if (!loopChecklist.getLoop().getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.CHECKLIST_ACCESS_DENIED);
         }
     }
     //루프 사용자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
-        if (!loop.getMember().getId().equals(currentUser.getId())) {
+        if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.LOOP_ACCESS_DENIED);
         }
     }

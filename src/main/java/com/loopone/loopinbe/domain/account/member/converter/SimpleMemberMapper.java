@@ -10,6 +10,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface SimpleMemberMapper {
     // ---------- ChatRoomMember -> SimpleMemberResponse ----------
@@ -18,27 +20,43 @@ public interface SimpleMemberMapper {
     @Mapping(target = "profileImageUrl", source = "member.profileImageUrl")
     SimpleMemberResponse toSimpleMemberResponse(ChatRoomMember member);
 
-    // ---------- MemberFollow.followed → SimpleMemberResponse ----------
-    @Mapping(target = "userId", source = "followed.id")
-    @Mapping(target = "userNickname", source = "followed.nickname")
-    @Mapping(target = "profileImageUrl", source = "followed.profileImageUrl")
-    SimpleMemberResponse toFollowingMember(MemberFollow mf);
+    @Named("toFollowingMember")
+    SimpleMemberResponse toFollowingMember(MemberFollow mf); // mf.getFollowed() -> SimpleMemberResponse
 
-    // ---------- MemberFollow.follow → SimpleMemberResponse ----------
-    @Mapping(target = "userId", source = "follow.id")
-    @Mapping(target = "userNickname", source = "follow.nickname")
-    @Mapping(target = "profileImageUrl", source = "follow.profileImageUrl")
-    SimpleMemberResponse toFollowerMember(MemberFollow mf);
+    @Named("toFollowerMember")
+    SimpleMemberResponse toFollowerMember(MemberFollow mf);  // mf.getFollow() -> SimpleMemberResponse
 
-    // ---------- MemberFollowReq.followRec → SimpleMemberResponse ----------
-    @Mapping(target = "userId", source = "followRec.id")
-    @Mapping(target = "userNickname", source = "followRec.nickname")
-    @Mapping(target = "profileImageUrl", source = "followRec.profileImageUrl")
+    @Named("toSimpleMemberFromFollowReq")
+    SimpleMemberResponse toSimpleMemberFromFollowReq(MemberFollowReq req);
+
+    @Named("toSimpleMemberFromFollowRec")
     SimpleMemberResponse toSimpleMemberFromFollowRec(MemberFollowReq req);
 
+    // ---------- MemberFollow.follow → SimpleMemberResponse ----------
+    @Named("toFollowingMembers")
+    default List<SimpleMemberResponse> toFollowingMembers(List<MemberFollow> list) {
+        if (list == null) return List.of();
+        return list.stream().map(this::toFollowingMember).toList();
+    }
+
+    // ---------- MemberFollow.followed → SimpleMemberResponse ----------
+    @Named("toFollowerMembers")
+    default List<SimpleMemberResponse> toFollowerMembers(List<MemberFollow> list) {
+        if (list == null) return List.of();
+        return list.stream().map(this::toFollowerMember).toList();
+    }
+
     // ---------- MemberFollowReq.followReq → SimpleMemberResponse ----------
-    @Mapping(target = "userId", source = "followReq.id")
-    @Mapping(target = "userNickname", source = "followReq.nickname")
-    @Mapping(target = "profileImageUrl", source = "followReq.profileImageUrl")
-    SimpleMemberResponse toSimpleMemberFromFollowReq(MemberFollowReq req);
+    @Named("toSimpleMembersFromFollowReqs")
+    default List<SimpleMemberResponse> toSimpleMembersFromFollowReqs(List<MemberFollowReq> list) {
+        if (list == null) return List.of();
+        return list.stream().map(this::toSimpleMemberFromFollowReq).toList();
+    }
+
+    // ---------- MemberFollowReq.followRec → SimpleMemberResponse ----------
+    @Named("toSimpleMembersFromFollowRecs")
+    default List<SimpleMemberResponse> toSimpleMembersFromFollowRecs(List<MemberFollowReq> list) {
+        if (list == null) return List.of();
+        return list.stream().map(this::toSimpleMemberFromFollowRec).toList();
+    }
 }

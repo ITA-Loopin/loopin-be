@@ -13,11 +13,8 @@ public class MemberResponse {
     private Long followedMemberCount;
     private Long chatRoomId;
 
-    public MemberResponse(Long id, String nickname,
-                          String profileImageUrl,
-                          Long followMemberCount,
-                          Long followedMemberCount,
-                          Long chatRoomId) {
+    public MemberResponse(Long id, String nickname, String profileImageUrl,
+                          Long followMemberCount, Long followedMemberCount, Long chatRoomId) {
         this.id = id;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;

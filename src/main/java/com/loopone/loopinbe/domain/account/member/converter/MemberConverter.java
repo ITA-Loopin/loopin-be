@@ -12,7 +12,7 @@ import org.mapstruct.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", uses = SimpleMemberMapper.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface MemberConverter {
     // ---------- Member -> MemberResponse ----------
     @Mapping(target = "followMemberCount", expression = "java(source.getFollowList() != null ? (long) source.getFollowList().size() : 0L)")
@@ -26,7 +26,7 @@ public interface MemberConverter {
     @Mapping(target = "followedList", source = "followedList", qualifiedByName = "toFollowerMembers")
     @Mapping(target = "followReqList", source = "followReqList", qualifiedByName = "toSimpleMembersFromFollowReqs")
     @Mapping(target = "followRecList", source = "followRecList", qualifiedByName = "toSimpleMembersFromFollowRecs")
-    DetailMemberResponse toDetailMemberResponse(Member source, @Context SimpleMemberMapper mapper);
+    DetailMemberResponse toDetailMemberResponse(Member source);
 
     // ---------- LoginUserDto <-> Member ----------
     Member toMember(CurrentUserDto source);

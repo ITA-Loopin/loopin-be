@@ -31,7 +31,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 회원 검색하기
     @Query("SELECT new com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse(" +
             "m.id, m.nickname, m.profileImageUrl, " +
-            "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id)) " +
+            "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id), m.chatRoomId) " +
             "FROM Member m " +
             "LEFT JOIN MemberFollow f1 ON f1.follow.id = m.id " +
             "LEFT JOIN MemberFollow f2 ON f2.followed.id = m.id " +
