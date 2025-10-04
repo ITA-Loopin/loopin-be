@@ -7,7 +7,7 @@ import lombok.Getter;
 public class NotificationPage {
     // 기본 page, size
     private int page = 0;
-    private int size = 15;
+    private int size = 20;
     @Getter
-    private static final int maxPageSize = 15;
+    private static final int maxPageSize = 20;
 }

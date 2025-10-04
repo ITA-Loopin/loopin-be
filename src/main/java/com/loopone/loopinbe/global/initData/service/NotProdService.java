@@ -40,19 +40,19 @@ public class NotProdService {
 
     // 2) 트랜잭션 커밋 후 가데이터 정보 출력
     public void initDummyData() {
-        long start = System.currentTimeMillis();
-        initDummyDataTransactional();
-        long end = System.currentTimeMillis();
-        long executionTimeMillis = end - start;
-        NotProdPrintTestAccount.printTestAccounts(
-                studentIds,
-                studentPasswords,
-                parentIds,
-                teacherIds,
-                teacherPasswords,
-                String.valueOf(adminAccountId),
-                adminPassword,
-                executionTimeMillis
-        );
+//        long start = System.currentTimeMillis();
+//        initDummyDataTransactional();
+//        long end = System.currentTimeMillis();
+//        long executionTimeMillis = end - start;
+//        NotProdPrintTestAccount.printTestAccounts(
+//                studentIds,
+//                studentPasswords,
+//                parentIds,
+//                teacherIds,
+//                teacherPasswords,
+//                String.valueOf(adminAccountId),
+//                adminPassword,
+//                executionTimeMillis
+//        );
     }
 }

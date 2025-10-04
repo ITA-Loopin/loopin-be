@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.global.initData.service;
 
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ public class NotProdMemberService {
 //    private final MemberService memberService;
 //    private final MemberRepository memberRepository;
 //    private final NotProdUtils notProdUtils;
-//    private final MemberMapper memberMapper;
+//    private final MemberConverter memberConverter;
 //    private final Random random = new Random();
 
 //    // 학생 가데이터 생성

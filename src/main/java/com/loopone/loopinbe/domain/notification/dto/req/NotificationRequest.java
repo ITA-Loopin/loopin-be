@@ -8,11 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class NotificationRequest {
-    @Column(columnDefinition = "jsonb") // PostgreSQL의 jsonb 타입 사용
-    private List<Long> notificationIdList;
-}
+public record NotificationRequest(
+        @Column(columnDefinition = "jsonb")
+        List<Long> notificationIdList
+) {}

@@ -11,17 +11,17 @@ import java.util.List;
 @Builder
 public class DetailMemberResponse {
     private Long id;
-    private String name;
-    private String nickname;
-    private String phone;
     private String email;
-    private Member.Gender gender;  // 성별
-    private LocalDate birthday;
+    private String nickname;
+//    private String phone;
+//    private Member.Gender gender;  // 성별
+//    private LocalDate birthday;
     private String profileImageUrl;
     private Long followMemberCount;
     private Long followedMemberCount;
-    private List<SimpleMemberDto> followList;
-    private List<SimpleMemberDto> followedList;
-    private List<SimpleMemberDto> followReqList;
-    private List<SimpleMemberDto> followRecList;
+    private List<SimpleMemberResponse> followList;
+    private List<SimpleMemberResponse> followedList;
+    private List<SimpleMemberResponse> followReqList;
+    private List<SimpleMemberResponse> followRecList;
+    private Long chatRoomId;
 }

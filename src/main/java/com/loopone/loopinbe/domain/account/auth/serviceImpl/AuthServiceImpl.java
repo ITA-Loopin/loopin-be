@@ -53,7 +53,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(CurrentUserDto currentUser) {
         // Redis에서 Refresh Token 삭제
-        refreshTokenService.deleteRefreshToken(currentUser.getId().toString());
+        refreshTokenService.deleteRefreshToken(currentUser.id().toString());
     }
 
     // accessToken 재발급
@@ -64,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
             refreshToken = refreshToken.substring(7);
         }
 
-        String storedRefreshToken = refreshTokenService.getRefreshToken(currentUser.getId().toString());
+        String storedRefreshToken = refreshTokenService.getRefreshToken(currentUser.id().toString());
         if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("유효하지 않은 리프레시 토큰입니다.");
         }

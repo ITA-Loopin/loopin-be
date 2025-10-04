@@ -16,6 +16,21 @@ services:
     networks:
       - loopin-backend
 
+  mongodb:
+    image: mongo:latest
+    container_name: loopin-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: loopinAdmin
+      MONGO_INITDB_ROOT_PASSWORD: loopinAdmin0906
+      MONGO_INITDB_DATABASE: meta_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - loopin-backend
+
   postgres:
     image: ankane/pgvector:latest
     container_name: loopin-postgres

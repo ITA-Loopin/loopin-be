@@ -1,10 +1,10 @@
 package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
@@ -36,15 +36,15 @@ import java.util.stream.Collectors;
 public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
     private final LoopChecklistRepository loopChecklistRepository;
-    private final MemberMapper memberMapper;
     private final LoopMapper loopMapper;
+    private final MemberConverter memberConverter;
 
     // 루프 생성
     @Override
     @Transactional
     public void addLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser){
         Loop loop = Loop.builder()
-                .member(memberMapper.toMember(currentUser))
+                .member(memberConverter.toMember(currentUser))
                 .title(loopCreateRequest.title())
                 .content(loopCreateRequest.content())
                 .loopDate(loopCreateRequest.loopDate())
@@ -71,7 +71,7 @@ public class LoopServiceImpl implements LoopService {
         checkPageSize(pageable.getPageSize());
 
         // 1. Loop 엔티티 페이지를 DB에서 조회
-        Page<Loop> loopPage = loopRepository.findByMemberIdWithOrder(currentUser.getId(), pageable);
+        Page<Loop> loopPage = loopRepository.findByMemberIdWithOrder(currentUser.id(), pageable);
         List<Long> loopIds = loopPage.stream().map(Loop::getId).toList();
 
         // 2. 모든 체크리스트를 한 번에 조회해서 Map으로 그룹핑
@@ -126,7 +126,7 @@ public class LoopServiceImpl implements LoopService {
 
     // 루프 작성자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
-        if (!loop.getMember().getId().equals(currentUser.getId())) {
+        if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
     }
