@@ -1,6 +1,5 @@
-package com.loopone.loopinbe.domain.loop.checkList.entity;
+package com.loopone.loopinbe.domain.loop.loopChecklist.entity;
 
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
@@ -10,18 +9,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDate;
-
 @Entity
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class LoopCheckList extends BaseEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+public class LoopChecklist extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loop_id", nullable = false)
@@ -31,5 +25,5 @@ public class LoopCheckList extends BaseEntity {
     private String content;
 
     @Column(nullable = false)
-    private Boolean completed = false; //완료 여부
+    private Boolean completed = false; //완료 여부 (기본값 false)
 }

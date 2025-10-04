@@ -2,12 +2,14 @@ package com.loopone.loopinbe.domain.loop.loop.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopRequest;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,15 +29,25 @@ public class ApiV1LoopController {
     // 루프 생성
     @PostMapping
     @Operation(summary = "루프 생성")
-    public ApiResponse<Void> addLoop(@RequestBody @Valid LoopRequest loopRequest, @CurrentUser CurrentUserDto currentUser){
-        loopService.addLoop(loopRequest, currentUser);
+    public ApiResponse<Void> addLoop(
+            @RequestBody @Valid LoopCreateRequest loopCreateRequest,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.addLoop(loopCreateRequest, currentUser);
         return ApiResponse.success();
     }
+
+    //TODO: 루프 상세 조회 API 구현
+
+    //TODO: 루프 날짜별 리스트 조회 API 구현
 
     // 루프 전체 리스트 조회
     @GetMapping
     @Operation(summary = "루프 리스트 조회")
-    public ApiResponse<List<LoopWithCheckListResponse>> getAllLoop(@ModelAttribute LoopPage loopPage, @CurrentUser CurrentUserDto currentUser){
+    public ApiResponse<List<LoopSimpleResponse>> getAllLoop(
+            @ModelAttribute LoopPage loopPage,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
         Pageable pageable = PageRequest.of(loopPage.getPage(), loopPage.getSize());
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
     }
@@ -43,16 +55,22 @@ public class ApiV1LoopController {
     // 루프 수정
     @PutMapping("/{loopId}")
     @Operation(summary = "루프 수정")
-    public ApiResponse<Void> updateLoop(@PathVariable("loopId") Long loopId,
-                                        @RequestBody @Valid LoopRequest loopRequest, @CurrentUser CurrentUserDto currentUser){
-        loopService.updateLoop(loopId, loopRequest, currentUser);
+    public ApiResponse<Void> updateLoop(
+            @PathVariable("loopId") Long loopId,
+            @RequestBody @Valid LoopUpdateRequest loopUpdateRequest,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.updateLoop(loopId, loopUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
     // 루프 삭제
     @DeleteMapping("/{loopId}")
     @Operation(summary = "루프 삭제")
-    public ApiResponse<Void> deleteLoop(@PathVariable("loopId") Long loopId, @CurrentUser CurrentUserDto currentUser){
+    public ApiResponse<Void> deleteLoop(
+            @PathVariable("loopId") Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
         loopService.deleteLoop(loopId, currentUser);
         return ApiResponse.success();
     }
