@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.loop.checkList.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.checkList.dto.req.LoopCheckListRequest;
@@ -23,7 +23,7 @@ import java.util.List;
 public class LoopCheckListServiceImpl implements LoopCheckListService {
     private final LoopCheckListRepository LoopCheckListRepository;
     private final LoopRepository loopRepository;
-    private final MemberMapper memberMapper;
+    private final MemberConverter memberConverter;
 
     // 체크리스트 생성
     @Override
@@ -32,7 +32,7 @@ public class LoopCheckListServiceImpl implements LoopCheckListService {
         Loop loop = loopRepository.findById(loopCheckListRequest.getLoopId())
                 .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
         LoopCheckList loopChecklist = LoopCheckList.builder()
-                .member(memberMapper.toMember(currentUser))
+                .member(memberConverter.toMember(currentUser))
                 .loop(loop)
                 .content(loopCheckListRequest.getContent())
                 .completed(loopCheckListRequest.getCompleted())

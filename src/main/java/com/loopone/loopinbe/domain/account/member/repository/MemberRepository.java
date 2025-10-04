@@ -17,18 +17,25 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 이메일로 회원 존재여부 확인
     boolean existsByEmail(String email);
 
-    // 이메일로 회원 찾기
+    // 고유한 닉네임인지 확인
+    boolean existsByNickname(String nickname);
+
+    // 이메일로 id 조회
+    @Query("select m.id from Member m where m.email = :email")
+    Optional<Long> findIdByEmail(@Param("email") String email);
+
+    // 이메일로 회원 조회
     @EntityGraph(value = "Member.withAllRelations", type = EntityGraph.EntityGraphType.LOAD)
     Optional<Member> findByEmail(String email);
 
     // 회원 검색하기
     @Query("SELECT new com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse(" +
-            "m.id, m.name, m.nickname, m.profileImageUrl, " +
+            "m.id, m.nickname, m.profileImageUrl, " +
             "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id)) " +
             "FROM Member m " +
             "LEFT JOIN MemberFollow f1 ON f1.follow.id = m.id " +
             "LEFT JOIN MemberFollow f2 ON f2.followed.id = m.id " +
-            "WHERE m.name LIKE %:keyword% OR m.nickname LIKE %:keyword% " +
-            "GROUP BY m.id, m.name, m.nickname, m.profileImageUrl")
+            "WHERE m.nickname LIKE %:keyword% " +
+            "GROUP BY m.id, m.nickname, m.profileImageUrl")
     Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword);
 }

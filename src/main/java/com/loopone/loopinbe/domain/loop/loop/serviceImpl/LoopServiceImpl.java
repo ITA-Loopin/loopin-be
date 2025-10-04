@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopWithCheckListResponse;
@@ -38,14 +38,14 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
     private final LoopCheckListRepository loopCheckListRepository;
     private final LoopCheckListService loopCheckListService;
-    private final MemberMapper memberMapper;
+    private final MemberConverter memberConverter;
 
     // 루프 생성
     @Override
     @Transactional
     public void addLoop(LoopRequest loopRequest, CurrentUserDto currentUser){
         Loop loop = Loop.builder()
-                .member(memberMapper.toMember(currentUser))
+                .member(memberConverter.toMember(currentUser))
                 .title(loopRequest.getTitle())
                 .content(loopRequest.getContent())
                 .loopDate(loopRequest.getLoopDate())

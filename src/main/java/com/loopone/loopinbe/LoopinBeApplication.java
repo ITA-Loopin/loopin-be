@@ -1,10 +1,13 @@
 package com.loopone.loopinbe;
 
+import com.loopone.loopinbe.domain.account.oauth2.dto.OAuth2WebPropertiesDto;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(OAuth2WebPropertiesDto.class)
 public class LoopinBeApplication {
 
 	public static void main(String[] args) {

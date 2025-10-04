@@ -24,19 +24,19 @@ public class FindPasswordServiceImpl {
     // 이메일 인증코드 전송(비밀번호 찾기)
     @Transactional(readOnly = true)
     public boolean sendEmailVerificationCode(String email) {
-        //1.존재하는 유저인지 확인
+        // 1.존재하는 유저인지 확인
         Optional<Member> member = memberRepository.findByEmail(email);
         if (member.isEmpty())
             return false;
 
-        //2.인증코드 생성 및 캐싱
+        // 2.인증코드 생성 및 캐싱
         int code = 100000 + secureRandom.nextInt(900000);
         redisVerificationCodeService.saveCodeByEmail(email, code);
 
-        //3.메일 발송
+        // 3.메일 발송
         SimpleMailMessage verificationCodeMail = new SimpleMailMessage();
         verificationCodeMail.setTo(email);
-        verificationCodeMail.setSubject("[Letzgo] 비밀번호 재설정을 위한 인증코드입니다.");
+        verificationCodeMail.setSubject("[Loopin] 비밀번호 재설정을 위한 인증코드입니다.");
         verificationCodeMail.setText("비밀번호 재설정을 위한 인증코드는 " + code + " 입니다.\n만료기간(10분) 전에 입력해주세요.");
         javaMailSender.send(verificationCodeMail);
         return true;
@@ -44,10 +44,10 @@ public class FindPasswordServiceImpl {
 
     // 이메일 인증코드 인증 (비밀번호 찾기)
     public String verifyEmailVerificationCode(String email, int verificationCode) {
-        //인증코드 조회
+        // 인증코드 조회
         int storedCode = redisVerificationCodeService.getCodeByEmail(email);
         if(storedCode == verificationCode) {
-            //인증코드 맞을시 비밀번호 재설정용 토큰리턴
+            // 인증코드 맞을시 비밀번호 재설정용 토큰 리턴
             redisVerificationCodeService.deleteCodeByEmail(email);
             String token = redisVerificationCodeService.generateAndStoreResetToken(email);
             return token;
@@ -55,10 +55,10 @@ public class FindPasswordServiceImpl {
         return "INVALID_CODE";
     }
 
-    //비밀번호 재설정
+    // 비밀번호 재설정
     @Transactional
     public boolean resetPassword(String email, String token, String newPassword) {
-        //토큰 일치확인
+        // 토큰 일치 확인
         if (redisVerificationCodeService.checkResetToken(email, token)) {
             Optional<Member> member = memberRepository.findByEmail(email);
             member.ifPresent(m->m.setPassword(passwordEncoder.encode(newPassword)));
