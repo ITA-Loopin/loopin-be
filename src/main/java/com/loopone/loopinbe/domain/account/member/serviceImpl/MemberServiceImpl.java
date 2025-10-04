@@ -57,12 +57,11 @@ public class MemberServiceImpl implements MemberService {
         if (memberRepository.existsByEmail((memberCreateRequest.getEmail()))) {
             throw new RuntimeException("이미 존재하는 이메일입니다.");
         }
-        String nickname = generateUniqueNickname(memberCreateRequest.getNickname());
 //        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
 //                .password(encodedPassword)
-                .nickname(nickname)
+                .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())// 인코딩된 비밀번호 저장
 //                .gender(memberCreateRequest.getGender())
 //                .birthday(memberCreateRequest.getBirthday())
@@ -78,10 +77,9 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public Member socialSignUp(MemberCreateRequest memberCreateRequest) {
-        String nickname = generateUniqueNickname(memberCreateRequest.getNickname());
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
-                .nickname(nickname)
+                .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())
 //                .gender(memberCreateRequest.getGender())
 //                .birthday(memberCreateRequest.getBirthday())
@@ -298,16 +296,5 @@ public class MemberServiceImpl implements MemberService {
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }
-    }
-
-    private String generateUniqueNickname(String baseName) {
-        String base = (baseName != null && !baseName.isBlank()) ? baseName : "Looper";
-        String nickname;
-        do {
-            String tag = String.format("%06d", new Random().nextInt(1_000_000));
-            // 000000 ~ 999999 (6자리 고정 숫자)
-            nickname = base + "#" + tag; // 예: Looper#123456
-        } while (memberRepository.existsByNickname(nickname));
-        return nickname;
     }
 }
