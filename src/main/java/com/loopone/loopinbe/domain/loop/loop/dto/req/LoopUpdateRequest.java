@@ -2,7 +2,6 @@ package com.loopone.loopinbe.domain.loop.loop.dto.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
