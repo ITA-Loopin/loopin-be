@@ -29,13 +29,16 @@ public class Loop extends BaseEntity {
     private String title; //루프 제목
 
     @Column(nullable = false)
-    private LocalDate loopDate;
+    private LocalDate loopDate; //루프 날짜
 
     @Column(length = 500)
     private String content; //루프 설명 (메모 또는 부가정보)
 
     @OneToMany(mappedBy = "loop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LoopChecklist> loopChecklists = new ArrayList<>();
+
+    @Column(nullable = false)
+    private String loopGroup; //함께 생성된 루프 그룹핑
 
     //연관관계 편의 메서드
     public void addChecklist(LoopChecklist checklist) {
