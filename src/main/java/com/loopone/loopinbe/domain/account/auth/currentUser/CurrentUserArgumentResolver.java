@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.domain.account.auth.currentUser;
 
-import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
@@ -19,7 +19,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @RequiredArgsConstructor
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
     private final MemberRepository memberRepository;
-    private final MemberMapper memberMapper;
+    private final MemberConverter memberConverter;
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
@@ -35,7 +35,7 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
             String email = securityUser.getUsername(); // UserDetails의 getUsername()은 이메일을 반환
 
             return memberRepository.findByEmail(email)
-                    .map(memberMapper::toCurrentUserDto)
+                    .map(memberConverter::toCurrentUserDto)
                     .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         }
         return null;
