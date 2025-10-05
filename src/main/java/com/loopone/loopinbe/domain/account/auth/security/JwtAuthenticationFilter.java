@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
@@ -39,8 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/rest-api/v1/oauth2")
-                || path.startsWith("/find-password")
-                || path.startsWith("/api/v1/health-check");
+                || path.startsWith("/rest-api/v1/find-password")
+                || path.startsWith("/api/v1/health-check")
+                || (path.equals("/rest-api/v1/member") && "POST".equalsIgnoreCase(method));
     }
 
     @Override
@@ -53,12 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             responseUnauthorized(response, "인증 실패");
             return;
         }
-
         boolean decodingSuccess = false;
-
         String email = "";
         try {
-            if (!jwtTokenProvider.validateToken(token)) {
+            if (!jwtTokenProvider.validateAccessToken(token)) {
                 log.warn("토큰이 유효하지 않습니다.");
                 responseUnauthorized(response, "유효하지 않은 Access Token 입니다.");
                 return;

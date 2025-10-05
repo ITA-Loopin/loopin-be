@@ -42,11 +42,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/rest-api/v1/auth/login",
-                                "/swagger-ui",
-                                "/v3/api-docs",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
                                 "/rest-api/v1/oauth2/**",
-                                "/find-password/**",
-                                "/api/v1/health-check").permitAll()
+                                "/rest-api/v1/find-password/**",
+                                "/api/v1/health-check",
+                                "/ws/**",
+                                "/rest-api/v1/member/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -72,16 +74,12 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:5173",
+        configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:8080",
-                "http://localhost:19006",
-                "https://www.letzgo.site",
-                "https://letzgo.site"
+                "https://*.letzgo.site"
         ));
-        configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTION"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
+        configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"));
+        configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true); // 쿠키 허용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
