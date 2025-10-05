@@ -162,6 +162,7 @@ volumes:
   redis-data:
   redpanda-data:
   postgres-data:
+  mongo_data:
   grafana-storage:
 
 networks:
