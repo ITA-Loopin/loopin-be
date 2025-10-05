@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Random;
 
 @Slf4j
@@ -183,7 +184,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void followReq(Long memberId, CurrentUserDto currentUser){
-        if (memberId == currentUser.id()) {
+        if (Objects.equals(memberId, currentUser.id())) {
             throw new ServiceException(ReturnCode.CANNOT_FOLLOW_SELF);
         }
         Member followReq = memberConverter.toMember(currentUser);
