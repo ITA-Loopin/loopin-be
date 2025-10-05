@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         boolean decodingSuccess = false;
         String email = "";
         try {
-            if (!jwtTokenProvider.validateToken(token)) {
+            if (!jwtTokenProvider.validateAccessToken(token)) {
                 log.warn("토큰이 유효하지 않습니다.");
                 responseUnauthorized(response, "유효하지 않은 Access Token 입니다.");
                 return;

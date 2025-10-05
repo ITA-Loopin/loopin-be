@@ -42,8 +42,8 @@ public class AuthServiceImpl implements AuthService {
         if (!isSocialLogin && !passwordEncoder.matches(loginRequest.getPassword(), member.getPassword())) {
             throw new RuntimeException("비밀번호가 올바르지 않습니다.");
         }
-        String accessToken = jwtTokenProvider.generateToken(member.getEmail(), accessTokenExpiration);
-        String refreshToken = jwtTokenProvider.generateToken(member.getEmail(), refreshTokenExpiration);
+        String accessToken = jwtTokenProvider.generateToken(member.getEmail(), "ACCESS",accessTokenExpiration);
+        String refreshToken = jwtTokenProvider.generateToken(member.getEmail(), "REFRESH",refreshTokenExpiration);
         // Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(member.getId().toString(), refreshToken, refreshTokenExpiration);
         return new LoginResponse(accessToken, refreshToken);
@@ -68,11 +68,11 @@ public class AuthServiceImpl implements AuthService {
         if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("유효하지 않은 리프레시 토큰입니다.");
         }
-        if (!jwtTokenProvider.validateToken(storedRefreshToken)) {
+        if (!jwtTokenProvider.validateRefreshToken(storedRefreshToken)) {
             throw new RuntimeException("리프레시 토큰이 만료되었습니다.");
         }
         String email = jwtTokenProvider.getEmailFromToken(storedRefreshToken);
-        String newAccessToken = jwtTokenProvider.generateToken(email, accessTokenExpiration);
+        String newAccessToken = jwtTokenProvider.generateToken(email, "ACCESS", accessTokenExpiration);
 
         return new LoginResponse(newAccessToken, storedRefreshToken);
     }

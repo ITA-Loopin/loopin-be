@@ -31,29 +31,4 @@ public interface MemberConverter {
     // ---------- LoginUserDto <-> Member ----------
     Member toMember(CurrentUserDto source);
     CurrentUserDto toCurrentUserDto(Member source);
-
-    // ---------- List 단위 매핑(팔로우/요청) ----------
-    @Named("toFollowingMembers")
-    default List<SimpleMemberResponse> toFollowingMembers(List<MemberFollow> list, @Context SimpleMemberMapper mapper) {
-        return list == null ? List.of() :
-                list.stream().map(mapper::toFollowingMember).collect(Collectors.toList());
-    }
-
-    @Named("toFollowerMembers")
-    default List<SimpleMemberResponse> toFollowerMembers(List<MemberFollow> list, @Context SimpleMemberMapper mapper) {
-        return list == null ? List.of() :
-                list.stream().map(mapper::toFollowerMember).collect(Collectors.toList());
-    }
-
-    @Named("toSimpleMembersFromFollowReqs")
-    default List<SimpleMemberResponse> toSimpleMembersFromFollowReqs(List<MemberFollowReq> list, @Context SimpleMemberMapper mapper) {
-        return list == null ? List.of() :
-                list.stream().map(mapper::toSimpleMemberFromFollowReq).collect(Collectors.toList());
-    }
-
-    @Named("toSimpleMembersFromFollowRecs")
-    default List<SimpleMemberResponse> toSimpleMembersFromFollowRecs(List<MemberFollowReq> list, @Context SimpleMemberMapper mapper) {
-        return list == null ? List.of() :
-                list.stream().map(mapper::toSimpleMemberFromFollowRec).collect(Collectors.toList());
-    }
 }

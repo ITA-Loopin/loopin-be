@@ -114,6 +114,7 @@ public enum ReturnCode {
     ALREADY_FOLLOW(409, "FOLLOW_003", "이미 팔로우 중인 사용자입니다."),
     FOLLOWER_NOT_FOUND(404, "FOLLOW_004", "팔로워를 찾을 수 없습니다."),
     FOLLOW_NOT_FOUND(404, "FOLLOW_005", "팔로우한 사용자를 찾을 수 없습니다."),
+    CANNOT_FOLLOW_SELF(404, "FOLLOW_006", "자기 자신을 팔로우 할 수 없습니다."),
 
     // Notification
     NOTIFICATION_NOT_FOUND(404, "NOTIFICATION_001", "해당 알림을 찾을 수 없습니다."),

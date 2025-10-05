@@ -18,7 +18,7 @@ import java.time.LocalDate;
 public class MemberCreateRequest {
     @NotBlank String email;
 //    @NotBlank(groups = RegularSignUp.class)
-//    String password;    // 일반 회원가입 때만 필수
+    String password;    // 일반 회원가입 때만 필수
     String nickname;
 //    String phone;
 //    Member.Gender gender;

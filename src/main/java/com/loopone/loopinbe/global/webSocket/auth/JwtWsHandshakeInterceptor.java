@@ -33,7 +33,7 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
         try {
             // 1) 토큰 추출 (Authorization: Bearer, or ?token=)
             String token = resolveToken(request);
-            if (token == null || !jwtTokenProvider.validateToken(token)) {
+            if (token == null || !jwtTokenProvider.validateAccessToken(token)) {
                 log.warn("[WS] invalid or missing token");
                 setUnauthorized(response);
                 return false;

@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/rest-api/v1/notification")
 @RequiredArgsConstructor
-@Tag(name = "FCM", description = "FCM API")
+@Tag(name = "Notification", description = "알림 API")
 public class NotificationController {
     private final NotificationService notificationService;
 

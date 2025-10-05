@@ -20,40 +20,54 @@ public interface SimpleMemberMapper {
     @Mapping(target = "profileImageUrl", source = "member.profileImageUrl")
     SimpleMemberResponse toSimpleMemberResponse(ChatRoomMember member);
 
+    // MemberFollow.follow -> SimpleMemberResponse (내가 '팔로잉'하는 사람)
     @Named("toFollowingMember")
-    SimpleMemberResponse toFollowingMember(MemberFollow mf); // mf.getFollowed() -> SimpleMemberResponse
+    @Mapping(target = "userId", source = "follow.id")
+    @Mapping(target = "userNickname", source = "follow.nickname")
+    @Mapping(target = "profileImageUrl", source = "follow.profileImageUrl")
+    SimpleMemberResponse toFollowerMember(MemberFollow mf);
 
+    // MemberFollow.followed -> SimpleMemberResponse (나를 '팔로우'하는 사람)
     @Named("toFollowerMember")
-    SimpleMemberResponse toFollowerMember(MemberFollow mf);  // mf.getFollow() -> SimpleMemberResponse
+    @Mapping(target = "userId", source = "followed.id")
+    @Mapping(target = "userNickname", source = "followed.nickname")
+    @Mapping(target = "profileImageUrl", source = "followed.profileImageUrl")
+    SimpleMemberResponse toFollowingMember(MemberFollow mf);
 
+    // MemberFollowReq.followReq -> SimpleMemberResponse (내가 팔로우 요청 보낸 대상)
     @Named("toSimpleMemberFromFollowReq")
+    @Mapping(target = "userId", source = "followRec.id")
+    @Mapping(target = "userNickname", source = "followRec.nickname")
+    @Mapping(target = "profileImageUrl", source = "followRec.profileImageUrl")
     SimpleMemberResponse toSimpleMemberFromFollowReq(MemberFollowReq req);
 
+    // MemberFollowReq.followRec -> SimpleMemberResponse (나한테 팔로우 요청한 사람)
     @Named("toSimpleMemberFromFollowRec")
+    @Mapping(target = "userId", source = "followReq.id")
+    @Mapping(target = "userNickname", source = "followReq.nickname")
+    @Mapping(target = "profileImageUrl", source = "followReq.profileImageUrl")
     SimpleMemberResponse toSimpleMemberFromFollowRec(MemberFollowReq req);
 
-    // ---------- MemberFollow.follow → SimpleMemberResponse ----------
+    // ---------- List 변환 ----------
+
     @Named("toFollowingMembers")
     default List<SimpleMemberResponse> toFollowingMembers(List<MemberFollow> list) {
         if (list == null) return List.of();
         return list.stream().map(this::toFollowingMember).toList();
     }
 
-    // ---------- MemberFollow.followed → SimpleMemberResponse ----------
     @Named("toFollowerMembers")
     default List<SimpleMemberResponse> toFollowerMembers(List<MemberFollow> list) {
         if (list == null) return List.of();
         return list.stream().map(this::toFollowerMember).toList();
     }
 
-    // ---------- MemberFollowReq.followReq → SimpleMemberResponse ----------
     @Named("toSimpleMembersFromFollowReqs")
     default List<SimpleMemberResponse> toSimpleMembersFromFollowReqs(List<MemberFollowReq> list) {
         if (list == null) return List.of();
         return list.stream().map(this::toSimpleMemberFromFollowReq).toList();
     }
 
-    // ---------- MemberFollowReq.followRec → SimpleMemberResponse ----------
     @Named("toSimpleMembersFromFollowRecs")
     default List<SimpleMemberResponse> toSimpleMembersFromFollowRecs(List<MemberFollowReq> list) {
         if (list == null) return List.of();

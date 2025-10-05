@@ -47,8 +47,7 @@ frontend:
   oauth-redirect: https://www.letzgo.site/login
 
 fcm:
-  service-account-file: file:/app/fcm-private-key.json
-  project-id: 30409426097
+  service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
 
 logging:
   level:

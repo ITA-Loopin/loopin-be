@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Random;
 
 @Slf4j
@@ -57,10 +58,10 @@ public class MemberServiceImpl implements MemberService {
         if (memberRepository.existsByEmail((memberCreateRequest.getEmail()))) {
             throw new RuntimeException("이미 존재하는 이메일입니다.");
         }
-//        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
+        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
-//                .password(encodedPassword)
+                .password(encodedPassword)
                 .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())// 인코딩된 비밀번호 저장
 //                .gender(memberCreateRequest.getGender())
@@ -77,6 +78,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public Member socialSignUp(MemberCreateRequest memberCreateRequest) {
+        // nickname 검증 필요
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
                 .nickname(memberCreateRequest.getNickname())
@@ -150,7 +152,7 @@ public class MemberServiceImpl implements MemberService {
             if (imageUrl != null && !imageUrl.isEmpty()) s3Service.deleteFile(imageUrl); // 기존 이미지 삭제
             imageUrl = null;
         }
-        member.update(memberUpdateRequest, imageUrl, passwordEncoder);
+        member.update(memberUpdateRequest, imageUrl, null);
     }
 
     // 회원탈퇴
@@ -171,9 +173,9 @@ public class MemberServiceImpl implements MemberService {
     // 회원 검색하기
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword){
+    public PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
-        Page<MemberResponse> members = memberRepository.findByKeyword(pageable, keyword);
+        Page<MemberResponse> members = memberRepository.findByKeyword(pageable, keyword, currentUser.id());
         return PageResponse.of(members);
     }
 
@@ -181,6 +183,9 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void followReq(Long memberId, CurrentUserDto currentUser){
+        if (memberId == currentUser.id()) {
+            throw new ServiceException(ReturnCode.CANNOT_FOLLOW_SELF);
+        }
         Member followReq = memberConverter.toMember(currentUser);
         Member followRec = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
@@ -208,6 +213,7 @@ public class MemberServiceImpl implements MemberService {
                 .objectId(memberFollowReq.getId())
                 .content("님이 팔로우를 요청하였습니다.")
                 .targetObject(Notification.TargetObject.Follow)
+                .createdAt(LocalDateTime.now())
                 .build();
         notificationEventPublisher.publishFollowRequest(notification);
     }
@@ -248,6 +254,7 @@ public class MemberServiceImpl implements MemberService {
                 .objectId(memberFollow.getId())
                 .content("님이 팔로우 요청을 수락하였습니다.")
                 .targetObject(Notification.TargetObject.Follow)
+                .createdAt(LocalDateTime.now())
                 .build();
         notificationEventPublisher.publishFollowRequest(notification);
     }
