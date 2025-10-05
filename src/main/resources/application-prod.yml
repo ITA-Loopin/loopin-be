@@ -16,6 +16,9 @@ spring:
     redis:
       host: loopin-redis
       port: 6379
+    mongodb:
+      uri: mongodb://admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:27017/meta_db?authSource=admin
+      database: meta_db
   kafka:
     bootstrap-servers: loopin-redpanda:9092
 
@@ -44,23 +47,7 @@ frontend:
   oauth-redirect: https://www.letzgo.site/login
 
 fcm:
-  service-account-file: file:/app/fcm-private-key.json
-  project-id: 30409426097
-
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui
-    config-url: /v3/api-docs/swagger-config
-    url: /v3/api-docs
-    groups-order: DESC
-    operations-sorter: method
-    tags-sorter: alpha
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
+  service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
 
 logging:
   level:

@@ -46,3 +46,18 @@ mail:
         timeout: 5000
         write-timeout: 5000
   code-expiration-millis: 600000  #코드 만료기간: 10분
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+    config-url: /v3/api-docs/swagger-config
+    url: /v3/api-docs
+    groups-order: DESC
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

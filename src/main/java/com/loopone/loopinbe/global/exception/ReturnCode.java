@@ -102,9 +102,11 @@ public enum ReturnCode {
     COMMENT_NOT_FOUND(404, "COMMENT_001", "댓글을 찾을 수 없습니다."),
     COMMENT_ALREADY_LIKED(409, "COMMENT_002", "이미 좋아요를 누른 댓글입니다."),
 
-    // Goal
-    MAIN_GOAL_NOT_FOUND(404, "GOAL_001", "상위목표를 찾을 수 없습니다."),
-    SUB_GOAL_NOT_FOUND(404, "GOAL_002", "하위목표를 찾을 수 없습니다."),
+    // Loop
+    LOOP_NOT_FOUND(404, "LOOP_001", "루프를 찾을 수 없습니다."),
+    CHECK_LIST_NOT_FOUND(404, "LOOP_002", "체크리스트를 찾을 수 없습니다."),
+    LOOP_ACCESS_DENIED(403, "LOOP_003", "해당 루프에 대한 권한이 없습니다."),
+    CHECKLIST_ACCESS_DENIED(403, "LOOP_004", "해당 체크리스트에 대한 권한이 없습니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
@@ -112,6 +114,7 @@ public enum ReturnCode {
     ALREADY_FOLLOW(409, "FOLLOW_003", "이미 팔로우 중인 사용자입니다."),
     FOLLOWER_NOT_FOUND(404, "FOLLOW_004", "팔로워를 찾을 수 없습니다."),
     FOLLOW_NOT_FOUND(404, "FOLLOW_005", "팔로우한 사용자를 찾을 수 없습니다."),
+    CANNOT_FOLLOW_SELF(404, "FOLLOW_006", "자기 자신을 팔로우 할 수 없습니다."),
 
     // Notification
     NOTIFICATION_NOT_FOUND(404, "NOTIFICATION_001", "해당 알림을 찾을 수 없습니다."),

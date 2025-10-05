@@ -3,16 +3,20 @@ package com.loopone.loopinbe.domain.account.auth.controller;
 import com.loopone.loopinbe.domain.account.auth.serviceImpl.FindPasswordServiceImpl;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/find-password")
+@RequestMapping("/rest-api/v1/find-password")
+@Tag(name = "FindPassword", description = "비밀번호 찾기 API")
 public class FindPasswordController {
     private final FindPasswordServiceImpl findPasswordService;
 
     // 이메일 인증코드 전송
+    @Operation(summary = "이메일 인증코드 전송", description = "이메일 인증코드를 전송합니다.")
     @GetMapping("/send-code/email")
     public ApiResponse<Void> sendCodeToEmail(@RequestParam("email") String email) {
         boolean result = findPasswordService.sendEmailVerificationCode(email);
@@ -22,6 +26,7 @@ public class FindPasswordController {
     }
 
     // 이메일 인증코드 인증
+    @Operation(summary = "이메일 인증코드 인증", description = "이메일 인증코드를 인증합니다.")
     @GetMapping("/verify-code")
     public ApiResponse<String> verifyCodeByEmail(@RequestParam("email") String email, @RequestParam("code") Integer code) {
         String token = findPasswordService.verifyEmailVerificationCode(email, code);
@@ -31,6 +36,7 @@ public class FindPasswordController {
     }
 
     // 비밀번호 초기화
+    @Operation(summary = "비밀번호 초기화", description = "비밀번호를 초기화합니다.")
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@RequestParam("email") String email,
                                              @RequestParam("token") String token,

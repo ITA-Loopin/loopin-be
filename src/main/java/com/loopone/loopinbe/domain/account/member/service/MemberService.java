@@ -1,7 +1,8 @@
 package com.loopone.loopinbe.domain.account.member.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.dto.req.MemberRequest;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
@@ -10,8 +11,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface MemberService {
-    // 회원가입
-    Member signup(MemberRequest memberRequest);
+    // 일반 회원가입
+    Member regularSignUp(MemberCreateRequest memberCreateRequest);
+
+    // 소셜 회원가입
+    Member socialSignUp(MemberCreateRequest memberCreateRequest);
 
     // 본인 회원정보 조회
     MemberResponse getMyInfo(CurrentUserDto currentUser);
@@ -26,13 +30,13 @@ public interface MemberService {
     DetailMemberResponse getDetailMemberInfo(Long memberId);
 
     // 회원정보 수정
-    void updateMember(MemberRequest memberRequest, MultipartFile imageFile, CurrentUserDto currentUser);
+    void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser);
 
     // 회원탈퇴
     void deleteMember(CurrentUserDto currentUser);
 
     // 회원 검색하기
-    PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword);
+    PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword,  CurrentUserDto currentUser);
 
     // 팔로우 요청하기
     void followReq(Long memberId, CurrentUserDto currentUser);

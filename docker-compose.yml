@@ -13,6 +13,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  mongodb:
+    image: mongo:latest
+    container_name: loopin-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: meta_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   redis:
     image: redis:latest
     container_name: loopin-redis
@@ -62,6 +75,7 @@ services:
 
 volumes:
   postgres_data:
+  mongo_data:
   redis_data:
   redpanda_data:
 
@@ -85,6 +99,21 @@ volumes:
 #      timeout: 3s
 #      retries: 5
 #      start_period: 3s
+#    networks:
+#      - loopin-backend
+#
+#  mongodb:
+#    image: mongo:latest
+#    container_name: loopin-mongodb
+#    restart: always
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: loopinAdmin
+#      MONGO_INITDB_ROOT_PASSWORD: loopinAdmin0906
+#      MONGO_INITDB_DATABASE: meta_db
+#    ports:
+#      - "27017:27017"
+#    volumes:
+#      - mongo_data:/data/db
 #    networks:
 #      - loopin-backend
 #
