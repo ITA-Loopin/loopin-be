@@ -6,11 +6,12 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
-@Schema(description = "단일 루프의 수정을 위한 요청 DTO")
-public record LoopUpdateRequest(
+@Schema(description = "루프 그룹 전체의 수정을 위한 요청 DTO")
+public record LoopGroupUpdateRequest(
         String title,
         String content,
-        LocalDate loopDate,
+        List<DayOfWeek> daysOfWeek,
+        LocalDate startDate,
+        LocalDate endDate,
         List<String> checklists
 ) {}
-
