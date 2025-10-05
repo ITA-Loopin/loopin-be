@@ -24,7 +24,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
     private final LoopChecklistRepository LoopChecklistRepository;
     private final LoopRepository loopRepository;
 
-    // 체크리스트 생성
+    //체크리스트 생성
     @Override
     @Transactional
     public void addLoopChecklist(Long loopId, LoopChecklistCreateRequest loopChecklistCreateRequest, CurrentUserDto currentUser){
