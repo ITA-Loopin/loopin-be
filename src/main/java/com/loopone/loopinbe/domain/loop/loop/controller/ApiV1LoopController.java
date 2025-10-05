@@ -10,6 +10,7 @@ import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,20 +21,20 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(value="/rest-api/v1/loop")
+@RequestMapping(value="/rest-api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Loop", description = "루프 API")
 public class ApiV1LoopController {
     private final LoopService loopService;
 
-    // 루프 생성
-    @PostMapping
-    @Operation(summary = "루프 생성")
+    //루프 생성
+    @PostMapping("/loops")
+    @Operation(summary = "루프 생성", description = "새로운 루프를 생성합니다.")
     public ApiResponse<Void> addLoop(
             @RequestBody @Valid LoopCreateRequest loopCreateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopService.addLoop(loopCreateRequest, currentUser);
+        loopService.createLoop(loopCreateRequest, currentUser);
         return ApiResponse.success();
     }
 
@@ -41,9 +42,9 @@ public class ApiV1LoopController {
 
     //TODO: 루프 날짜별 리스트 조회 API 구현
 
-    // 루프 전체 리스트 조회
-    @GetMapping
-    @Operation(summary = "루프 리스트 조회")
+    //루프 전체 리스트 조회
+    @GetMapping("/loops")
+    @Operation(summary = "루프 리스트 조회", description = "사용자가 생성한 모든 루프를 조회합니다.")
     public ApiResponse<List<LoopSimpleResponse>> getAllLoop(
             @ModelAttribute LoopPage loopPage,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
@@ -52,9 +53,9 @@ public class ApiV1LoopController {
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
     }
 
-    // 루프 수정
-    @PutMapping("/{loopId}")
-    @Operation(summary = "루프 수정")
+    //단일 루프 수정
+    @PutMapping("/loops/{loopId}")
+    @Operation(summary = "단일 루프 수정", description = "해당 루프의 정보를 수정합니다. (그룹에서 제외됨)")
     public ApiResponse<Void> updateLoop(
             @PathVariable("loopId") Long loopId,
             @RequestBody @Valid LoopUpdateRequest loopUpdateRequest,
@@ -64,9 +65,11 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    // 루프 삭제
-    @DeleteMapping("/{loopId}")
-    @Operation(summary = "루프 삭제")
+    //TODO: 그룹 전체 루프 수정 API 구현
+
+    //루프 삭제
+    @DeleteMapping("/loops/{loopId}")
+    @Operation(summary = "루프 삭제", description = "해당 루프를 삭제합니다.")
     public ApiResponse<Void> deleteLoop(
             @PathVariable("loopId") Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
@@ -74,4 +77,6 @@ public class ApiV1LoopController {
         loopService.deleteLoop(loopId, currentUser);
         return ApiResponse.success();
     }
+
+    //TODO: 그룹 전체 루프 삭제 API 구현
 }
