@@ -26,8 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -39,29 +41,44 @@ public class LoopServiceImpl implements LoopService {
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
 
-    // 루프 생성
+    //루프 생성
     @Override
     @Transactional
-    public void addLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser){
-        Loop loop = Loop.builder()
-                .member(memberConverter.toMember(currentUser))
-                .title(loopCreateRequest.title())
-                .content(loopCreateRequest.content())
-                .loopDate(loopCreateRequest.loopDate())
-                .build();
+    public void createLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser){
+        //시작일, 종료일 설정 (종료일 미입력 시, 시작일의 1년 후)
+        LocalDate start = loopCreateRequest.startDate();
+        LocalDate end = (loopCreateRequest.endDate() == null) ? start.plusYears(1) : loopCreateRequest.endDate();
 
-/*        // 요청받은 checklist 내용으로 LoopChecklist 엔티티 생성 및 연관관계 설정
-        if (loopCreateRequest.getChecklists() != null) {
-            for (String checklistContent : loopCreateRequest.getChecklists()) {
-                LoopChecklist checklist = LoopChecklist.builder()
-                        .content(checklistContent)
-                        .completed(false) // 생성 시 기본값은 false
+        //고유 그룹id UUID로 생성
+        String groupId = UUID.randomUUID().toString();
+
+        List<Loop> loopToCreate = new ArrayList<>();
+
+        //오늘부터 종료일까지 반복
+        for(LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)){
+            //입력한 요일 목록에 포함되어있다면 현재 date에 루프 생성
+            if(loopCreateRequest.daysOfWeek().contains(date.getDayOfWeek())){
+                Loop loop = Loop.builder()
+                        .member(memberConverter.toMember(currentUser))
+                        .title(loopCreateRequest.title())
+                        .content(loopCreateRequest.content())
+                        .loopDate(date)
+                        .loopGroup(groupId)
                         .build();
-                loop.addChecklist(checklist); // 연관관계 편의 메서드 사용
-            }
-        }*/
 
-        loopRepository.save(loop);
+                //입력한 체크리스트가 있다면 해당 루프에 추가
+                if(loopCreateRequest.checklists() != null && !loopCreateRequest.checklists().isEmpty()){
+                    for(String cl : loopCreateRequest.checklists()){
+                        loop.addChecklist(LoopChecklist.builder().content(cl).build());
+                    }
+                }
+                loopToCreate.add(loop);
+            }
+        }
+        //만들어진 루프 DB에 저장
+        if(!loopToCreate.isEmpty()){
+            loopRepository.saveAll(loopToCreate);
+        }
     }
 
     // 루프 전체 리스트 조회

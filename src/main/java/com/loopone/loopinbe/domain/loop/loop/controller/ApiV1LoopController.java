@@ -33,7 +33,7 @@ public class ApiV1LoopController {
             @RequestBody @Valid LoopCreateRequest loopCreateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopService.addLoop(loopCreateRequest, currentUser);
+        loopService.createLoop(loopCreateRequest, currentUser);
         return ApiResponse.success();
     }
 
