@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface LoopService {
     // 루프 생성
-    void addLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser);
+    void createLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser);
 
     // 루프 전체 리스트 조회
     PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser);
