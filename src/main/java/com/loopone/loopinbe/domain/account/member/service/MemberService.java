@@ -36,7 +36,7 @@ public interface MemberService {
     void deleteMember(CurrentUserDto currentUser);
 
     // 회원 검색하기
-    PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword);
+    PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword,  CurrentUserDto currentUser);
 
     // 팔로우 요청하기
     void followReq(Long memberId, CurrentUserDto currentUser);

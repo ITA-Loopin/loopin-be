@@ -24,7 +24,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/rest-api/v1/oauth2")
 @RequiredArgsConstructor
-@Tag(name = "OAuth2", description = "소셜인증 API")
+@Tag(name = "OAuth2", description = "소셜 인증 API")
 public class OAuth2Controller {
     private final AuthService authService;
     private final OAuth2Service oAuth2Service;

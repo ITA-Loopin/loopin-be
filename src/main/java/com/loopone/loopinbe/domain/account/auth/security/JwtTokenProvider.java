@@ -26,9 +26,10 @@ public class JwtTokenProvider {
     }
 
     // JWT 생성
-    public String generateToken(String email, long expiration) {
+    public String generateToken(String email, String type, long expiration) {
         return Jwts.builder()
                 .subject(email)
+                .claim("tokenType", type)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, Jwts.SIG.HS256)  // 필드 key 사용
@@ -43,13 +44,30 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token);
     }
 
+    // ACCESS Token 검증
+    public boolean validateAccessToken(String token) {
+        return validateToken(token, "ACCESS");
+    }
+
+    // REFRESH Token 검증
+    public boolean validateRefreshToken(String token) {
+        return validateToken(token, "REFRESH");
+    }
+
     // JWT 검증
-    public boolean validateToken(String token) {
+    private boolean validateToken(String token, String expectedType) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token);
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            String tokenType = claims.get("tokenType", String.class);
+            if (!expectedType.equals(tokenType)) {
+                log.warn("토큰 타입 불일치: expected={}, actual={}", expectedType, tokenType);
+                return false;
+            }
             return true;
         } catch (ExpiredJwtException e) {
             log.warn("토큰이 만료되었습니다: {}", e.getMessage());

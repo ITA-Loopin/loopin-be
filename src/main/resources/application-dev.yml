@@ -52,7 +52,6 @@ frontend:
 
 fcm:
   service-account-file: classpath:fcm-service-account.json
-  project-id: 30409426097
 
 logging:
   level:

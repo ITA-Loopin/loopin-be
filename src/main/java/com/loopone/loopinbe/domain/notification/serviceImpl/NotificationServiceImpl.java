@@ -10,6 +10,7 @@ import com.loopone.loopinbe.domain.notification.converter.NotificationConverter;
 import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
 import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.notification.entity.NotificationPage;
 import com.loopone.loopinbe.domain.notification.repository.NotificationRepository;
 import com.loopone.loopinbe.domain.notification.service.NotificationService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
@@ -108,7 +109,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     // 요청 페이지 수 제한
     private void checkPageSize(int pageSize) {
-        int maxPageSize = MemberPage.getMaxPageSize();
+        int maxPageSize = NotificationPage.getMaxPageSize();
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }

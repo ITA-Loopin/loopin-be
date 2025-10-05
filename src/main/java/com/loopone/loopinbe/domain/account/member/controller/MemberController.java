@@ -14,8 +14,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,8 +68,8 @@ public class MemberController {
 
     // 회원정보 수정
     @Operation(summary = "회원정보 수정", description = "현재 로그인된 사용자의 회원정보를 수정합니다.")
-    @PatchMapping
-    public ApiResponse<Void> updateMemberInfo(@RequestPart(value = "memberForm") @Valid MemberUpdateRequest memberUpdateRequest,
+    @PatchMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ApiResponse<Void> updateMemberInfo(@ParameterObject @ModelAttribute MemberUpdateRequest memberUpdateRequest,
                                               @RequestPart(value = "imageFile", required = false) MultipartFile imageFile,
                                               @CurrentUser CurrentUserDto currentUser) {
         memberService.updateMember(memberUpdateRequest, imageFile, currentUser);
@@ -85,9 +87,11 @@ public class MemberController {
     // 회원 검색하기
     @Operation(summary = "회원 검색", description = "현재 로그인된 사용자가 회원을 검색합니다.(기본설정: page=0, size=15)")
     @GetMapping("/search")
-    public ApiResponse<List<MemberResponse>> searchMemberInfo(@ModelAttribute MemberPage request, @RequestParam(value = "keyword") String keyword) {
+    public ApiResponse<List<MemberResponse>> searchMemberInfo(@ModelAttribute MemberPage request,
+                                                              @RequestParam(value = "keyword") String keyword,
+                                                              @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
-        return ApiResponse.success(memberService.searchMemberInfo(pageable, keyword));
+        return ApiResponse.success(memberService.searchMemberInfo(pageable, keyword, currentUser));
     }
 
     // 팔로우 요청하기

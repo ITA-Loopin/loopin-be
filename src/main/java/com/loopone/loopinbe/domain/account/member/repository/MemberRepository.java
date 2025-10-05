@@ -36,6 +36,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             "LEFT JOIN MemberFollow f1 ON f1.follow.id = m.id " +
             "LEFT JOIN MemberFollow f2 ON f2.followed.id = m.id " +
             "WHERE m.nickname LIKE %:keyword% " +
-            "GROUP BY m.id, m.nickname, m.profileImageUrl")
-    Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword);
+            "AND m.id <> :currentUserId " +   // 본인 제외
+            "GROUP BY m.id, m.nickname, m.profileImageUrl, m.chatRoomId")
+    Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
 }
