@@ -81,59 +81,69 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-    // 루프 전체 리스트 조회
+    //루프 전체 리스트 조회
     @Override
     @Transactional(readOnly = true)
     public PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
 
-        // 1. Loop 엔티티 페이지를 DB에서 조회
+        //Loop 엔티티 페이지를 DB에서 조회
         Page<Loop> loopPage = loopRepository.findByMemberIdWithOrder(currentUser.id(), pageable);
         List<Long> loopIds = loopPage.stream().map(Loop::getId).toList();
 
-        // 2. 모든 체크리스트를 한 번에 조회해서 Map으로 그룹핑
+        //모든 체크리스트를 한 번에 조회해서 Map으로 그룹핑
         Map<Long, List<LoopChecklist>> checklistsMap = loopChecklistRepository.findByLoopIdIn(loopIds)
                 .stream()
                 .collect(Collectors.groupingBy(cl -> cl.getLoop().getId())); // Stream의 groupingBy를 사용해 한 줄로 그룹핑
 
-        // 3. 엔티티 페이지를 DTO 페이지로 직접 변환
+        //엔티티 페이지를 DTO 페이지로 직접 변환
         Page<LoopSimpleResponse> simpleDtoPage = loopPage.map(loopMapper::toSimpleResponse);
 
         return PageResponse.of(simpleDtoPage);
     }
 
-    // 루프 수정
+    //단일 루프 수정
     @Override
     @Transactional
     public void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser){
+        //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
-        // 작성자 검증 아닌 경우 예외 처리
+        //루프의 소유자가 현재 사용자인지 확인
         validateLoopOwner(loop, currentUser);
 
+        //그룹 연결 해제 (단일 수정을 하는 경우, 독립적인 루프가 되기에)
+        loop.setLoopGroup(null);
+
+        //루프 정보 수정
         if (loopUpdateRequest.title() != null) loop.setTitle(loopUpdateRequest.title());
         if (loopUpdateRequest.content() != null) loop.setContent(loopUpdateRequest.content());
         if (loopUpdateRequest.loopDate() != null) loop.setLoopDate(loopUpdateRequest.loopDate());
 
-        //TODO: 체크리스트 업데이트 로직
+        //체크리스트 수정
+        if(loopUpdateRequest.checklists() != null){
+            for(String cl : loopUpdateRequest.checklists()){
+                loop.addChecklist(LoopChecklist.builder().content(cl).build());
+            }
+        }
 
         loopRepository.save(loop);
     }
 
-    // 루프 삭제
+    //루프 삭제
     @Override
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
-        // 작성자 검증 아닌 경우 예외 처리
+        //루프의 소유자가 현재 사용자인지 확인
         validateLoopOwner(loop, currentUser);
 
         loopRepository.delete(loop);
     }
 
-    // ----------------- 헬퍼 메서드 -----------------
-    // 요청 페이지 수 제한
+    // ========== 헬퍼 메서드 ==========
+    //요청 페이지 수 제한
     private void checkPageSize(int pageSize) {
         int maxPageSize = LoopPage.getMaxPageSize();
         if (pageSize > maxPageSize) {
@@ -141,29 +151,11 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-    // 루프 작성자 검증
+    // ========== 검증 메서드 ==========
+    //루프 사용자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
-    }
-
-    // D-Day 계산 함수
-    private String calculateDDay(LocalDate deadline) {
-        if (deadline == null) {
-            return null;
-        }
-        long daysBetween = ChronoUnit.DAYS.between(LocalDate.now(), deadline);
-        if (daysBetween > 0) {
-            return "D-" + daysBetween;   // 마감일이 미래
-        } else if (daysBetween == 0) {
-            return "D-Day";              // 오늘이 마감일
-        } else {
-            return "D+" + Math.abs(daysBetween); // 마감일이 지남
-        }
-    }
-
-    private static String safe(String s) {
-        return s == null ? "" : s.replaceAll("\\s+", " ").trim();
     }
 }

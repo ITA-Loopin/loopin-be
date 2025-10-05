@@ -52,7 +52,7 @@ public class ApiV1LoopController {
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
     }
 
-    //루프 수정
+    //단일 루프 수정
     @PutMapping("/loops/{loopId}")
     @Operation(summary = "루프 수정")
     public ApiResponse<Void> updateLoop(
@@ -63,6 +63,8 @@ public class ApiV1LoopController {
         loopService.updateLoop(loopId, loopUpdateRequest, currentUser);
         return ApiResponse.success();
     }
+
+    //TODO: 그룹 전체 루프 수정 API 구현
 
     //루프 삭제
     @DeleteMapping("/loops/{loopId}")
