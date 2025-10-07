@@ -19,30 +19,30 @@ import java.util.UUID;
 @RequestMapping("/rest-api/v1/loopAI")
 @Tag(name = "LoopAI", description = "루프 AI API")
 public class ApiV1LoopAIController {
-    private final LoopAIService loopAIService;
-    private final LoopAIRequestProducer loopAIRequestProducer;
-
-    @PostMapping("")
-    @Operation(summary = "AI 루프 생성")
-    public ApiResponse<String> chat(
-            @RequestParam String prompt,
-            @CurrentUser CurrentUserDto user
-    ) {
-        String requestId = UUID.randomUUID().toString();
-
-        loopAIRequestProducer.sendRequest(requestId, prompt);
-
-        return ApiResponse.success(requestId);
-    }
-
-    @GetMapping("")
-    @Operation(summary = "AI 불러오기")
-    public ApiResponse<String> getResult(
-            @RequestParam String requestId,
-            @CurrentUser CurrentUserDto user
-    ) {
-        String result = loopAIService.getAIResult(requestId);
-
-        return ApiResponse.success(result);
-    }
+//    private final LoopAIService loopAIService;
+//    private final LoopAIRequestProducer loopAIRequestProducer;
+//
+//    @PostMapping("")
+//    @Operation(summary = "AI 루프 생성")
+//    public ApiResponse<String> chat(
+//            @RequestParam String prompt,
+//            @CurrentUser CurrentUserDto user
+//    ) {
+//        String requestId = UUID.randomUUID().toString();
+//
+//        loopAIRequestProducer.sendRequest(requestId, prompt);
+//
+//        return ApiResponse.success(requestId);
+//    }
+//
+//    @GetMapping("")
+//    @Operation(summary = "AI 불러오기")
+//    public ApiResponse<String> getResult(
+//            @RequestParam String requestId,
+//            @CurrentUser CurrentUserDto user
+//    ) {
+//        String result = loopAIService.getAIResult(requestId);
+//
+//        return ApiResponse.success(result);
+//    }
 }
