@@ -46,6 +46,7 @@ public class ChatMessageEventListener {
                     .chatRoomId(saved.chatRoomId())
                     .memberId(saved.memberId())
                     .content(saved.content())
+                    .authorType(saved.authorType())
                     .createdAt(saved.createdAt() != null
                             ? saved.createdAt().atZone(java.time.ZoneOffset.UTC).toLocalDateTime()
                             : null)
