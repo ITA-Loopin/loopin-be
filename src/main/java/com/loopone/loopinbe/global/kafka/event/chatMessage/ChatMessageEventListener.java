@@ -48,7 +48,7 @@ public class ChatMessageEventListener {
                     .content(saved.content())
                     .authorType(saved.authorType())
                     .createdAt(saved.createdAt() != null
-                            ? saved.createdAt().atZone(java.time.ZoneOffset.UTC).toLocalDateTime()
+                            ? saved.createdAt()
                             : null)
                     .build();
             ChatWebSocketPayload out = ChatWebSocketPayload.builder()
