@@ -32,7 +32,7 @@ public class AiEventListener {
             AiRequestPayload req = objectMapper.readValue(rec.value(), AiRequestPayload.class);
 
             // 1) 프롬프트 구성 + LLM 호출
-            String loopRecommend = "---------- NeedToCallService -----------";
+            String loopRecommend = loopAIService.chat(req);
 
             // 2) 여기서 AI 답변용 ChatInboundMessagePayload 생성
             ChatInboundMessagePayload botInbound = new ChatInboundMessagePayload(
