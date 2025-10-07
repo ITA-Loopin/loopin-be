@@ -131,8 +131,11 @@ public enum ReturnCode {
 
     // ELK Search
     DATA_CONVERSION_ERROR(500, "SEARCH_001", "데이터 변환 중 오류가 발생했습니다."),
-    SEARCH_POST_ERROR(500, "SEARCH_002", "엘라스틱 서치 검색 중 에러 발생");
+    SEARCH_POST_ERROR(500, "SEARCH_002", "엘라스틱 서치 검색 중 에러 발생"),
 
+    // Kafka
+    KAFKA_SEND_ERROR(500, "KAFKA_001", "카프카 전송 중 오류가 발생했습니다."),
+    ;
     private final int status;
     private final String code;
     private final String message;
