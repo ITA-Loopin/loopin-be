@@ -17,6 +17,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import static com.loopone.loopinbe.global.constants.KafkaKey.*;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,9 +29,9 @@ public class ChatMessageEventListener {
     private final AiEventPublisher aiEventPublisher;
 
     @KafkaListener(
-            topics = "send-message-topic",
-            groupId = "chat-group",
-            containerFactory = "kafkaListenerContainerFactory"
+            topics = SEND_MESSAGE_TOPIC,
+            groupId = CHAT_GROUP_ID,
+            containerFactory = KAFKA_LISTENER_CONTAINER
     )
     public void consume(ConsumerRecord<String, String> record) {
         try {

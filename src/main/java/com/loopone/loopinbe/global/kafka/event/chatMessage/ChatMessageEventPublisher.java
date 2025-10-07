@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import static com.loopone.loopinbe.global.constants.KafkaKey.SEND_MESSAGE_TOPIC;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -19,7 +21,7 @@ public class ChatMessageEventPublisher {
     public void publishInbound(ChatInboundMessagePayload payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
-            kafkaTemplate.send("send-message-topic", String.valueOf(payload.chatRoomId()), json); // key=roomId(순서보장)
+            kafkaTemplate.send(SEND_MESSAGE_TOPIC, String.valueOf(payload.chatRoomId()), json); // key=roomId(순서보장)
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize inbound payload", e);
         }
