@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
@@ -38,8 +39,17 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 루프 상세 조회 API 구현
-    //
+    //루프 상세 조회
+    @GetMapping("/loops/{loopId}")
+    @Operation(summary = "루프 상세 조회", description = "해당 루프의 상세 정보를 조회합니다.")
+    public ApiResponse<LoopDetailResponse> getDetailLoop(
+            @PathVariable("loopId") Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        LoopDetailResponse detailLoop = loopService.getDetailLoop(loopId, currentUser);
+        return ApiResponse.success(detailLoop);
+    }
+
 
     //TODO: 루프 날짜별 리스트 조회 API 구현
 
