@@ -38,7 +38,7 @@ public class ApiV1LoopChecklistController {
     @PutMapping("/checklists/{checklistId}")
     @Operation(summary = "체크리스트 수정")
     public ApiResponse<Void> updateLoopChecklist(
-            @PathVariable("loopChecklistId") Long loopChecklistId,
+            @PathVariable("checklistId") Long loopChecklistId,
             @RequestBody @Valid LoopChecklistUpdateRequest loopChecklistUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
@@ -50,7 +50,7 @@ public class ApiV1LoopChecklistController {
     @DeleteMapping("/checklists/{checklistId}")
     @Operation(summary = "체크리스트 삭제")
     public ApiResponse<Void> deleteLoopChecklist(
-            @PathVariable("loopChecklistId") Long loopChecklistId,
+            @PathVariable("checklistId") Long loopChecklistId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopChecklistService.deleteLoopChecklist(loopChecklistId, currentUser);

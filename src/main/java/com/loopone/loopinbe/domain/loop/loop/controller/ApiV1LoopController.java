@@ -45,7 +45,7 @@ public class ApiV1LoopController {
     @GetMapping("/loops/{loopId}")
     @Operation(summary = "루프 상세 조회", description = "해당 루프의 상세 정보를 조회합니다.")
     public ApiResponse<LoopDetailResponse> getDetailLoop(
-            @PathVariable("loopId") Long loopId,
+            @PathVariable Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         LoopDetailResponse detailLoop = loopService.getDetailLoop(loopId, currentUser);
@@ -79,7 +79,7 @@ public class ApiV1LoopController {
     @PutMapping("/loops/{loopId}")
     @Operation(summary = "단일 루프 수정", description = "해당 루프의 정보를 수정합니다. (그룹에서 제외됨)")
     public ApiResponse<Void> updateLoop(
-            @PathVariable("loopId") Long loopId,
+            @PathVariable Long loopId,
             @RequestBody @Valid LoopUpdateRequest loopUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
@@ -93,7 +93,7 @@ public class ApiV1LoopController {
     @DeleteMapping("/loops/{loopId}")
     @Operation(summary = "루프 삭제", description = "해당 루프를 삭제합니다.")
     public ApiResponse<Void> deleteLoop(
-            @PathVariable("loopId") Long loopId,
+            @PathVariable Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopService.deleteLoop(loopId, currentUser);
