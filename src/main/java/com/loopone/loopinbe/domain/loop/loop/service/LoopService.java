@@ -16,10 +16,10 @@ public interface LoopService {
     void createLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser);
 
     //루프 상세 조회
-    LoopDetailResponse getDetailLoop(Long loopId, CurrentUserDto currentUserDto);
+    LoopDetailResponse getDetailLoop(Long loopId, CurrentUserDto currentUser);
 
     //날짜별 루프 리스트 조회
-    DailyLoopsResponse getDailyLoops(LocalDate date, CurrentUserDto currentUserDto);
+    DailyLoopsResponse getDailyLoops(LocalDate date, CurrentUserDto currentUser);
 
     //루프 전체 리스트 조회
     //PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser);

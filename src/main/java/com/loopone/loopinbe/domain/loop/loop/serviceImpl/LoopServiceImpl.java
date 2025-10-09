@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
@@ -94,7 +95,16 @@ public class LoopServiceImpl implements LoopService {
         return loopMapper.toDetailResponse(loop);
     }
 
-    //루프 전체 리스트 조회
+    //날짜별 루프 리스트 조회
+    @Override
+    public DailyLoopsResponse getDailyLoops(LocalDate date, CurrentUserDto currentUser) {
+        //루프 리스트 조회
+        List<Loop> DailyLoops = loopRepository.findByMemberIdAndLoopDate(currentUser.id(), date);
+
+        return loopMapper.toDailyLoopsResponse(DailyLoops);
+    }
+
+/*    //루프 전체 리스트 조회
     @Override
     @Transactional(readOnly = true)
     public PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser) {
@@ -113,7 +123,7 @@ public class LoopServiceImpl implements LoopService {
         Page<LoopSimpleResponse> simpleDtoPage = loopPage.map(loopMapper::toSimpleResponse);
 
         return PageResponse.of(simpleDtoPage);
-    }
+    }*/
 
     //단일 루프 수정
     @Override
