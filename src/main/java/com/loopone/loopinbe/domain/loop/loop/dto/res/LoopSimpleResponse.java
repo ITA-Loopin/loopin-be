@@ -11,8 +11,8 @@ public record LoopSimpleResponse (
     Long id,
     String title,
     LocalDate loopDate,
-    //double progress, //해당 루프의 진행률
-    boolean completed,
+    //double progress, //해당 루프의 체크리스트 진행률
+    boolean completed, //완료 여부
     int totalChecklists, //전체 체크리스트 개수
-    int compleatedChecklists //완료된 체크리스트 개수
+    int completedChecklists //완료된 체크리스트 개수
 ){}

@@ -14,6 +14,6 @@ public record LoopDetailResponse (
         String title,
         String content,
         LocalDate loopDate,
-        double progress, //해당 루프의 진행률
+        double progress, //해당 루프의 체크리스트 진행률
         List<LoopChecklistResponse> checklists //체크리스트 목록
 ){}
