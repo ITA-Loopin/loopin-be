@@ -4,10 +4,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
@@ -35,6 +32,7 @@ public class Loop extends BaseEntity {
     private String content; //루프 설명 (메모 또는 부가정보)
 
     @OneToMany(mappedBy = "loop", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<LoopChecklist> loopChecklists = new ArrayList<>();
 
     @Column(nullable = false)
