@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -51,9 +53,18 @@ public class ApiV1LoopController {
     }
 
 
-    //TODO: 루프 날짜별 리스트 조회 API 구현
+    //날짜별 루프 리스트 조회
+    @GetMapping("/loops/date/{loopDate}")
+    @Operation(summary = "날짜별 루프 리스트 조회", description = "해당 날짜의 루프 리스트를 조회합니다.")
+    public ApiResponse<DailyLoopsResponse> getDailyLoops(
+            @PathVariable LocalDate loopDate,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        DailyLoopsResponse dailyLoops = loopService.getDailyLoops(loopDate, currentUser);
+        return ApiResponse.success(dailyLoops);
+    }
 
-    //루프 전체 리스트 조회
+/*    //루프 전체 리스트 조회
     @GetMapping("/loops")
     @Operation(summary = "루프 리스트 조회", description = "사용자가 생성한 모든 루프를 조회합니다.")
     public ApiResponse<List<LoopSimpleResponse>> getAllLoop(
@@ -62,7 +73,7 @@ public class ApiV1LoopController {
     ){
         Pageable pageable = PageRequest.of(loopPage.getPage(), loopPage.getSize());
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
-    }
+    }*/
 
     //단일 루프 수정
     @PutMapping("/loops/{loopId}")
