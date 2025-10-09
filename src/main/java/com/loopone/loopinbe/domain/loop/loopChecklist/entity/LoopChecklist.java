@@ -3,10 +3,7 @@ package com.loopone.loopinbe.domain.loop.loopChecklist.entity;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
@@ -25,5 +22,6 @@ public class LoopChecklist extends BaseEntity {
     private String content;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean completed = false; //완료 여부 (기본값 false)
 }
