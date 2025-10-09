@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
@@ -79,6 +80,18 @@ public class LoopServiceImpl implements LoopService {
         if(!loopToCreate.isEmpty()){
             loopRepository.saveAll(loopToCreate);
         }
+    }
+
+    //루프 상세 조회
+    @Override
+    public LoopDetailResponse getDetailLoop(Long loopId, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop, currentUser);
+
+        return loopMapper.toDetailResponse(loop);
     }
 
     //루프 전체 리스트 조회
