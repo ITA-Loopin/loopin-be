@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_TOPIC;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,7 +19,7 @@ public class AiEventPublisher {
     public void publishAiRequest(AiRequestPayload payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
-            kafkaTemplate.send("ai-request-topic", String.valueOf(payload.chatRoomId()), json);
+            kafkaTemplate.send(OPEN_AI_TOPIC, String.valueOf(payload.chatRoomId()), json);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to publish AI request", e);
         }

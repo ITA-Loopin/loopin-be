@@ -3,6 +3,7 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import lombok.RequiredArgsConstructor;
@@ -11,24 +12,27 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import static com.loopone.loopinbe.global.constants.KafkaKey.*;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AiEventListener {
     private final ObjectMapper objectMapper;
     private final ChatMessageEventPublisher chatMessageEventPublisher; // send-message-topic 발행기
+    private final LoopAIService loopAIService;
 
     @KafkaListener(
-            topics = "ai-request-topic",
-            groupId = "ai-worker",
-            containerFactory = "kafkaListenerContainerFactory"
+            topics = OPEN_AI_TOPIC,
+            groupId = OPEN_AI_GROUP_ID,
+            containerFactory = KAFKA_LISTENER_CONTAINER
     )
     public void onAiRequest(ConsumerRecord<String, String> rec) {
         try {
             AiRequestPayload req = objectMapper.readValue(rec.value(), AiRequestPayload.class);
 
             // 1) 프롬프트 구성 + LLM 호출
-            String loopRecommend = "---------- NeedToCallService -----------";
+            String loopRecommend = loopAIService.chat(req);
 
             // 2) 여기서 AI 답변용 ChatInboundMessagePayload 생성
             ChatInboundMessagePayload botInbound = new ChatInboundMessagePayload(

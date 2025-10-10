@@ -22,13 +22,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(jwtWsHandshakeInterceptor)
                 .setAllowedOrigins(
-                        "http://localhost:8080", "https://www.letzgo.site","https://letzgo.site"
+                        "http://localhost:8080", "https://www.loopin.co.kr"
                 );
 
         registry.addHandler(chatRoomWebSocketHandler, "/ws/chat-room")
                 .addInterceptors(jwtWsHandshakeInterceptor)
                 .setAllowedOrigins(
-                        "http://localhost:8080", "https://www.letzgo.site","https://letzgo.site"
+                        "http://localhost:8080", "https://www.loopin.co.kr"
                 );
     }
 }
