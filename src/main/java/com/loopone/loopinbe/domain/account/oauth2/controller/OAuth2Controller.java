@@ -59,6 +59,7 @@ public class OAuth2Controller {
         } else {
             MemberCreateRequest memberCreateRequest = MemberCreateRequest.builder()
                     .email(email)
+                    .password("SOCIAL_LOGIN_USER")
                     .provider(socialUser.provider())
                     .providerId(socialUser.providerId())
                     .build();
