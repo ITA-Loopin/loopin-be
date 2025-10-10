@@ -49,6 +49,10 @@ frontend:
 fcm:
   service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
 
+openai:
+  api:
+    key: ${GPT_API_KEY}
+
 logging:
   level:
     org.springframework.web: INFO

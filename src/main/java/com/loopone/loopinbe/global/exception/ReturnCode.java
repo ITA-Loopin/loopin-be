@@ -107,6 +107,9 @@ public enum ReturnCode {
     CHECK_LIST_NOT_FOUND(404, "LOOP_002", "체크리스트를 찾을 수 없습니다."),
     LOOP_ACCESS_DENIED(403, "LOOP_003", "해당 루프에 대한 권한이 없습니다."),
     CHECKLIST_ACCESS_DENIED(403, "LOOP_004", "해당 체크리스트에 대한 권한이 없습니다."),
+    OPEN_AI_INTERNAL_ERROR(500, "LOOP_005", "OpenAI 루프 생성 중 오류가 발생했습니다."),
+    OPEN_AI_UNAUTHORIZED(401, "LOOP_006", "OpenAI 인증에 실패했습니다."),
+    OPEN_AI_RATE_LIMIT(429, "LOOP_007", "OpenAI 요청 수를 초과하였습니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
@@ -128,8 +131,11 @@ public enum ReturnCode {
 
     // ELK Search
     DATA_CONVERSION_ERROR(500, "SEARCH_001", "데이터 변환 중 오류가 발생했습니다."),
-    SEARCH_POST_ERROR(500, "SEARCH_002", "엘라스틱 서치 검색 중 에러 발생");
+    SEARCH_POST_ERROR(500, "SEARCH_002", "엘라스틱 서치 검색 중 에러 발생"),
 
+    // Kafka
+    KAFKA_SEND_ERROR(500, "KAFKA_001", "카프카 전송 중 오류가 발생했습니다."),
+    ;
     private final int status;
     private final String code;
     private final String message;

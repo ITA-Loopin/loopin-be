@@ -4,9 +4,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +12,8 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatWebSocketPayload {
     @Enumerated(EnumType.STRING)
     @Column(length = 7)

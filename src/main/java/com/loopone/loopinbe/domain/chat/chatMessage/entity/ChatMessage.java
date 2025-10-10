@@ -24,7 +24,7 @@ import java.util.List;
 @SuperBuilder
 public class ChatMessage extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_id")
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,11 +32,11 @@ public class ChatMessage extends BaseEntity {
     @JsonIgnore
     private ChatRoom chatRoom;
 
-    @Column(name = "message_key", length = 36, unique = true, nullable = false)
+    @Column(name = "message_key", length = 40, unique = true, nullable = false)
     private String messageKey;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 4, nullable = false)
+    @Column(length = 4)
     private AuthorType authorType;
     public enum AuthorType {
         USER, BOT
