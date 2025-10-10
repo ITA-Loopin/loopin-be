@@ -28,11 +28,6 @@ public class LoopAIServiceImpl implements LoopAIService {
     private final WebClient openAiWebClient;
 
     @Override
-    public String getAIResult(String requestId) {
-        return stringRedisTemplate.opsForValue().get(OPEN_AI_RESULT_KEY + requestId);
-    }
-
-    @Override
     public String chat(AiRequestPayload request) {
         log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
 
