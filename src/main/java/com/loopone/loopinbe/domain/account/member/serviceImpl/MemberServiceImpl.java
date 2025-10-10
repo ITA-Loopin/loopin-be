@@ -80,8 +80,10 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member socialSignUp(MemberCreateRequest memberCreateRequest) {
         // nickname 검증 필요
+        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
+                .password(encodedPassword)
                 .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())
 //                .gender(memberCreateRequest.getGender())
