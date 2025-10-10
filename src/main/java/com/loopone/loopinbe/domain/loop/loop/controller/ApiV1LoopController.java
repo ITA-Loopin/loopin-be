@@ -4,6 +4,8 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,11 +41,30 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 루프 상세 조회 API 구현
+    //루프 상세 조회
+    @GetMapping("/loops/{loopId}")
+    @Operation(summary = "루프 상세 조회", description = "해당 루프의 상세 정보를 조회합니다.")
+    public ApiResponse<LoopDetailResponse> getDetailLoop(
+            @PathVariable Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        LoopDetailResponse detailLoop = loopService.getDetailLoop(loopId, currentUser);
+        return ApiResponse.success(detailLoop);
+    }
 
-    //TODO: 루프 날짜별 리스트 조회 API 구현
 
-    //루프 전체 리스트 조회
+    //날짜별 루프 리스트 조회
+    @GetMapping("/loops/date/{loopDate}")
+    @Operation(summary = "날짜별 루프 리스트 조회", description = "해당 날짜의 루프 리스트를 조회합니다.")
+    public ApiResponse<DailyLoopsResponse> getDailyLoops(
+            @PathVariable LocalDate loopDate,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        DailyLoopsResponse dailyLoops = loopService.getDailyLoops(loopDate, currentUser);
+        return ApiResponse.success(dailyLoops);
+    }
+
+/*    //루프 전체 리스트 조회
     @GetMapping("/loops")
     @Operation(summary = "루프 리스트 조회", description = "사용자가 생성한 모든 루프를 조회합니다.")
     public ApiResponse<List<LoopSimpleResponse>> getAllLoop(
@@ -51,13 +73,13 @@ public class ApiV1LoopController {
     ){
         Pageable pageable = PageRequest.of(loopPage.getPage(), loopPage.getSize());
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
-    }
+    }*/
 
     //단일 루프 수정
     @PutMapping("/loops/{loopId}")
     @Operation(summary = "단일 루프 수정", description = "해당 루프의 정보를 수정합니다. (그룹에서 제외됨)")
     public ApiResponse<Void> updateLoop(
-            @PathVariable("loopId") Long loopId,
+            @PathVariable Long loopId,
             @RequestBody @Valid LoopUpdateRequest loopUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
@@ -71,7 +93,7 @@ public class ApiV1LoopController {
     @DeleteMapping("/loops/{loopId}")
     @Operation(summary = "루프 삭제", description = "해당 루프를 삭제합니다.")
     public ApiResponse<Void> deleteLoop(
-            @PathVariable("loopId") Long loopId,
+            @PathVariable Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
         loopService.deleteLoop(loopId, currentUser);
