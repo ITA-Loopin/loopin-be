@@ -125,21 +125,30 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Transactional
     public ChatMessageSavedResult processInbound(ChatInboundMessagePayload in) {
         // 1) 권한 검증 (비재시도 예외로 던지는 게 운영에 유리)
-        if (!chatRoomRepository.existsMember(in.chatRoomId(), in.memberId())) {
-            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        // BOT 메시지는 멤버 검증을 생략
+        if (in.authorType() != ChatMessage.AuthorType.BOT) {
+            if (!chatRoomRepository.existsMember(in.chatRoomId(), in.memberId())) {
+                throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+            }
         }
+
         ChatRoom roomRef = chatRoomRepository.getReferenceById(in.chatRoomId());
         // 2) RDB 멱등 저장 (message_key UNIQUE)
         ChatMessage msg = chatMessageRepository.findByMessageKey(in.messageKey())
                 .orElseGet(() -> {
                     try {
                         ChatRoom room = chatRoomRepository.getReferenceById(in.chatRoomId());
-                        Member member = memberRepository.getReferenceById(in.memberId());
+
+                        Member member = (in.authorType() == ChatMessage.AuthorType.BOT)
+                                ? null
+                                : memberRepository.getReferenceById(in.memberId());
+
                         return chatMessageRepository.save(
                                 ChatMessage.builder()
                                         .messageKey(in.messageKey())
                                         .chatRoom(room)
                                         .member(member)
+                                        .authorType(in.authorType())
                                         .build()
                         );
                     } catch (org.springframework.dao.DataIntegrityViolationException dup) {
