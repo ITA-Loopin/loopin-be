@@ -69,47 +69,4 @@ public class LoopAIServiceImpl implements LoopAIService {
                     return Mono.error(new ServiceException(returnCode, errorBody));
                 });
     }
-
-    @Override
-    public String chat(AiRequestPayload request) {
-        log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
-
-        String result = openAiWebClient
-                .post()
-                .uri("/chat/completions")
-                .bodyValue(Map.of(
-                        "model", "gpt-4o-mini",
-                        "messages", List.of(Map.of("role", "user", "content", toPrompt(request.userContent())))
-                ))
-                .retrieve()
-                .onStatus(status -> status.value() == 401,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_UNAUTHORIZED, "OpenAI Unauthorized Error")
-                )
-                .onStatus(status -> status.value() == 429,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_RATE_LIMIT, "OpenAI Rate Limit Error")
-                )
-                .onStatus(HttpStatusCode::is5xxServerError,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_INTERNAL_ERROR, "OpenAI Internal Error")
-                )
-                .bodyToMono(JsonNode.class)
-                .map(node -> node.get("choices").get(0).get("message").get("content").asText())
-                .block();
-
-        stringRedisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), result, Duration.ofMinutes(10));
-
-        log.info("OpenAI 요청 처리 완료 : requestId={}", request.requestId());
-        return result;
-    }
-
-    private String toPrompt(String message) {
-        return message;
-    }
-
-    private Mono<? extends Throwable> handleError(ClientResponse response, ReturnCode returnCode, String logPrefix) {
-        return response.bodyToMono(String.class)
-                .flatMap(errorBody -> {
-                    log.error("{} : {}", logPrefix, errorBody);
-                    return Mono.error(new ServiceException(returnCode, errorBody));
-                });
-    }
 }
