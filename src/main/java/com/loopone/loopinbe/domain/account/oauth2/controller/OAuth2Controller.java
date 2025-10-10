@@ -35,7 +35,7 @@ public class OAuth2Controller {
     private String frontendRedirect;
 
     // 소셜 로그인 리디렉션 URL
-    @Operation(summary = "소셜 로그인 리디렉션 URL", description = "소셜 로그인 리디렉션 URL을 제공합니다.")
+    @Operation(summary = "소셜 로그인 리디렉션 URL", description = "소셜 로그인 리디렉션 URL을 제공합니다.(provider=google|kakao|naver)")
     @GetMapping("/redirect-url/{provider}")
     public ApiResponse<String> redirectToProvider(@PathVariable("provider") String provider) {
         String authUrl = oAuth2Service.getAuthUrl(provider);

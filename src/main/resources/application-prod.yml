@@ -28,23 +28,23 @@ app:
       google:
         clientId: ${GOOGLE_CLIENT_ID}
         clientSecret: ${GOOGLE_CLIENT_SECRET}
-        redirectUri: "https://api.letzgo.site/rest-api/v1/oauth2/google"
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth2/google"
         tokenUri: "https://oauth2.googleapis.com/token"
         userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
       naver:
         clientId: ${NAVER_CLIENT_ID}
         clientSecret: ${NAVER_CLIENT_SECRET}
-        redirectUri: "https://api.letzgo.site/rest-api/v1/oauth2/naver"
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth2/naver"
         tokenUri: "https://nid.naver.com/oauth2.0/token"
         userInfoUri: "https://openapi.naver.com/v1/nid/me"
       kakao:
         clientId: ${KAKAO_CLIENT_ID}
-        redirectUri: "https://api.letzgo.site/rest-api/v1/oauth2/kakao"
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth2/kakao"
         tokenUri: "https://kauth.kakao.com/oauth/token"
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
 
 frontend:
-  oauth-redirect: https://www.letzgo.site/login
+  oauth-redirect: https://www.loopin.co.kr/login
 
 fcm:
   service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
