@@ -17,7 +17,7 @@ spring:
       host: loopin-redis
       port: 6379
     mongodb:
-      uri: mongodb://admin:${POSTGRES_PASSWORD}@loopin-mongodb:27017/meta_db?authSource=admin
+      uri: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@loopin-mongodb:27017/meta_db?authSource=admin
       database: meta_db
   kafka:
     bootstrap-servers: loopin-redpanda:9092
