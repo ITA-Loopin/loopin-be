@@ -26,6 +26,8 @@ public class LoopinBeApplication {
         System.setProperty("POSTGRES_HOST", dotenv.get("POSTGRES_HOST"));
         System.setProperty("POSTGRES_USERNAME", dotenv.get("POSTGRES_USERNAME"));
         System.setProperty("POSTGRES_PASSWORD", dotenv.get("POSTGRES_PASSWORD"));
+        System.setProperty("MONGODB_USERNAME", dotenv.get("MONGODB_USERNAME"));
+        System.setProperty("MONGODB_PASSWORD", dotenv.get("MONGODB_PASSWORD"));
         System.setProperty("GOOGLE_CLIENT_ID", dotenv.get("GOOGLE_CLIENT_ID"));
         System.setProperty("GOOGLE_CLIENT_SECRET", dotenv.get("GOOGLE_CLIENT_SECRET"));
         System.setProperty("KAKAO_CLIENT_ID", dotenv.get("KAKAO_CLIENT_ID"));
