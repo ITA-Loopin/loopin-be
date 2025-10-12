@@ -34,13 +34,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String method = request.getMethod();
 
         // 인증이 필요 없는 URL 리스트
-        return path.startsWith("/rest-api/v1/auth/login")
+        return path.startsWith("/rest-api/v1/auth/signup-login")
+                || path.startsWith("/rest-api/v1/auth/login")
+                || path.startsWith("/rest-api/v1/member/available")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/rest-api/v1/oauth2")
                 || path.startsWith("/rest-api/v1/find-password")
-                || path.startsWith("/api/v1/health-check")
-                || (path.equals("/rest-api/v1/member") && "POST".equalsIgnoreCase(method));
+                || path.startsWith("/api/v1/health-check");
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
-import com.loopone.loopinbe.domain.account.member.service.RegularSignUp;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +17,6 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,9 +29,10 @@ import java.util.List;
 public class MemberController {
     private final MemberService memberService;
 
-//    // 일반 회원가입
+//    // 회원가입
+//    @Operation(summary = "회원가입", description = "이메일과 닉네임으로 회원가입합니다.")
 //    @PostMapping
-//    public ApiResponse<Void> regularSignUp(@Validated(RegularSignUp.class) @RequestBody MemberCreateRequest memberCreateRequest) {
+//    public ApiResponse<Void> regularSignUp(@RequestBody @Valid MemberCreateRequest memberCreateRequest) {
 //        memberService.regularSignUp(memberCreateRequest);
 //        return ApiResponse.success();
 //    }
@@ -64,6 +63,14 @@ public class MemberController {
     @GetMapping("/detail/{memberId}")
     public ApiResponse<DetailMemberResponse> getDetailMemberInfo(@PathVariable("memberId") Long memberId) {
         return ApiResponse.success(memberService.getDetailMemberInfo(memberId));
+    }
+
+    // 닉네임 중복 확인
+    @Operation(summary = "닉네임 중복 확인", description = "입력한 닉네임의 중복 사용을 확인합니다.")
+    @GetMapping("/available")
+    public ApiResponse<String> checkNickname(@RequestParam(value = "nickname") String nickname){
+        memberService.checkNickname(nickname);
+        return ApiResponse.success("사용 가능한 닉네임입니다.");
     }
 
     // 회원정보 수정

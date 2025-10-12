@@ -15,11 +15,7 @@ import org.springframework.context.annotation.Configuration;
         bearerFormat = "JWT"
 )
 @OpenAPIDefinition(
-        security = @SecurityRequirement(name = "bearerAuth"),
-        servers = {
-                @Server(url = "https://api.loopin.co.kr", description = "Production Server"),
-                @Server(url = "http://localhost:8080", description = "Local Server")
-        }
+        security = @SecurityRequirement(name = "bearerAuth")
 )
 public class SwaggerConfig {
 }

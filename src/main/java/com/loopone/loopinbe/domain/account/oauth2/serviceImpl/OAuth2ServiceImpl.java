@@ -1,16 +1,22 @@
 package com.loopone.loopinbe.domain.account.oauth2.serviceImpl;
 
+import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
+import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.member.dto.SocialUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.account.oauth2.dto.OAuth2WebPropertiesDto;
 import com.loopone.loopinbe.domain.account.oauth2.service.OAuth2Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 import java.util.UUID;
@@ -21,6 +27,10 @@ import java.util.UUID;
 public class OAuth2ServiceImpl implements OAuth2Service {
     private final RestTemplate restTemplate = new RestTemplate();
     private final OAuth2WebPropertiesDto oAuth2WebPropertiesDto;
+    private final MemberRepository memberRepository;
+    private final AuthService authService;
+    @Value("${frontend.oauth-redirect}")
+    private String frontendRedirect;
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
@@ -54,10 +64,6 @@ public class OAuth2ServiceImpl implements OAuth2Service {
                 + (p == Member.OAuthProvider.NAVER ? "&state=" + generateState() : ""); // 네이버는 state 권장
     }
 
-    private String generateState() {
-        return UUID.randomUUID().toString(); // CSRF 방지용 랜덤 값
-    }
-
     // 소셜 유저 정보 조회
     @Override
     public SocialUserDto getUserInfo(String provider, String code) {
@@ -68,7 +74,44 @@ public class OAuth2ServiceImpl implements OAuth2Service {
         return getUserInfoFromProvider(p, props.userInfoUri(), accessToken);
     }
 
+    // 리디렉션 URL 생성
+    @Override
+    public String getRedirectUrl(SocialUserDto socialUser) {
+        String email = socialUser.email();
+        boolean isExistingMember = memberRepository.existsByEmail(email);
+        String redirectUrl;
+        if (isExistingMember) {
+            // 기존 회원 → 로그인 처리
+            LoginRequest loginRequest = LoginRequest.builder()
+                    .email(email)
+                    .build();
+            LoginResponse loginResponse = authService.login(loginRequest);
+            String accessToken = loginResponse.getAccessToken();
+            String refreshToken = loginResponse.getRefreshToken();
+
+            // 토큰 포함 리디렉션
+            redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
+                    .queryParam("accessToken", accessToken)
+                    .queryParam("refreshToken", refreshToken)
+                    .build()
+                    .toUriString();
+        } else {
+            // 신규 회원 → 프론트에 소셜 정보 전달
+            redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
+                    .queryParam("email", email)
+                    .queryParam("provider", socialUser.provider().name())   // Enum → String
+                    .queryParam("providerId", socialUser.providerId())
+                    .build()
+                    .toUriString();
+        }
+        return redirectUrl;
+    }
+
     // ----------------- 헬퍼 메서드 -----------------
+
+    private String generateState() {
+        return UUID.randomUUID().toString(); // CSRF 방지용 랜덤 값
+    }
 
     private OAuth2WebPropertiesDto.ProviderProperties propsOf(Member.OAuthProvider p) {
         OAuth2WebPropertiesDto.ProviderProperties props =
