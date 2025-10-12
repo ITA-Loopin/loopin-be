@@ -130,6 +130,9 @@ public class MemberServiceImpl implements MemberService {
     public void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser) {
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
+        if (memberRepository.existsByNickname(memberUpdateRequest.nickname())) {
+            throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
+        }
         // 기존 이미지 삭제 후 입력 받은 이미지 S3에 저장
         String imageUrl = currentUser.profileImageUrl(); // 기본적으로 기존 이미지 URL을 사용
         if (imageFile != null && !imageFile.isEmpty()) {
