@@ -61,3 +61,7 @@ springdoc:
     tags-sorter: alpha
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+
+security:
+  auth:
+    dummy-password: "{noop}social-user"  # 실제 인증에 쓰이지 않지만, 빈값 방지용

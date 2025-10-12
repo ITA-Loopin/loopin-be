@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CustomUserDetailsServiceImpl implements UserDetailsService {
     private final MemberRepository memberRepository;
+    @Value("${security.auth.dummy-password:{noop}social-user}")
+    private String dummyPassword; // 하드코딩 회피: 설정/환경변수로 주입
 
     @Override
     @Transactional(readOnly = true)
@@ -24,7 +27,7 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
         // 비밀번호 보정: null/empty 방지
         String password = member.getPassword();
         if (!org.springframework.util.StringUtils.hasText(password)) {
-            password = "{noop}SOCIAL_LOGIN_USER";   // 더미값 (null/empty 금지)
+            password = dummyPassword;   // 더미값 (null/empty 금지)
         } else if (!password.startsWith("{")) {
             password = "{noop}" + password;     // 비암호화 평문이 저장되어 있는 특수 케이스라면 명시적으로 noop
         }
