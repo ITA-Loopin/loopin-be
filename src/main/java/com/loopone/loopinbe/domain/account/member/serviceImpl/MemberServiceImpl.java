@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -44,7 +45,6 @@ import java.util.Random;
 public class MemberServiceImpl implements MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthService authService;
     private final MemberFollowReqRepository memberFollowReqRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final S3Service s3Service;
@@ -52,40 +52,27 @@ public class MemberServiceImpl implements MemberService {
     private final ChatRoomService chatRoomService;
     private final NotificationEventPublisher notificationEventPublisher;
 
-    // 일반 회원가입
+    // 회원가입
     @Override
     @Transactional
     public Member regularSignUp(MemberCreateRequest memberCreateRequest) {
         if (memberRepository.existsByEmail((memberCreateRequest.getEmail()))) {
-            throw new RuntimeException("이미 존재하는 이메일입니다.");
+            throw new ServiceException(ReturnCode.EMAIL_ALREADY_USED);
         }
-        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
+        if (memberRepository.existsByNickname(memberCreateRequest.getNickname())) {
+            throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
+        }
+        String encodedPassword;
+        if (!StringUtils.hasText(memberCreateRequest.getPassword())) {
+            encodedPassword = passwordEncoder.encode("SOCIAL_LOGIN_USER");
+        } else {
+            encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
+        }
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
                 .password(encodedPassword)
                 .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())// 인코딩된 비밀번호 저장
-//                .gender(memberCreateRequest.getGender())
-//                .birthday(memberCreateRequest.getBirthday())
-                .build();
-        memberRepository.save(member);
-        ChatRoomRequest chatRoomRequest = ChatRoomRequest.builder().build();
-        ChatRoomResponse chatRoomResponse = chatRoomService.createAiChatRoom(chatRoomRequest, member);
-        member.setChatRoomId(chatRoomResponse.getId());
-        return member;
-    }
-
-    // 소셜 회원가입
-    @Override
-    @Transactional
-    public Member socialSignUp(MemberCreateRequest memberCreateRequest) {
-        // nickname 검증 필요
-        String encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
-        Member member = Member.builder()
-                .email(memberCreateRequest.getEmail())
-                .password(encodedPassword)
-                .nickname(memberCreateRequest.getNickname())
-//                .phone(memberCreateRequest.getPhone())
 //                .gender(memberCreateRequest.getGender())
 //                .birthday(memberCreateRequest.getBirthday())
                 .oAuthProvider(memberCreateRequest.getProvider())
@@ -134,6 +121,15 @@ public class MemberServiceImpl implements MemberService {
         return memberConverter.toDetailMemberResponse(member);
     }
 
+    // 닉네임 중복 확인
+    @Override
+    @Transactional(readOnly = true)
+    public void checkNickname(String nickname) {
+        if (memberRepository.existsByNickname(nickname)) {
+            throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
+        }
+    }
+
     // 회원정보 수정
     @Override
     @Transactional
@@ -162,8 +158,6 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void deleteMember(CurrentUserDto currentUser) {
-        // refreshToken 삭제
-        authService.logout(currentUser);
         // DB에서 회원 조회
         Member memberEntity = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));

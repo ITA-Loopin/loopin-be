@@ -6,8 +6,10 @@ import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
 import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -24,7 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final MemberRepository memberRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
-    private final PasswordEncoder passwordEncoder;
+    private final MemberService memberService;
 
     @Value("${custom.accessToken.expiration}")
     private long accessTokenExpiration;
@@ -32,16 +35,24 @@ public class AuthServiceImpl implements AuthService {
     @Value("${custom.refreshToken.expiration}")
     private long refreshTokenExpiration;
 
+    // 회원가입 후 로그인 처리
+    @Override
+    @Transactional
+    public LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest) {
+        Member newMember = memberService.regularSignUp(memberCreateRequest);
+        // 회원가입 직후 로그인 처리
+        LoginRequest loginRequest = LoginRequest.builder()
+                .email(newMember.getEmail())
+                .build();
+        return login(loginRequest); // 기존 로그인 로직 재사용
+    }
+
     // 로그인
     @Override
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest loginRequest, boolean isSocialLogin) {
+    public LoginResponse login(LoginRequest loginRequest) {
         Member member = memberRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        // 소셜 로그인이라면 비밀번호 검증을 생략
-        if (!isSocialLogin && !passwordEncoder.matches(loginRequest.getPassword(), member.getPassword())) {
-            throw new RuntimeException("비밀번호가 올바르지 않습니다.");
-        }
         String accessToken = jwtTokenProvider.generateToken(member.getEmail(), "ACCESS",accessTokenExpiration);
         String refreshToken = jwtTokenProvider.generateToken(member.getEmail(), "REFRESH",refreshTokenExpiration);
         // Refresh Token을 Redis에 저장

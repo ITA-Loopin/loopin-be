@@ -38,17 +38,16 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/rest-api/v1/auth/signup-login",
                                 "/rest-api/v1/auth/login",
+                                "/rest-api/v1/member/available",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/rest-api/v1/oauth2/**",
-                                "/rest-api/v1/find-password/**",
                                 "/api/v1/health-check",
-                                "/ws/**",
-                                "/rest-api/v1/member/**").permitAll()
+                                "/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
