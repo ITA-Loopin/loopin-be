@@ -23,7 +23,7 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
         return org.springframework.security.core.userdetails.User.builder()
                 .username(member.getEmail())
-                .password(member.getPassword()) // 패스워드는 보통 사용 안 함 (JWT 기반 인증)
+//                .password(member.getPassword()) // 패스워드는 보통 사용 안 함 (JWT 기반 인증)
                 .authorities("ROLE_USER") // 권한 설정 (추후 DB에서 가져올 수 있음)
                 .build();
     }
