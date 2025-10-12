@@ -14,12 +14,11 @@ import java.util.List;
 public class NotProdService {
     private final NotProdMemberService notProdMemberService;
     private List<String> memberEmails = new ArrayList<>();
-    private List<String> memberPasswords = new ArrayList<>();
 
     // 1) 트랜잭션 내 데이터 생성 메서드
     @Transactional
     public void initDummyDataTransactional() {
-        notProdMemberService.createMembers(memberEmails, memberPasswords);
+        notProdMemberService.createMembers(memberEmails);
     }
 
     // 2) 트랜잭션 커밋 후 가데이터 정보 출력
@@ -30,7 +29,6 @@ public class NotProdService {
         long executionTimeMillis = end - start;
         NotProdPrintTestAccount.printTestAccounts(
                 memberEmails,
-                memberPasswords,
                 executionTimeMillis
         );
     }

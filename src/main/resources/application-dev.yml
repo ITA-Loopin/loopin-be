@@ -64,6 +64,5 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql: TRACE
 
-swagger:
-  server:
-    url: http://localhost:8080
+springdoc:
+  server-url: http://localhost:8080
