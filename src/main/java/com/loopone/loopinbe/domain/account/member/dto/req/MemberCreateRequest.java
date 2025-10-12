@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MemberCreateRequest {
-    @NotBlank String email;
-    String password;
-    String nickname;
+    @NotBlank private String email;
+//    String password;
+    private String nickname;
 //    String phone;
 //    Member.Gender gender;
 //    LocalDate birthday;
-    Member.OAuthProvider provider;
-    String providerId;
+    private Member.OAuthProvider provider;
+    private String providerId;
 }

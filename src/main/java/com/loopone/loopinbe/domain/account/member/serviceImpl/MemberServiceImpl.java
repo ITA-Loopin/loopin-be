@@ -62,15 +62,9 @@ public class MemberServiceImpl implements MemberService {
         if (memberRepository.existsByNickname(memberCreateRequest.getNickname())) {
             throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
         }
-        String encodedPassword;
-        if (!StringUtils.hasText(memberCreateRequest.getPassword())) {
-            encodedPassword = passwordEncoder.encode("SOCIAL_LOGIN_USER");
-        } else {
-            encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
-        }
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
-                .password(encodedPassword)
+//                .password(encodedPassword)
                 .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())// 인코딩된 비밀번호 저장
 //                .gender(memberCreateRequest.getGender())

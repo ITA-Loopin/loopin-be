@@ -60,6 +60,5 @@ logging:
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql: WARN
 
-swagger:
-  server:
-    url: https://api.loopin.co.kr
+springdoc:
+  server-url: https://api.loopin.co.kr
