@@ -11,11 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface MemberService {
-    // 일반 회원가입
+    // 회원가입
     Member regularSignUp(MemberCreateRequest memberCreateRequest);
-
-    // 소셜 회원가입
-    Member socialSignUp(MemberCreateRequest memberCreateRequest);
 
     // 본인 회원정보 조회
     MemberResponse getMyInfo(CurrentUserDto currentUser);
@@ -28,6 +25,9 @@ public interface MemberService {
 
     // 다른 멤버의 상세회원정보 조회
     DetailMemberResponse getDetailMemberInfo(Long memberId);
+
+    // 닉네임 중복 확인
+    void checkNickname(String nickname);
 
     // 회원정보 수정
     void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser);

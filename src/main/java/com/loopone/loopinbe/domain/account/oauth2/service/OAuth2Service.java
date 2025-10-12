@@ -8,4 +8,7 @@ public interface OAuth2Service {
 
     // 소셜 유저 정보 조회
     SocialUserDto getUserInfo(String provider, String code);
+
+    // 리디렉션 URL 생성
+    String getRedirectUrl(SocialUserDto socialUser);
 }

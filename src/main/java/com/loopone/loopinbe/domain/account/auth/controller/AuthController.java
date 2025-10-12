@@ -5,11 +5,13 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,11 +21,18 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final AuthService authService;
 
+    // 회원가입 후 로그인 처리
+    @Operation(summary = "회원가입 후 로그인 처리", description = "신규 사용자 회원가입 후 로그인 처리합니다.")
+    @PostMapping("/signup-login")
+    public ApiResponse<LoginResponse> signUpAndLogin(@RequestBody MemberCreateRequest memberCreateRequest) {
+        return ApiResponse.success(authService.signUpAndLogin(memberCreateRequest));
+    }
+
     // 로그인
-    @Operation(summary = "로그인", description = "계정ID와 비밀번호로 로그인합니다.(소셜 로그인은 비밀번호 검증 생략)")
+    @Operation(summary = "로그인", description = "이메일로 로그인합니다.")
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
-        return ApiResponse.success(authService.login(loginRequest, false));
+        return ApiResponse.success(authService.login(loginRequest));
     }
 
     // 로그아웃

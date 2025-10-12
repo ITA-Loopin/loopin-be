@@ -32,9 +32,11 @@ public enum ReturnCode {
     SOCIAL_ACCOUNT_ALREADY_IN_USE(409, "AUTH_013", "이미 사용중인 소셜 계정입니다."),
     INVALID_ACCOUNT_ID(400, "AUTH_014", "유효하지 않은 계정ID입니다."),
     NOT_AUTHORIZED(401, "AUTH_015", "권한이 없습니다."),
+    EMAIL_ALREADY_USED(409, "AUTH_016", "이미 사용중인 이메일입니다."),
 
     // Member
     MEMBER_ALREADY_EXISTS(409, "MEMBER_001", "이미 존재하는 사용자입니다."),
+    NICKNAME_ALREADY_USED(409, "MEMBER_002", "이미 사용중인 닉네임입니다."),
 
     // User
     USER_NOT_FOUND(404, "USER_001", "사용자를 찾을 수 없습니다."),
