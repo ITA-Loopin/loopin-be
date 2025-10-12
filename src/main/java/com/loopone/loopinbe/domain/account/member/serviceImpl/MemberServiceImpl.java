@@ -62,15 +62,9 @@ public class MemberServiceImpl implements MemberService {
         if (memberRepository.existsByNickname(memberCreateRequest.getNickname())) {
             throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
         }
-        String encodedPassword;
-        if (!StringUtils.hasText(memberCreateRequest.getPassword())) {
-            encodedPassword = passwordEncoder.encode("SOCIAL_LOGIN_USER");
-        } else {
-            encodedPassword = passwordEncoder.encode(memberCreateRequest.getPassword());
-        }
         Member member = Member.builder()
                 .email(memberCreateRequest.getEmail())
-                .password(encodedPassword)
+//                .password(encodedPassword)
                 .nickname(memberCreateRequest.getNickname())
 //                .phone(memberCreateRequest.getPhone())// 인코딩된 비밀번호 저장
 //                .gender(memberCreateRequest.getGender())
@@ -136,6 +130,9 @@ public class MemberServiceImpl implements MemberService {
     public void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser) {
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
+        if (memberRepository.existsByNickname(memberUpdateRequest.nickname())) {
+            throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
+        }
         // 기존 이미지 삭제 후 입력 받은 이미지 S3에 저장
         String imageUrl = currentUser.profileImageUrl(); // 기본적으로 기존 이미지 URL을 사용
         if (imageFile != null && !imageFile.isEmpty()) {

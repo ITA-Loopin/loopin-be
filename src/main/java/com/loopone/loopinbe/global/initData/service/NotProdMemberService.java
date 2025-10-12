@@ -20,17 +20,15 @@ public class NotProdMemberService {
     private final MemberService memberService;
 
     // 유저 1 ~ 5 생성
-    public void createMembers(List<String> memberEmails, List<String> memberPasswords) {
+    public void createMembers(List<String> memberEmails) {
         List<String> nicknames = List.of("seoul_gangnam", "incheon_songdo", "gangneung_beach", "busan_haeundae", "jeju_seaside");
         for (int i = 0; i < nicknames.size(); i++){
             MemberCreateRequest memberCreateRequest = MemberCreateRequest.builder()
                     .nickname(nicknames.get(i))
                     .email("user" + (i + 1) + "@example.com")
-                    .password("1234")
                     .build();
             Member member = memberService.regularSignUp(memberCreateRequest);
             memberEmails.add(member.getEmail());
-            memberPasswords.add("1234");
         }
     }
 }
