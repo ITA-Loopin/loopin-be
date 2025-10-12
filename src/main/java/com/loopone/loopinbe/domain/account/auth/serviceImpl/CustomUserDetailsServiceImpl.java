@@ -21,9 +21,16 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
+        String password = member.getPassword();
+        if (!org.springframework.util.StringUtils.hasText(password)) {
+            password = "{noop}SOCIAL_LOGIN_USER";   // ★ 더미값 (null/empty 금지)
+        } else if (!password.startsWith("{")) {
+            // 비암호화 평문이 저장되어 있는 특수 케이스라면 명시적으로 noop
+            password = "{noop}" + password;
+        }
         return org.springframework.security.core.userdetails.User.builder()
                 .username(member.getEmail())
-//                .password(member.getPassword()) // 패스워드는 보통 사용 안 함 (JWT 기반 인증)
+                .password(password) // 패스워드는 보통 사용 안 함 (JWT 기반 인증)
                 .authorities("ROLE_USER") // 권한 설정 (추후 DB에서 가져올 수 있음)
                 .build();
     }
