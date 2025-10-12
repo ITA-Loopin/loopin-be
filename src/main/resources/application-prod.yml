@@ -62,3 +62,5 @@ logging:
 
 springdoc:
   server-url: https://api.loopin.co.kr
+server:
+  forward-headers-strategy: framework
