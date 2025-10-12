@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -54,33 +55,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             responseUnauthorized(response, "인증 실패");
             return;
         }
-        boolean decodingSuccess = false;
-        String email = "";
         try {
+            // 토큰 유효성 검사
             if (!jwtTokenProvider.validateAccessToken(token)) {
-                log.warn("토큰이 유효하지 않습니다.");
+                log.warn("유효하지 않은 Access Token");
                 responseUnauthorized(response, "유효하지 않은 Access Token 입니다.");
                 return;
             }
-
-            jwtTokenProvider.decodeToken(token);
-            email = jwtTokenProvider.getEmailFromToken(token);
-            decodingSuccess = true;
+            // 이메일 추출
+            String email = jwtTokenProvider.getEmailFromToken(token);
             log.info("정상적으로 사용자 정보를 토큰으로부터 가져왔습니다. Email: {}", email);
-        } catch (Exception e) {
-            log.warn("유효하지 않은 Access Token: {}", e.getMessage());
-        }
+            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-        if (decodingSuccess) {
+            // JWT 기반 인증 객체 생성 (비밀번호 없이)
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            // SecurityContextHolder에 직접 세팅
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        } catch (Exception e) {
+            log.error("JWT 인증 처리 실패: {}", e.getMessage(), e);
+            SecurityContextHolder.clearContext();
             try {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("SecurityContext 에 인증 정보 설정 완료: {}", authentication);
-            } catch (Exception e) {
-                log.error("인증 처리 실패: {}", e.getMessage());
-                SecurityContextHolder.clearContext();
+                String email = jwtTokenProvider.getEmailFromToken(token);
                 refreshTokenService.deleteRefreshToken(email);
+            } catch (Exception ignored) {
             }
         }
         filterChain.doFilter(request, response);
