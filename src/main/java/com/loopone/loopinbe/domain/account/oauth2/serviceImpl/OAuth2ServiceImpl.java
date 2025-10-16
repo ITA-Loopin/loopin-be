@@ -91,6 +91,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
 
             // 토큰 포함 리디렉션
             redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
+                    .queryParam("status", "LOGIN_SUCCESS")
                     .queryParam("accessToken", accessToken)
                     .queryParam("refreshToken", refreshToken)
                     .build()
@@ -98,6 +99,7 @@ public class OAuth2ServiceImpl implements OAuth2Service {
         } else {
             // 신규 회원 → 프론트에 소셜 정보 전달
             redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
+                    .queryParam("status", "SIGNUP_REQUIRED")
                     .queryParam("email", email)
                     .queryParam("provider", socialUser.provider().name())   // Enum → String
                     .queryParam("providerId", socialUser.providerId())
