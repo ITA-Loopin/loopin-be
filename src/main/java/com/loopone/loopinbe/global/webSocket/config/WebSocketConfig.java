@@ -1,7 +1,6 @@
 package com.loopone.loopinbe.global.webSocket.config;
 
 import com.loopone.loopinbe.global.webSocket.auth.JwtWsHandshakeInterceptor;
-import com.loopone.loopinbe.global.webSocket.handler.ChatRoomWebSocketHandler;
 import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +13,6 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
     private final ChatWebSocketHandler chatWebSocketHandler;
-    private final ChatRoomWebSocketHandler chatRoomWebSocketHandler;
     private final JwtWsHandshakeInterceptor jwtWsHandshakeInterceptor;
 
     @Override
@@ -22,13 +20,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(jwtWsHandshakeInterceptor)
                 .setAllowedOrigins(
-                        "http://localhost:8080", "https://www.loopin.co.kr"
-                );
-
-        registry.addHandler(chatRoomWebSocketHandler, "/ws/chat-room")
-                .addInterceptors(jwtWsHandshakeInterceptor)
-                .setAllowedOrigins(
-                        "http://localhost:8080", "https://www.loopin.co.kr"
+                        "http://localhost:8080", "http://localhost:3000", "https://www.loopin.co.kr"
                 );
     }
 }
