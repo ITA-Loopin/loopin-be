@@ -1,0 +1,151 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: loopin-redis
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server --appendonly yes
+                   --bind 0.0.0.0
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - loopin-backend
+
+  mongodb:
+    image: mongo:latest
+    container_name: loopin-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: loopinAdmin
+      MONGO_INITDB_ROOT_PASSWORD: loopinAdmin0906
+      MONGO_INITDB_DATABASE: meta_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - loopin-backend
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: loopin-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: loopinAdmin
+      POSTGRES_PASSWORD: loopinAdmin0906
+      POSTGRES_DB: meta_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - loopin-backend
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: loopin-redpanda
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --mode
+      - dev-container
+      - --smp
+      - "1"
+      - --memory
+      - 256M
+      - --reserve-memory
+      - 128M
+      - --default-log-level=warn
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://loopin-redpanda:9092
+      - --pandaproxy-addr
+      - 0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - loopin-redpanda:8082
+      - --schema-registry-addr
+      - 0.0.0.0:8081
+      - --rpc-addr
+      - 0.0.0.0:33145
+      - --advertise-rpc-addr
+      - loopin-redpanda:33145
+    ports:
+      - "9092:9092"     # Kafka API
+      - "8081:8081"     # Schema Registry
+      - "8082:8082"     # PandaProxy
+      - "9644:9644"     # Admin API
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    networks:
+      - loopin-backend
+
+  app:
+    image: junhui9789/loopin-app:latest
+    container_name: loopin-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGODB_USERNAME: ${MONGODB_USERNAME}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
+      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD}
+      GPT_API_KEY: ${GPT_API_KEY}
+    volumes:
+      - ./fcm-service-account.json:/app/fcm-service-account.json
+    depends_on:
+      redis:
+        condition: service_healthy  # Redis가 정상 작동할 때까지 대기
+      postgres:
+        condition: service_started  # Postgres가 정상 작동할 때까지 대기
+    networks:
+      - loopin-backend
+      - loopin-proxy
+
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: loopin-npm
+    restart: unless-stopped
+    ports:
+      - '80:80'    # HTTP 포트
+      - '443:443'  # HTTPS 포트
+      - '81:81'    # 관리자 웹 인터페이스 포트
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - loopin-proxy
+
+volumes:
+  redis-data:
+  redpanda-data:
+  postgres-data:
+  mongo_data:
+
+networks:
+  loopin-backend:
+    driver: bridge
+  loopin-proxy:
+    driver: bridge
+  loopin-monitor:
+    driver: bridge
