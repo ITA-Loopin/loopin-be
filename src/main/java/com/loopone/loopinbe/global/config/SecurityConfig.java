@@ -76,7 +76,8 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:8080",
                 "http://localhost:3000",
-                "https://*.loopin.co.kr"
+                "https://*.loopin.co.kr",
+                "http://local.loopin.co.kr"
         ));
         configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"));
         configuration.addAllowedHeader("*");
