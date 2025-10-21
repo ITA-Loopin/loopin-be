@@ -48,7 +48,7 @@ app:
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
 
 frontend:
-  oauth-redirect: http://localhost:3000/login
+  oauth-redirect: http://local.loopin.co.kr/login
 
 fcm:
   service-account-file: classpath:fcm-service-account.json
