@@ -20,7 +20,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(jwtWsHandshakeInterceptor)
                 .setAllowedOrigins(
-                        "http://localhost:8080", "http://localhost:3000", "https://www.loopin.co.kr"
+                        "http://localhost:8080",
+                        "http://localhost:3000",
+                        "http://local.loopin.co.kr",
+                        "https://loopin.co.kr",
+                        "https://develop.loopin.co.kr"
                 );
     }
 }
