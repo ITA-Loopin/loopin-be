@@ -1,11 +1,11 @@
-package com.loopone.loopinbe.domain.account.oauth2.dto;
+package com.loopone.loopinbe.global.config.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Map;
 
-@ConfigurationProperties(prefix = "app.oauth2")
-public record OAuth2WebPropertiesDto(
+@ConfigurationProperties(prefix = "app.oauth")
+public record OAuthWebProperties(
         Map<String, ProviderProperties> providers
 ) {
     public record ProviderProperties(
