@@ -45,7 +45,7 @@ public class SecurityConfig {
                                 "/rest-api/v1/member/available",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/rest-api/v1/oauth2/**",
+                                "/rest-api/v1/oauth/**",
                                 "/api/v1/health-check",
                                 "/ws/**").permitAll()
                         .anyRequest().authenticated()
@@ -76,8 +76,9 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:8080",
                 "http://localhost:3000",
-                "https://*.loopin.co.kr",
-                "http://local.loopin.co.kr"
+                "http://local.loopin.co.kr",
+                "https://loopin.co.kr",
+                "https://develop.loopin.co.kr"
         ));
         configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"));
         configuration.addAllowedHeader("*");
