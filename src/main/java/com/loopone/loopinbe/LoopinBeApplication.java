@@ -1,15 +1,17 @@
 package com.loopone.loopinbe;
 
-import com.loopone.loopinbe.domain.account.oauth2.dto.OAuth2WebPropertiesDto;
+import com.loopone.loopinbe.global.config.properties.OAuthWebProperties;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @EnableJpaAuditing
 @SpringBootApplication
-@EnableConfigurationProperties(OAuth2WebPropertiesDto.class)
+@EnableConfigurationProperties(OAuthWebProperties.class)
+@ConfigurationPropertiesScan(basePackages = "com.loopone.loopinbe")
 public class LoopinBeApplication {
 
 	public static void main(String[] args) {
@@ -35,6 +37,7 @@ public class LoopinBeApplication {
         System.setProperty("NAVER_CLIENT_SECRET", dotenv.get("NAVER_CLIENT_SECRET"));
         System.setProperty("GPT_API_KEY", dotenv.get("GPT_API_KEY"));
         System.setProperty("MAIL_APP_PASSWORD", dotenv.get("MAIL_APP_PASSWORD"));
+        System.setProperty("OAUTH_STATE_SECRET", dotenv.get("OAUTH_STATE_SECRET"));
 
         SpringApplication.run(LoopinBeApplication.class, args);
 	}
