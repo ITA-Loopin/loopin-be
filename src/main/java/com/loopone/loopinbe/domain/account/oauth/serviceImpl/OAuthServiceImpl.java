@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.oauth2.serviceImpl;
+package com.loopone.loopinbe.domain.account.oauth.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
@@ -6,11 +6,13 @@ import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.member.dto.SocialUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
-import com.loopone.loopinbe.domain.account.oauth2.dto.OAuth2WebPropertiesDto;
-import com.loopone.loopinbe.domain.account.oauth2.service.OAuth2Service;
+import com.loopone.loopinbe.global.config.properties.OAuthWebProperties;
+import com.loopone.loopinbe.domain.account.oauth.enums.FrontendEnv;
+import com.loopone.loopinbe.domain.account.oauth.service.OAuthService;
+import com.loopone.loopinbe.domain.account.oauth.service.OAuthStateService;
+import com.loopone.loopinbe.global.config.properties.FrontendRedirectProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,112 +20,115 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OAuth2ServiceImpl implements OAuth2Service {
+public class OAuthServiceImpl implements OAuthService {
     private final RestTemplate restTemplate = new RestTemplate();
-    private final OAuth2WebPropertiesDto oAuth2WebPropertiesDto;
+    private final OAuthWebProperties oAuthWebProperties;
     private final MemberRepository memberRepository;
     private final AuthService authService;
-    @Value("${frontend.oauth-redirect}")
-    private String frontendRedirect;
+    private final OAuthStateService stateService;
+    private final FrontendRedirectProperties frontendRedirectProperties;
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
-    public String getAuthUrl(String provider) {
+    public String getAuthUrl(String provider, FrontendEnv env) {
         Member.OAuthProvider p = Member.OAuthProvider.from(provider);
-        OAuth2WebPropertiesDto.ProviderProperties props = propsOf(p);
+        OAuthWebProperties.ProviderProperties props = propsOf(p);
         String base;
-        String scope;
+        List<String> scopes;
         switch (p) {
-            case GOOGLE:
+            case GOOGLE -> {
                 base = "https://accounts.google.com/o/oauth2/v2/auth";
-                scope = "openid%20profile%20email";
-                break;
-            case KAKAO:
+                scopes = List.of("openid", "profile", "email");
+            }
+            case KAKAO -> {
                 base = "https://kauth.kakao.com/oauth/authorize";
-                scope = "account_email";
-                break;
-            case NAVER:
+                scopes = List.of("account_email");
+            }
+            case NAVER -> {
                 base = "https://nid.naver.com/oauth2.0/authorize";
-                scope = "email";
-                break;
-            default:
-                throw new IllegalArgumentException("지원되지 않는 OAuth2 제공자: " + provider);
+                scopes = List.of("email");
+            }
+            default -> throw new IllegalArgumentException("지원되지 않는 OAuth2 제공자: " + provider);
         }
-        // 공통 파라미터 조립
-        return base
-                + "?client_id=" + props.clientId()
-                + "&redirect_uri=" + props.redirectUri()
-                + "&response_type=code"
-                + "&scope=" + scope
-                + (p == Member.OAuthProvider.NAVER ? "&state=" + generateState() : ""); // 네이버는 state 권장
+        // env가 들어간 서명된 state 발급 (5분)
+        String state = stateService.issue(env, Duration.ofMinutes(5));
+
+        // 안전한 파라미터 인코딩
+        return UriComponentsBuilder.fromHttpUrl(base)
+                .queryParam("client_id", props.clientId())
+                .queryParam("redirect_uri", props.redirectUri())
+                .queryParam("response_type", "code")
+                .queryParam("scope", String.join(" ", scopes))
+                .queryParam("state", state) // 모든 제공자에 state 사용
+                .build()
+                .toUriString();
+    }
+
+    // OAuth state 토큰 검증
+    @Override
+    public FrontendEnv resolveEnvFromState(String state) {
+        return stateService.consume(state);
     }
 
     // 소셜 유저 정보 조회
     @Override
     public SocialUserDto getUserInfo(String provider, String code) {
         Member.OAuthProvider p = Member.OAuthProvider.from(provider);
-        OAuth2WebPropertiesDto.ProviderProperties props = propsOf(p);
+        OAuthWebProperties.ProviderProperties props = propsOf(p);
 
         String accessToken = getAccessToken(p, props, code);
         return getUserInfoFromProvider(p, props.userInfoUri(), accessToken);
     }
 
-    // 리디렉션 URL 생성
+    // 리디렉션 URL 생성 (env 별 분기)
     @Override
-    public String getRedirectUrl(SocialUserDto socialUser) {
+    public String getRedirectUrl(SocialUserDto socialUser, FrontendEnv env) {
+        String base = frontendRedirectProperties.urlFor(env);
         String email = socialUser.email();
         boolean isExistingMember = memberRepository.existsByEmail(email);
-        String redirectUrl;
+
+        UriComponentsBuilder b = UriComponentsBuilder.fromUriString(base);
         if (isExistingMember) {
-            // 기존 회원 → 로그인 처리
+            // 로그인 처리
             LoginRequest loginRequest = LoginRequest.builder()
                     .email(email)
                     .build();
             LoginResponse loginResponse = authService.login(loginRequest);
-            String accessToken = loginResponse.getAccessToken();
-            String refreshToken = loginResponse.getRefreshToken();
 
-            // 토큰 포함 리디렉션
-            redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
-                    .queryParam("status", "LOGIN_SUCCESS")
-                    .queryParam("accessToken", accessToken)
-                    .queryParam("refreshToken", refreshToken)
+            return b.queryParam("status", "LOGIN_SUCCESS")
+                    .queryParam("accessToken", loginResponse.getAccessToken())
+                    .queryParam("refreshToken", loginResponse.getRefreshToken())
                     .build()
                     .toUriString();
         } else {
-            // 신규 회원 → 프론트에 소셜 정보 전달
-            redirectUrl = UriComponentsBuilder.fromUriString(frontendRedirect)
-                    .queryParam("status", "SIGNUP_REQUIRED")
+            // 신규 가입 유도
+            return b.queryParam("status", "SIGNUP_REQUIRED")
                     .queryParam("email", email)
-                    .queryParam("provider", socialUser.provider().name())   // Enum → String
+                    .queryParam("provider", socialUser.provider().name())
                     .queryParam("providerId", socialUser.providerId())
                     .build()
                     .toUriString();
         }
-        return redirectUrl;
     }
 
     // ----------------- 헬퍼 메서드 -----------------
 
-    private String generateState() {
-        return UUID.randomUUID().toString(); // CSRF 방지용 랜덤 값
-    }
-
-    private OAuth2WebPropertiesDto.ProviderProperties propsOf(Member.OAuthProvider p) {
-        OAuth2WebPropertiesDto.ProviderProperties props =
-                oAuth2WebPropertiesDto.providers().get(p.key()); // google/kakao/naver
+    private OAuthWebProperties.ProviderProperties propsOf(Member.OAuthProvider p) {
+        OAuthWebProperties.ProviderProperties props =
+                oAuthWebProperties.providers().get(p.key()); // google/kakao/naver
         if (props == null) throw new IllegalArgumentException("지원되지 않는 OAuth2 제공자: " + p);
         return props;
     }
 
     private String getAccessToken(Member.OAuthProvider provider,
-                                  OAuth2WebPropertiesDto.ProviderProperties props,
+                                  OAuthWebProperties.ProviderProperties props,
                                   String code) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
