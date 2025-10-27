@@ -111,6 +111,7 @@ services:
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
       MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD}
       GPT_API_KEY: ${GPT_API_KEY}
+      OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET}
     volumes:
       - ./fcm-service-account.json:/app/fcm-service-account.json
     depends_on:
