@@ -3,6 +3,7 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
@@ -12,6 +13,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import static com.loopone.loopinbe.global.constants.Constant.AI_RESPONSE_MESSAGE;
 import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 
 @Slf4j
@@ -32,14 +34,15 @@ public class AiEventListener {
             AiRequestPayload req = objectMapper.readValue(rec.value(), AiRequestPayload.class);
 
             // 1) 프롬프트 구성 + LLM 호출
-            String loopRecommend = loopAIService.chat(req);
+            RecommendationsLoop loopRecommend = loopAIService.chat(req);
 
             // 2) 여기서 AI 답변용 ChatInboundMessagePayload 생성
             ChatInboundMessagePayload botInbound = new ChatInboundMessagePayload(
                     deterministicMessageKey(req),       // 멱등키 (아래 참고)
                     req.chatRoomId(),
                     null,
-                    loopRecommend,
+                    AI_RESPONSE_MESSAGE,
+                    loopRecommend.recommendations(),
                     ChatMessage.AuthorType.BOT,
                     java.time.LocalDateTime.now()
             );

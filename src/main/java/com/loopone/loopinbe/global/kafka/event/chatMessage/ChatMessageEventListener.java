@@ -46,6 +46,7 @@ public class ChatMessageEventListener {
                     .chatRoomId(saved.chatRoomId())
                     .memberId(saved.memberId())
                     .content(saved.content())
+                    .recommendations(saved.recommendations())
                     .authorType(saved.authorType())
                     .createdAt(saved.createdAt() != null
                             ? saved.createdAt()
