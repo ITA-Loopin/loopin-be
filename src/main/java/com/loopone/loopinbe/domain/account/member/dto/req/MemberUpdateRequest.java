@@ -1,6 +1,5 @@
 package com.loopone.loopinbe.domain.account.member.dto.req;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record MemberUpdateRequest (
