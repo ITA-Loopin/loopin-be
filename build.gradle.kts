@@ -36,6 +36,7 @@ dependencies {
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // netty
     implementation("org.springframework.boot:spring-boot-starter-reactor-netty")

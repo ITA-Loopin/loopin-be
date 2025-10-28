@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,7 +23,7 @@ public class AuthController {
     // 회원가입 후 로그인 처리
     @Operation(summary = "회원가입 후 로그인 처리", description = "신규 사용자 회원가입 후 로그인 처리합니다.")
     @PostMapping("/signup-login")
-    public ApiResponse<LoginResponse> signUpAndLogin(@RequestBody MemberCreateRequest memberCreateRequest) {
+    public ApiResponse<LoginResponse> signUpAndLogin(@Valid @RequestBody MemberCreateRequest memberCreateRequest) {
         return ApiResponse.success(authService.signUpAndLogin(memberCreateRequest));
     }
 
