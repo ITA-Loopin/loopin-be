@@ -40,4 +40,6 @@ public class Constant {
                 6. 출력은 반드시 위 JSON 형식으로만 작성하고, 불필요한 텍스트를 포함하지 말라.
                 사용자의 요구사항은 다음과 같아.
                 """;
+
+    public static final String AI_RESPONSE_MESSAGE = "더 나은 루틴이 필요하시다면, 더 상세하게 말씀해주세요.";
 }
