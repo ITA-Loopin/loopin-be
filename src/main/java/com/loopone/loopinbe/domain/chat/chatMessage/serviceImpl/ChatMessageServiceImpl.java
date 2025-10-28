@@ -10,7 +10,6 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.MessageContent;
-import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -168,6 +167,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 in.memberId(),
                 msg.getId(),
                 in.content(),
+                in.recommendations(),
                 in.authorType(),
                 msg.getCreatedAt(),
                 isBotRoom

@@ -9,14 +9,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -43,7 +40,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 for (String p : q.split("&")) {
                     int i = p.indexOf('=');
                     if (i > 0 && "chatRoomId".equals(p.substring(0, i))) {
-                        try { chatRoomId = Long.parseLong(p.substring(i + 1)); } catch (NumberFormatException ignored) {}
+                        try {
+                            chatRoomId = Long.parseLong(p.substring(i + 1));
+                        } catch (NumberFormatException ignored) {
+                        }
                     }
                 }
             }
@@ -97,6 +97,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     roomId,
                     memberId,
                     content,
+                    null,
                     ChatMessage.AuthorType.USER,
                     java.time.LocalDateTime.now()
             );
@@ -120,12 +121,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         try {
             var err = java.util.Map.of("type", "ERROR", "code", code, "message", msg);
             s.sendMessage(new TextMessage(objectMapper.writeValueAsString(err)));
-        } catch (IOException ignore) {}
+        } catch (IOException ignore) {
+        }
     }
 
     private void sendWsErrorAndClose(WebSocketSession s, String code, String msg) {
         sendWsError(s, code, msg);
-        try { s.close(CloseStatus.POLICY_VIOLATION); } catch (IOException ignore) {}
+        try {
+            s.close(CloseStatus.POLICY_VIOLATION);
+        } catch (IOException ignore) {
+        }
     }
 
     // 실시간 메시지 채팅방에 브로드캐스트
