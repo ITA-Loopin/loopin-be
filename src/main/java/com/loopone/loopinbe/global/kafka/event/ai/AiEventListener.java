@@ -2,11 +2,16 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
+import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
+import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -23,6 +28,8 @@ public class AiEventListener {
     private final ObjectMapper objectMapper;
     private final ChatMessageEventPublisher chatMessageEventPublisher; // send-message-topic 발행기
     private final LoopAIService loopAIService;
+    private final ChatWebSocketHandler chatWebSocketHandler;
+    private final ChatMessageService chatMessageService;
 
     @KafkaListener(
             topics = OPEN_AI_TOPIC,
@@ -47,8 +54,27 @@ public class AiEventListener {
                     java.time.LocalDateTime.now()
             );
 
-            // 3) 기존 파이프라인 재사용: send-message-topic 으로 재주입
-            chatMessageEventPublisher.publishInbound(botInbound);
+            // 3) 브로드캐스트 (DB 생성 시각/ID 사용)
+            ChatMessageSavedResult saved = chatMessageService.processInbound(botInbound);
+
+            ChatMessageDto resp = ChatMessageDto.builder()
+                    .id(saved.messageId())
+                    .chatRoomId(saved.chatRoomId())
+                    .memberId(saved.memberId())
+                    .content(saved.content())
+                    .recommendations(saved.recommendations())
+                    .authorType(saved.authorType())
+                    .createdAt(saved.createdAt() != null
+                            ? saved.createdAt()
+                            : null)
+                    .build();
+            ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                    .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
+                    .chatRoomId(saved.chatRoomId())
+                    .chatMessageDto(resp)
+                    .lastMessageCreatedAt(resp.getCreatedAt())
+                    .build();
+            chatWebSocketHandler.broadcastToRoom(saved.chatRoomId(), objectMapper.writeValueAsString(out));
         } catch (ServiceException se) {
             log.warn("AI biz error: {}", se.getReturnCode(), se);
             throw se; // not-retry → DLT
