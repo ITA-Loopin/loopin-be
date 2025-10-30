@@ -16,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ChatMessageDto {
     private Long id;
+    private String tempId;
     private Long chatRoomId;
     private Long memberId;
     private String nickname;
