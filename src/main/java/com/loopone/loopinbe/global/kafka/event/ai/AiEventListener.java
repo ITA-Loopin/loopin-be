@@ -3,7 +3,6 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
@@ -54,27 +53,29 @@ public class AiEventListener {
                     java.time.LocalDateTime.now()
             );
 
-            // 3) 브로드캐스트 (DB 생성 시각/ID 사용)
-            ChatMessageSavedResult saved = chatMessageService.processInbound(botInbound);
-
+            // 3) 브로드캐스트
             ChatMessageDto resp = ChatMessageDto.builder()
-                    .id(saved.messageId())
-                    .chatRoomId(saved.chatRoomId())
-                    .memberId(saved.memberId())
-                    .content(saved.content())
-                    .recommendations(saved.recommendations())
-                    .authorType(saved.authorType())
-                    .createdAt(saved.createdAt() != null
-                            ? saved.createdAt()
+                    .tempId(botInbound.messageKey())
+                    .chatRoomId(botInbound.chatRoomId())
+                    .memberId(botInbound.memberId())
+                    .content(botInbound.content())
+                    .recommendations(botInbound.recommendations())
+                    .authorType(botInbound.authorType())
+                    .createdAt(botInbound.createdAt() != null
+                            ? botInbound.createdAt()
                             : null)
                     .build();
+
             ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                     .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
-                    .chatRoomId(saved.chatRoomId())
+                    .chatRoomId(botInbound.chatRoomId())
                     .chatMessageDto(resp)
                     .lastMessageCreatedAt(resp.getCreatedAt())
                     .build();
-            chatWebSocketHandler.broadcastToRoom(saved.chatRoomId(), objectMapper.writeValueAsString(out));
+            chatWebSocketHandler.broadcastToRoom(botInbound.chatRoomId(), objectMapper.writeValueAsString(out));
+
+            // 4) RDB 저장
+            chatMessageService.processInbound(botInbound);
         } catch (ServiceException se) {
             log.warn("AI biz error: {}", se.getReturnCode(), se);
             throw se; // not-retry → DLT
