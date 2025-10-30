@@ -157,7 +157,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     }
                 });
         // 3) Mongo 업서트 (id = messageKey)
-        messageContentRepository.upsert(in.messageKey(), in.content());
+        messageContentRepository.upsert(in.messageKey(), in.content(), in.recommendations());
         // 4) 봇 방 여부는 ChatRoom에서!
         boolean isBotRoom = (msg.getChatRoom() != null)
                 ? msg.getChatRoom().isBotRoom()
