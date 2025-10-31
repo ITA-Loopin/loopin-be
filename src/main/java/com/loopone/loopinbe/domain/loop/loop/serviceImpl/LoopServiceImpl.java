@@ -186,9 +186,13 @@ public class LoopServiceImpl implements LoopService {
 
         List<Loop> loopsToCreate = new ArrayList<>();
         LocalDate currentDate = start;
+        int monthsToAdd = 0; //plusMonths에 넣어줄 값을 저장할 변수
         while (!currentDate.isAfter(end)) {
             loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, groupId));
-            currentDate = currentDate.plusMonths(1);
+            monthsToAdd++;
+            //plusMonths로 인해 생기는 보정 문제: 윤년 또는 말일이 유효한 날짜가 아닌 경우, 자동으로 보정을 해주는데 그 다음 계산에서 원복을 하지 않음.
+            //ex)3월31일->4월30일(보정)->5월30일(문제발생)
+            currentDate = start.plusMonths(monthsToAdd); //시작일을 기준으로 증가하도록 구현하여 보정으로 인해 생기는 문제를 해결
         }
         if (!loopsToCreate.isEmpty()) {
             loopRepository.saveAll(loopsToCreate);
@@ -204,9 +208,11 @@ public class LoopServiceImpl implements LoopService {
 
         List<Loop> loopsToCreate = new ArrayList<>();
         LocalDate currentDate = start;
+        int yearsToAdd = 0;
         while (!currentDate.isAfter(end)) {
             loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, groupId));
-            currentDate = currentDate.plusYears(1);
+            yearsToAdd++;
+            currentDate = start.plusYears(yearsToAdd);
         }
         if (!loopsToCreate.isEmpty()) {
             loopRepository.saveAll(loopsToCreate);
