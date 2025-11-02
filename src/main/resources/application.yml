@@ -26,9 +26,9 @@ custom:
   jwt:
     secretKey: ${JWT_SECRET_KEY}
   accessToken:
-    expiration: "#{4 * 30 * 7 * 24 * 60 * 60 * 1000}"   # 4달
+    expiration: 120d  # 4달
   refreshToken:
-    expiration: "#{6 * 30 * 7 * 24 * 60 * 60 * 1000}"   # 6달
+    expiration: 180d   # 6달
 
 frontend:
   redirect:

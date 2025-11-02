@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,10 +32,10 @@ public class AuthServiceImpl implements AuthService {
     private final MemberService memberService;
 
     @Value("${custom.accessToken.expiration}")
-    private long accessTokenExpiration;
+    private Duration accessTokenExpiration;
 
     @Value("${custom.refreshToken.expiration}")
-    private long refreshTokenExpiration;
+    private Duration refreshTokenExpiration;
 
     // 회원가입 후 로그인 처리
     @Override
