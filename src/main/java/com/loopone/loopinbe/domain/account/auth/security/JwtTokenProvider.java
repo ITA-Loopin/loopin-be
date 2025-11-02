@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 
@@ -26,12 +28,13 @@ public class JwtTokenProvider {
     }
 
     // JWT 생성
-    public String generateToken(String email, String type, long expiration) {
+    public String generateToken(String email, String type, Duration expiration) {
+        Instant now = Instant.now();
         return Jwts.builder()
                 .subject(email)
                 .claim("tokenType", type)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .expiration(Date.from(now.plus(expiration)))
                 .signWith(key, Jwts.SIG.HS256)  // 필드 key 사용
                 .compact();
     }
