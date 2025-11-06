@@ -20,8 +20,10 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static com.loopone.loopinbe.global.constants.Constant.LOOP_PROMPT;
 import static com.loopone.loopinbe.global.constants.RedisKey.OPEN_AI_RESULT_KEY;
@@ -35,10 +37,10 @@ public class LoopAIServiceImpl implements LoopAIService {
     private final ObjectMapper objectMapper;
 
     @Override
-    public RecommendationsLoop chat(AiRequestPayload request) {
+    public CompletableFuture<RecommendationsLoop> chat(AiRequestPayload request) {
         log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
 
-        String result = openAiWebClient
+        return openAiWebClient
                 .post()
                 .uri("/chat/completions")
                 .bodyValue(Map.of(
@@ -57,21 +59,23 @@ public class LoopAIServiceImpl implements LoopAIService {
                 )
                 .bodyToMono(JsonNode.class)
                 .map(node -> node.get("choices").get(0).get("message").get("content").asText())
-                .block();
+                .map(this::parseToRecommendationsLoop)
+                .doOnNext(parsed -> {
+                    redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), parsed, Duration.ofMinutes(10));
+                    log.info("OpenAI 결과 Redis에 캐시 완료 : {}", request.requestId());
+                })
+                .doOnError(err -> log.error("OpenAI 호출 중 오류 발생: {}", err.getMessage()))
+                .toFuture();
+    }
 
-        // RecommendationsLoop 객체로 변환
-        RecommendationsLoop parsedLoop = null;
+    private RecommendationsLoop parseToRecommendationsLoop(String result) {
         try {
-            objectMapper.readTree(result);
-            parsedLoop = objectMapper.readValue(result, RecommendationsLoop.class);
+            objectMapper.readTree(result); // JSON 형식 검증
+            return objectMapper.readValue(result, RecommendationsLoop.class);
         } catch (JsonProcessingException e) {
             log.warn("GPT 응답이 JSON 형식이 아닙니다. 원문 저장으로 대체합니다: {}", e.getMessage());
+            return new RecommendationsLoop(Collections.emptyList());
         }
-
-        redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), parsedLoop, Duration.ofMinutes(10));
-
-        log.info("OpenAI 요청 처리 완료 : requestId={}", request.requestId());
-        return parsedLoop;
     }
 
     private String toPrompt(String message) {
