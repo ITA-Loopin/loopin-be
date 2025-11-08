@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -64,8 +65,6 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-
-
     //루프 상세 조회
     @Override
     public LoopDetailResponse getDetailLoop(Long loopId, CurrentUserDto currentUser) {
@@ -124,7 +123,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 정보 수정
         if (requestDTO.title() != null) loop.setTitle(requestDTO.title());
         if (requestDTO.content() != null) loop.setContent(requestDTO.content());
-        if (requestDTO.loopDate() != null) loop.setLoopDate(requestDTO.loopDate());
+        if (requestDTO.specificDate() != null) loop.setLoopDate(requestDTO.specificDate());
 
         //체크리스트 수정
         if(requestDTO.checklists() != null){
@@ -134,6 +133,26 @@ public class LoopServiceImpl implements LoopService {
         }
 
         loopRepository.save(loop);
+    }
+
+    //루프 그룹 전체 수정
+    @Override
+    public void updateLoopGroup(Long loopId, LoopGroupUpdateRequest requestDTO, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop, currentUser);
+
+        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
+
+        //해당 루프 리스트를 삭제
+        loopRepository.deleteAll(LoopList);
+
+        //새로운 규칙으로 생성
+        LoopCreateRequest createRequestDTO = loopMapper.toLoopCreateRequest(requestDTO);
+        createLoop(createRequestDTO, currentUser);
     }
 
     //루프 삭제
@@ -236,6 +255,12 @@ public class LoopServiceImpl implements LoopService {
             }
         }
         return loop;
+    }
+
+    // ========== 조회 메서드 ==========
+    private List<Loop> findAllByLoopGroup(String loopGroup, LocalDate today) {
+        List<Loop> loopList = loopRepository.findAllByLoopGroupAndLoopDateAfter(loopGroup, today);
+        return loopList;
     }
 
     // ========== 헬퍼 메서드 ==========
