@@ -1,5 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.mapper;
 
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
@@ -44,6 +46,9 @@ public interface LoopMapper {
 
     //LoopChecklist 엔티티를 LoopChecklistResponse로 변환
     LoopChecklistResponse toChecklistResponse(LoopChecklist checklist);
+
+    //LoopGroupUpdateRequest를 LoopCreateRequest로 변환
+    LoopCreateRequest toLoopCreateRequest(LoopGroupUpdateRequest requestDTO);
 
     //진행률(progress)을 계산하는 헬퍼 메서드
     @Named("calculateProgress")
