@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.global.kafka.event.ai;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
@@ -7,6 +8,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
+import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
@@ -40,42 +42,49 @@ public class AiEventListener {
             AiRequestPayload req = objectMapper.readValue(rec.value(), AiRequestPayload.class);
 
             // 1) 프롬프트 구성 + LLM 호출
-            RecommendationsLoop loopRecommend = loopAIService.chat(req);
+            loopAIService.chat(req).thenAccept(loopRecommend -> {
+                // 2) 여기서 AI 답변용 ChatInboundMessagePayload 생성
+                ChatInboundMessagePayload botInbound = new ChatInboundMessagePayload(
+                        deterministicMessageKey(req),       // 멱등키 (아래 참고)
+                        req.chatRoomId(),
+                        null,
+                        AI_RESPONSE_MESSAGE,
+                        loopRecommend.recommendations(),
+                        ChatMessage.AuthorType.BOT,
+                        java.time.LocalDateTime.now()
+                );
 
-            // 2) 여기서 AI 답변용 ChatInboundMessagePayload 생성
-            ChatInboundMessagePayload botInbound = new ChatInboundMessagePayload(
-                    deterministicMessageKey(req),       // 멱등키 (아래 참고)
-                    req.chatRoomId(),
-                    null,
-                    AI_RESPONSE_MESSAGE,
-                    loopRecommend.recommendations(),
-                    ChatMessage.AuthorType.BOT,
-                    java.time.LocalDateTime.now()
-            );
+                // 3) 브로드캐스트
+                ChatMessageDto resp = ChatMessageDto.builder()
+                        .tempId(botInbound.messageKey())
+                        .chatRoomId(botInbound.chatRoomId())
+                        .memberId(botInbound.memberId())
+                        .content(botInbound.content())
+                        .recommendations(botInbound.recommendations())
+                        .authorType(botInbound.authorType())
+                        .createdAt(botInbound.createdAt() != null
+                                ? botInbound.createdAt()
+                                : null)
+                        .build();
 
-            // 3) 브로드캐스트
-            ChatMessageDto resp = ChatMessageDto.builder()
-                    .tempId(botInbound.messageKey())
-                    .chatRoomId(botInbound.chatRoomId())
-                    .memberId(botInbound.memberId())
-                    .content(botInbound.content())
-                    .recommendations(botInbound.recommendations())
-                    .authorType(botInbound.authorType())
-                    .createdAt(botInbound.createdAt() != null
-                            ? botInbound.createdAt()
-                            : null)
-                    .build();
+                ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                        .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
+                        .chatRoomId(botInbound.chatRoomId())
+                        .chatMessageDto(resp)
+                        .lastMessageCreatedAt(resp.getCreatedAt())
+                        .build();
+                try {
+                    chatWebSocketHandler.broadcastToRoom(botInbound.chatRoomId(), objectMapper.writeValueAsString(out));
+                } catch (JsonProcessingException e) {
+                    throw new ServiceException(ReturnCode.OPEN_AI_JSON_PROCESSING_ERROR, e.getMessage());
+                }
 
-            ChatWebSocketPayload out = ChatWebSocketPayload.builder()
-                    .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
-                    .chatRoomId(botInbound.chatRoomId())
-                    .chatMessageDto(resp)
-                    .lastMessageCreatedAt(resp.getCreatedAt())
-                    .build();
-            chatWebSocketHandler.broadcastToRoom(botInbound.chatRoomId(), objectMapper.writeValueAsString(out));
-
-            // 4) RDB 저장
-            chatMessageService.processInbound(botInbound);
+                // 4) RDB 저장
+                chatMessageService.processInbound(botInbound);
+            }).exceptionally(ex -> {
+                log.error("AI 비동기 응답 처리 중 오류: {}", ex.getMessage());
+                return null;
+            });
         } catch (ServiceException se) {
             log.warn("AI biz error: {}", se.getReturnCode(), se);
             throw se; // not-retry → DLT
