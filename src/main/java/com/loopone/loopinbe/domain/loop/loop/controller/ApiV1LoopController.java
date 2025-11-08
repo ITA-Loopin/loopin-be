@@ -88,7 +88,7 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 루프 그룹 전체 수정 API 구현
+    //루프 그룹 전체 수정
     @PutMapping("/loops/group/{loopId}")
     @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
     public ApiResponse<Void> updateGroupLoop(
@@ -111,5 +111,14 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 그룹 전체 루프 삭제 API 구현
+    //루프 그룹 삭제
+    @DeleteMapping("/loops/group/{loopId}")
+    @Operation(summary = "루프 그룹 전체 삭제", description = "해당 그룹의 루프 전체를 삭제합니다.")
+    public ApiResponse<Void> deleteLoopGroup(
+            @PathVariable Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.deleteLoopGroup(loopId, currentUser);
+        return ApiResponse.success();
+    }
 }
