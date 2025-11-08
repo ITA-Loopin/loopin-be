@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.loop.loop.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -87,7 +88,18 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 그룹 전체 루프 수정 API 구현
+    //TODO: 루프 그룹 전체 수정 API 구현
+    @PutMapping("/loops/{loopGroup}")
+    @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
+    public ApiResponse<Void> updateGroupLoop(
+            @Parameter(description = "수정할 루프 그룹의 ID") @PathVariable Long loopGroup,
+            @RequestBody @Valid LoopGroupUpdateRequest loopGroupUpdateRequest,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.updateLoopGroup(loopGroup, loopGroupUpdateRequest, currentUser);
+        return ApiResponse.success();
+    }
+
 
     //루프 삭제
     @DeleteMapping("/loops/{loopId}")
