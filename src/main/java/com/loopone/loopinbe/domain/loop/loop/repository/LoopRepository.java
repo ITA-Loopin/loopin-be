@@ -22,6 +22,14 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
     """)
     Page<Loop> findByMemberIdWithOrder(@Param("memberId") Long memberId, Pageable pageable);
 
-    // 특정 멤버의 특정 날짜에 해당하는 모든 루프 목록을 조회
+    //특정 멤버의 특정 날짜에 해당하는 모든 루프 목록을 조회
     List<Loop> findByMemberIdAndLoopDate(Long memberId, LocalDate loopDate);
+
+    //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+    @Query("""
+        SELECT l
+        FROM Loop l
+        WHERE l.loopGroup = :loopGroup AND l.loopDate >= :date
+    """)
+    List<Loop> findAllByLoopGroupAndLoopDateAfter(@Param("loopGroup") String loopGroup, @Param("date") LocalDate date);
 }
