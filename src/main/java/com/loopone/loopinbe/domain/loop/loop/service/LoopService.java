@@ -33,4 +33,7 @@ public interface LoopService {
 
     //루프 삭제
     void deleteLoop(Long loopId, CurrentUserDto currentUser);
+
+    //루프 그룹 전체 삭제
+    void deleteLoopGroup(Long loopId, CurrentUserDto currentUser);
 }
