@@ -159,12 +159,30 @@ public class LoopServiceImpl implements LoopService {
     @Override
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
+        //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
         //루프의 소유자가 현재 사용자인지 확인
         validateLoopOwner(loop, currentUser);
 
         loopRepository.delete(loop);
+    }
+
+    //루프 그룹 전체 삭제
+    @Override
+    @Transactional
+    public void deleteLoopGroup(Long loopId, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop, currentUser);
+
+        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
+
+        //해당 루프 리스트를 삭제
+        loopRepository.deleteAll(LoopList);
     }
 
     // ========== 비즈니스 로직 메서드 ==========
@@ -258,6 +276,7 @@ public class LoopServiceImpl implements LoopService {
     }
 
     // ========== 조회 메서드 ==========
+    //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
     private List<Loop> findAllByLoopGroup(String loopGroup, LocalDate today) {
         List<Loop> loopList = loopRepository.findAllByLoopGroupAndLoopDateAfter(loopGroup, today);
         return loopList;
