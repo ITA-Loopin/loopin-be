@@ -92,11 +92,11 @@ public class ApiV1LoopController {
     @PutMapping("/loops/{loopGroup}")
     @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
     public ApiResponse<Void> updateGroupLoop(
-            @Parameter(description = "수정할 루프 그룹의 ID") @PathVariable Long loopGroup,
+            @Parameter(description = "수정할 루프 ID") @PathVariable Long loopId,
             @RequestBody @Valid LoopGroupUpdateRequest loopGroupUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopService.updateLoopGroup(loopGroup, loopGroupUpdateRequest, currentUser);
+        loopService.updateLoopGroup(loopId, loopGroupUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
