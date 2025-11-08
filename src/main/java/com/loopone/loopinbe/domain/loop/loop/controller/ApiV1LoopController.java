@@ -89,7 +89,7 @@ public class ApiV1LoopController {
     }
 
     //TODO: 루프 그룹 전체 수정 API 구현
-    @PutMapping("/loops/{loopGroup}")
+    @PutMapping("/loops/group/{loopId}")
     @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
     public ApiResponse<Void> updateGroupLoop(
             @Parameter(description = "수정할 루프 ID") @PathVariable Long loopId,
@@ -99,7 +99,6 @@ public class ApiV1LoopController {
         loopService.updateLoopGroup(loopId, loopGroupUpdateRequest, currentUser);
         return ApiResponse.success();
     }
-
 
     //루프 삭제
     @DeleteMapping("/loops/{loopId}")
