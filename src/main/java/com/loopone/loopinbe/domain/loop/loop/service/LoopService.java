@@ -29,7 +29,7 @@ public interface LoopService {
     void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser);
 
     //루프 그룹 전체 수정
-    void updateLoopGroup(Long loopGroup, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
+    void updateLoopGroup(Long loopId, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
 
     //루프 삭제
     void deleteLoop(Long loopId, CurrentUserDto currentUser);
