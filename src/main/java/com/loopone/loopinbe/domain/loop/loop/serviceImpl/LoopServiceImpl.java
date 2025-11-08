@@ -124,7 +124,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 정보 수정
         if (requestDTO.title() != null) loop.setTitle(requestDTO.title());
         if (requestDTO.content() != null) loop.setContent(requestDTO.content());
-        if (requestDTO.loopDate() != null) loop.setLoopDate(requestDTO.loopDate());
+        if (requestDTO.specificDate() != null) loop.setLoopDate(requestDTO.specificDate());
 
         //체크리스트 수정
         if(requestDTO.checklists() != null){
