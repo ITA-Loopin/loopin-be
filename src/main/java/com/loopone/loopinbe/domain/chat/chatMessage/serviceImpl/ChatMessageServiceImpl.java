@@ -58,20 +58,20 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoomId(chatRoomId, sortedPageable);
             List<String> stringMessageIds = chatMessages.stream()
-                    .map(chatMessage -> String.valueOf(chatMessage.getId()))
+                    .map(chatMessage -> String.valueOf(chatMessage.getMessageKey()))
                     .collect(Collectors.toList());
             List<MessageContent> contents = Optional.ofNullable(messageContentRepository.findByIdIn(stringMessageIds))
                     .orElse(Collections.emptyList());
-            Map<Long, String> messageContentMap = new HashMap<>();
+            Map<String, String> messageContentMap = new HashMap<>();
             for (MessageContent message : contents) {
                 try {
-                    messageContentMap.put(Long.parseLong(message.getId()), message.getContent());
+                    messageContentMap.put(message.getId(), message.getContent());
                 } catch (NumberFormatException e) {
                     log.warn("Invalid messageContent ID format: {}", message.getId());
                 }
             }
             return PageResponse.of(chatMessages.map(chatMessage -> {
-                String content = messageContentMap.getOrDefault(chatMessage.getId(), "");
+                String content = messageContentMap.getOrDefault(chatMessage.getMessageKey(), "");
                 return chatMessageConverter.toChatMessageDto(chatMessage, content);
             }));
         } catch (ServiceException e) {
