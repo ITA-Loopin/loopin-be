@@ -1,11 +1,14 @@
 package com.loopone.loopinbe.domain.chat.chatMessage.entity;
 
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.List;
 
 @Document(collection = "message_content")
 @Getter
@@ -21,5 +24,5 @@ public class MessageContent {
     @Size(max = 1000)
     private String content;
 
-    private RecommendationsLoop recommendations;
+    private List<LoopCreateRequest> recommendations;
 }
