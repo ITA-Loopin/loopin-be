@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -32,19 +33,12 @@ public class JwtTokenProvider {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(email)
+                .id(UUID.randomUUID().toString())
                 .claim("tokenType", type)
                 .issuedAt(new Date())
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key, Jwts.SIG.HS256)  // 필드 key 사용
                 .compact();
-    }
-
-    // JWT 디코딩
-    public void decodeToken(String token) {
-        Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token);
     }
 
     // ACCESS Token 검증
@@ -95,5 +89,25 @@ public class JwtTokenProvider {
             return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
+    }
+
+    // jti/TTL 헬퍼
+    public String getJti(String token) {
+        return parse(token).getId(); // 표준 jti
+    }
+
+    public long getRemainingSeconds(String token) {
+        Date exp = parse(token).getExpiration();
+        long diffMs = exp.getTime() - System.currentTimeMillis();
+        return Math.max(0, diffMs / 1000);
+    }
+
+    // 공통 파서
+    private Claims parse(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

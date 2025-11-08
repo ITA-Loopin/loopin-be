@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
 import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
+import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
@@ -12,13 +13,14 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+import org.springframework.web.socket.CloseStatus;
 
 import java.time.Duration;
 
@@ -30,6 +32,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final MemberService memberService;
+    private final WsSessionRegistry wsSessionRegistry;
+    private final AccessTokenDenyListService accessTokenDenyListService;
 
     @Value("${custom.accessToken.expiration}")
     private Duration accessTokenExpiration;
@@ -64,9 +68,21 @@ public class AuthServiceImpl implements AuthService {
 
     // 로그아웃
     @Override
-    public void logout(CurrentUserDto currentUser) {
+    public void logout(CurrentUserDto currentUser, String accessToken) {
         // Redis에서 Refresh Token 삭제
         refreshTokenService.deleteRefreshToken(currentUser.id().toString());
+        // access 즉시 차단(deny-list)
+        if (accessToken != null && jwtTokenProvider.validateAccessToken(accessToken)) {
+            String jti = jwtTokenProvider.getJti(accessToken);
+            long ttlSec = jwtTokenProvider.getRemainingSeconds(accessToken);
+            if (ttlSec > 0) {
+                accessTokenDenyListService.deny(jti, Duration.ofSeconds(ttlSec));
+            }
+        }
+        // WS 모두 종료 (4401: Unauthorized/Logged out)
+        wsSessionRegistry.closeAll(currentUser.id(), new CloseStatus(4401, "Logged out"));
+        log.info("Logout: memberId={}, closedWsSessions={}", currentUser.id(),
+                wsSessionRegistry.count(currentUser.id()));
     }
 
     // accessToken 재발급
