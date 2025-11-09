@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.member.dto.SocialUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.account.oauth.dto.res.OAuthRedirectResponse;
 import com.loopone.loopinbe.global.config.properties.OAuthWebProperties;
 import com.loopone.loopinbe.domain.account.oauth.enums.FrontendEnv;
 import com.loopone.loopinbe.domain.account.oauth.service.OAuthService;
@@ -89,32 +90,30 @@ public class OAuthServiceImpl implements OAuthService {
 
     // 리디렉션 URL 생성 (env 별 분기)
     @Override
-    public String getRedirectUrl(SocialUserDto socialUser, FrontendEnv env) {
+    public OAuthRedirectResponse buildRedirectResponse(SocialUserDto socialUser, FrontendEnv env) {
         String base = frontendRedirectProperties.urlFor(env);
         String email = socialUser.email();
-        boolean isExistingMember = memberRepository.existsByEmail(email);
+        boolean existing = memberRepository.existsByEmail(email);
 
-        UriComponentsBuilder b = UriComponentsBuilder.fromUriString(base);
-        if (isExistingMember) {
-            // 로그인 처리
-            LoginRequest loginRequest = LoginRequest.builder()
-                    .email(email)
-                    .build();
-            LoginResponse loginResponse = authService.login(loginRequest);
+        if (existing) {
+            // 내부 로그인
+            LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
 
-            return b.queryParam("status", "LOGIN_SUCCESS")
-                    .queryParam("accessToken", loginResponse.getAccessToken())
-                    .queryParam("refreshToken", loginResponse.getRefreshToken())
+            // 보안상: URL에 토큰을 넣지 말 것(로그/리퍼러/히스토리 유출 위험)
+            String redirectUrl = UriComponentsBuilder.fromUriString(base)
+                    .queryParam("status", "LOGIN_SUCCESS")
                     .build()
                     .toUriString();
+            return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken());
         } else {
-            // 신규 가입 유도
-            return b.queryParam("status", "SIGNUP_REQUIRED")
+            String redirectUrl = UriComponentsBuilder.fromUriString(base)
+                    .queryParam("status", "SIGNUP_REQUIRED")
                     .queryParam("email", email)
                     .queryParam("provider", socialUser.provider().name())
                     .queryParam("providerId", socialUser.providerId())
                     .build()
                     .toUriString();
+            return new OAuthRedirectResponse(false, redirectUrl, null);
         }
     }
 

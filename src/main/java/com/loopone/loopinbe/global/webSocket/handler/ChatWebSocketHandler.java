@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayloa
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
+import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,9 +29,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Long> sessionRoomMap = new ConcurrentHashMap<>(); // 세션 -> 방 매핑
+    private final WsSessionRegistry wsSessionRegistry;
+    private final Map<WebSocketSession, Long> sessionMemberMap = new ConcurrentHashMap<>(); // 세션 → 멤버 매핑
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        // 인터셉터가 넣어준 memberId 필수
+        Long memberId = (Long) session.getAttributes().get("memberId");
+        if (memberId == null) {
+            log.warn("WS connected without memberId: {}", session.getId());
+            session.close(new CloseStatus(4401, "UNAUTHENTICATED"));
+            return;
+        }
         // 인터셉터가 넣어준 값 우선 사용
         Long chatRoomId = (Long) session.getAttributes().get("chatRoomId");
         if (chatRoomId == null) {
@@ -57,13 +67,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 .computeIfAbsent(chatRoomId, k -> new CopyOnWriteArrayList<>())
                 .add(session);
         sessionRoomMap.put(session, chatRoomId);
-        log.info("WebSocket connected: {} for chatRoomId: {}", session.getId(), chatRoomId);
+        sessionMemberMap.put(session, memberId);
+        wsSessionRegistry.add(memberId, session);
+        log.info("WS connected: {} memberId={} chatRoomId={}", session.getId(), memberId, chatRoomId);
     }
 
     private Long resolveMemberId(WebSocketSession session) {
-        Object v = session.getAttributes().get("memberId");
-        if (v == null) throw new IllegalStateException("Unauthenticated WS session");
-        return (Long) v;
+        // 레지스트리 매핑에서 즉시 조회
+        Long memberId = sessionMemberMap.get(session);
+        if (memberId == null) throw new IllegalStateException("Unauthenticated WS session");
+        return memberId;
     }
 
     @Override
@@ -156,14 +169,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         Long chatRoomId = sessionRoomMap.remove(session);
         if (chatRoomId != null) {
-            CopyOnWriteArrayList<WebSocketSession> sessions = chatRoomSessions.get(chatRoomId);
+            var sessions = chatRoomSessions.get(chatRoomId);
             if (sessions != null) {
-                sessions.remove(session);         // COW라 동시성 안전
+                sessions.remove(session);
                 if (sessions.isEmpty()) chatRoomSessions.remove(chatRoomId);
             }
-            log.info("WebSocket disconnected: {} from chatRoomId: {}", session.getId(), chatRoomId);
+        }
+        // 멤버 세션 해제
+        Long memberId = sessionMemberMap.remove(session);
+        if (memberId != null) {
+            wsSessionRegistry.remove(memberId, session);
+            log.info("WS disconnected: {} memberId={} room={}", session.getId(), memberId, chatRoomId);
         } else {
-            log.info("WebSocket disconnected without chatRoomId: {}", session.getId());
+            log.info("WS disconnected: {} (no member mapping) room={}", session.getId(), chatRoomId);
         }
     }
 }

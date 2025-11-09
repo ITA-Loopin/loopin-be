@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -27,6 +29,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -167,7 +170,7 @@ class MemberControllerTest {
                 new MemberResponse(20L, "bob", "https://b", 3L, 4L, 22L)
         );
         given(memberService.searchMemberInfo(any(Pageable.class), eq("kw"), any(CurrentUserDto.class)))
-                .willReturn(list);
+                .willReturn((PageResponse<MemberResponse>) list);
 
         mvc.perform(get("/rest-api/v1/member/search")
                         .param("keyword", "kw")
