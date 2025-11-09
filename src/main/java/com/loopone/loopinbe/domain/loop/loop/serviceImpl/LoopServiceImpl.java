@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -46,40 +47,21 @@ public class LoopServiceImpl implements LoopService {
     //루프 생성
     @Override
     @Transactional
-    public void createLoop(LoopCreateRequest loopCreateRequest, CurrentUserDto currentUser){
-        //시작일, 종료일 설정 (종료일 미입력 시, 시작일의 1년 후)
-        LocalDate start = loopCreateRequest.startDate();
-        LocalDate end = (loopCreateRequest.endDate() == null) ? start.plusYears(1) : loopCreateRequest.endDate();
+    public void createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser){
 
-        //고유 그룹id UUID로 생성
-        String groupId = UUID.randomUUID().toString();
-
-        List<Loop> loopToCreate = new ArrayList<>();
-
-        //오늘부터 종료일까지 반복
-        for(LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)){
-            //입력한 요일 목록에 포함되어있다면 현재 date에 루프 생성
-            if(loopCreateRequest.daysOfWeek().contains(date.getDayOfWeek())){
-                Loop loop = Loop.builder()
-                        .member(memberConverter.toMember(currentUser))
-                        .title(loopCreateRequest.title())
-                        .content(loopCreateRequest.content())
-                        .loopDate(date)
-                        .loopGroup(groupId)
-                        .build();
-
-                //입력한 체크리스트가 있다면 해당 루프에 추가
-                if(loopCreateRequest.checklists() != null && !loopCreateRequest.checklists().isEmpty()){
-                    for(String cl : loopCreateRequest.checklists()){
-                        loop.addChecklist(LoopChecklist.builder().content(cl).build());
-                    }
-                }
-                loopToCreate.add(loop);
-            }
-        }
-        //만들어진 루프 DB에 저장
-        if(!loopToCreate.isEmpty()){
-            loopRepository.saveAll(loopToCreate);
+        switch (requestDTO.scheduleType()) {
+            case NONE:
+                createSingleLoop(requestDTO, currentUser);
+                break;
+            case WEEKLY:
+                createWeeklyLoops(requestDTO, currentUser);
+                break;
+            case MONTHLY:
+                createMonthlyLoops(requestDTO, currentUser);
+                break;
+            case YEARLY:
+                createYearlyLoops(requestDTO, currentUser);
+                break;
         }
     }
 
@@ -128,7 +110,7 @@ public class LoopServiceImpl implements LoopService {
     //단일 루프 수정
     @Override
     @Transactional
-    public void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser){
+    public void updateLoop(Long loopId, LoopUpdateRequest requestDTO, CurrentUserDto currentUser){
         //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
@@ -139,13 +121,13 @@ public class LoopServiceImpl implements LoopService {
         loop.setLoopGroup(null);
 
         //루프 정보 수정
-        if (loopUpdateRequest.title() != null) loop.setTitle(loopUpdateRequest.title());
-        if (loopUpdateRequest.content() != null) loop.setContent(loopUpdateRequest.content());
-        if (loopUpdateRequest.loopDate() != null) loop.setLoopDate(loopUpdateRequest.loopDate());
+        if (requestDTO.title() != null) loop.setTitle(requestDTO.title());
+        if (requestDTO.content() != null) loop.setContent(requestDTO.content());
+        if (requestDTO.specificDate() != null) loop.setLoopDate(requestDTO.specificDate());
 
         //체크리스트 수정
-        if(loopUpdateRequest.checklists() != null){
-            for(String cl : loopUpdateRequest.checklists()){
+        if(requestDTO.checklists() != null){
+            for(String cl : requestDTO.checklists()){
                 loop.addChecklist(LoopChecklist.builder().content(cl).build());
             }
         }
@@ -153,16 +135,151 @@ public class LoopServiceImpl implements LoopService {
         loopRepository.save(loop);
     }
 
+    //루프 그룹 전체 수정
+    @Override
+    public void updateLoopGroup(Long loopId, LoopGroupUpdateRequest requestDTO, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop, currentUser);
+
+        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
+
+        //해당 루프 리스트를 삭제
+        loopRepository.deleteAll(LoopList);
+
+        //새로운 규칙으로 생성
+        LoopCreateRequest createRequestDTO = loopMapper.toLoopCreateRequest(requestDTO);
+        createLoop(createRequestDTO, currentUser);
+    }
+
     //루프 삭제
     @Override
     @Transactional
     public void deleteLoop(Long loopId, CurrentUserDto currentUser) {
+        //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
         //루프의 소유자가 현재 사용자인지 확인
         validateLoopOwner(loop, currentUser);
 
         loopRepository.delete(loop);
+    }
+
+    //루프 그룹 전체 삭제
+    @Override
+    @Transactional
+    public void deleteLoopGroup(Long loopId, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프의 소유자가 현재 사용자인지 확인
+        validateLoopOwner(loop, currentUser);
+
+        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
+
+        //해당 루프 리스트를 삭제
+        loopRepository.deleteAll(LoopList);
+    }
+
+    // ========== 비즈니스 로직 메서드 ==========
+    //단일 루프 (반복x)
+    private void createSingleLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        LocalDate date = (requestDTO.specificDate() == null) ? LocalDate.now() : requestDTO.specificDate(); //null이면 당일로 설정
+        Loop loop = buildLoop(requestDTO, currentUser, date, null);
+        loopRepository.save(loop);
+    }
+
+    //매주 반복 루프
+    private void createWeeklyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        LocalDate start = (requestDTO.startDate() == null) ? LocalDate.now() : requestDTO.startDate();
+        LocalDate end = (requestDTO.endDate() == null) ? start.plusYears(1) : requestDTO.endDate();
+
+        //고유 그룹id UUID로 생성
+        String groupId = UUID.randomUUID().toString();
+
+        List<Loop> loopsToCreate = new ArrayList<>();
+        for (LocalDate currentDate = start; !currentDate.isAfter(end); currentDate = currentDate.plusDays(1)) {
+            if (requestDTO.daysOfWeek().contains(currentDate.getDayOfWeek())) {
+                loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, groupId));
+            }
+        }
+
+        //만들어진 루프 DB에 저장
+        if (!loopsToCreate.isEmpty()) {
+            loopRepository.saveAll(loopsToCreate);
+        }
+    }
+
+    //매월 반복 루프
+    private void createMonthlyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        LocalDate start = (requestDTO.startDate() == null) ? LocalDate.now() : requestDTO.startDate();
+        LocalDate end = (requestDTO.endDate() == null) ? start.plusYears(1) : requestDTO.endDate();
+
+        String groupId = UUID.randomUUID().toString();
+
+        List<Loop> loopsToCreate = new ArrayList<>();
+        LocalDate currentDate = start;
+        int monthsToAdd = 0; //plusMonths에 넣어줄 값을 저장할 변수
+        while (!currentDate.isAfter(end)) {
+            loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, groupId));
+            monthsToAdd++;
+            //plusMonths로 인해 생기는 보정 문제: 윤년 또는 말일이 유효한 날짜가 아닌 경우, 자동으로 보정을 해주는데 그 다음 계산에서 원복을 하지 않음.
+            //ex)3월31일->4월30일(보정)->5월30일(문제발생)
+            currentDate = start.plusMonths(monthsToAdd); //시작일을 기준으로 증가하도록 구현하여 보정으로 인해 생기는 문제를 해결
+        }
+        if (!loopsToCreate.isEmpty()) {
+            loopRepository.saveAll(loopsToCreate);
+        }
+    }
+
+    //매년 반복 루프
+    private void createYearlyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        LocalDate start = (requestDTO.startDate() == null) ? LocalDate.now() : requestDTO.startDate();
+        LocalDate end = (requestDTO.endDate() == null) ? start.plusYears(5) : requestDTO.endDate();
+
+        String groupId = UUID.randomUUID().toString();
+
+        List<Loop> loopsToCreate = new ArrayList<>();
+        LocalDate currentDate = start;
+        int yearsToAdd = 0;
+        while (!currentDate.isAfter(end)) {
+            loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, groupId));
+            yearsToAdd++;
+            currentDate = start.plusYears(yearsToAdd);
+        }
+        if (!loopsToCreate.isEmpty()) {
+            loopRepository.saveAll(loopsToCreate);
+        }
+    }
+
+    //루프 생성
+    private Loop buildLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LocalDate date, String loopGroup) {
+        Loop loop = Loop.builder()
+                .member(memberConverter.toMember(currentUser))
+                .title(requestDTO.title())
+                .content(requestDTO.content())
+                .loopDate(date)
+                .loopGroup(loopGroup)
+                .build();
+
+        //입력한 체크리스트가 있다면 해당 루프에 추가
+        if (requestDTO.checklists() != null && !requestDTO.checklists().isEmpty()){
+            for (String checklistContent : requestDTO.checklists()) {
+                loop.addChecklist(LoopChecklist.builder().content(checklistContent).build());
+            }
+        }
+        return loop;
+    }
+
+    // ========== 조회 메서드 ==========
+    //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+    private List<Loop> findAllByLoopGroup(String loopGroup, LocalDate today) {
+        List<Loop> loopList = loopRepository.findAllByLoopGroupAndLoopDateAfter(loopGroup, today);
+        return loopList;
     }
 
     // ========== 헬퍼 메서드 ==========

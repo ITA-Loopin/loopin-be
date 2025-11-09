@@ -10,7 +10,6 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.MessageContent;
-import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -18,6 +17,8 @@ import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
@@ -59,21 +60,24 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoomId(chatRoomId, sortedPageable);
             List<String> stringMessageIds = chatMessages.stream()
-                    .map(chatMessage -> String.valueOf(chatMessage.getId()))
+                    .map(chatMessage -> String.valueOf(chatMessage.getMessageKey()))
                     .collect(Collectors.toList());
             List<MessageContent> contents = Optional.ofNullable(messageContentRepository.findByIdIn(stringMessageIds))
                     .orElse(Collections.emptyList());
-            Map<Long, String> messageContentMap = new HashMap<>();
+            Map<String, String> messageContentMap = new HashMap<>();
+            Map<String, List<LoopCreateRequest>> recommendationsLoopMap = new HashMap<>();
             for (MessageContent message : contents) {
                 try {
-                    messageContentMap.put(Long.parseLong(message.getId()), message.getContent());
+                    messageContentMap.put(message.getId(), message.getContent());
+                    recommendationsLoopMap.put(message.getId(), message.getRecommendations());
                 } catch (NumberFormatException e) {
                     log.warn("Invalid messageContent ID format: {}", message.getId());
                 }
             }
             return PageResponse.of(chatMessages.map(chatMessage -> {
-                String content = messageContentMap.getOrDefault(chatMessage.getId(), "");
-                return chatMessageConverter.toChatMessageDto(chatMessage, content);
+                String content = messageContentMap.getOrDefault(chatMessage.getMessageKey(), "");
+                List<LoopCreateRequest> recommendationsLoop = recommendationsLoopMap.get(chatMessage.getMessageKey());
+                return chatMessageConverter.toChatMessageDto(chatMessage, content, recommendationsLoop);
             }));
         } catch (ServiceException e) {
             throw e;
@@ -115,7 +119,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         // 4. DTO 변환
         List<ChatMessageDto> responses = filteredMessages.stream()
-                .map(cm -> chatMessageConverter.toChatMessageDto(cm, messageContentMap.get(cm.getId())))
+                .map(cm -> chatMessageConverter.toChatMessageDto(cm, messageContentMap.get(cm.getId()), null))
                 .toList();
         return PageResponse.of(new PageImpl<>(responses, pageable, responses.size()));
     }
@@ -158,7 +162,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     }
                 });
         // 3) Mongo 업서트 (id = messageKey)
-        messageContentRepository.upsert(in.messageKey(), in.content());
+        messageContentRepository.upsert(in.messageKey(), in.content(), in.recommendations());
         // 4) 봇 방 여부는 ChatRoom에서!
         boolean isBotRoom = (msg.getChatRoom() != null)
                 ? msg.getChatRoom().isBotRoom()
@@ -168,6 +172,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 in.memberId(),
                 msg.getId(),
                 in.content(),
+                in.recommendations(),
                 in.authorType(),
                 msg.getCreatedAt(),
                 isBotRoom

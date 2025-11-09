@@ -21,7 +21,7 @@ public class NotProdMemberService {
 
     // 유저 1 ~ 5 생성
     public void createMembers(List<String> memberEmails) {
-        List<String> nicknames = List.of("seoul_gangnam", "incheon_songdo", "gangneung_beach", "busan_haeundae", "jeju_seaside");
+        List<String> nicknames = List.of("seoul", "incheon", "gangneung", "busan", "jeju");
         for (int i = 0; i < nicknames.size(); i++){
             MemberCreateRequest memberCreateRequest = MemberCreateRequest.builder()
                     .nickname(nicknames.get(i))

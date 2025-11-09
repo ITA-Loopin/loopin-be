@@ -36,6 +36,7 @@ dependencies {
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // netty
     implementation("org.springframework.boot:spring-boot-starter-reactor-netty")
@@ -75,6 +76,14 @@ dependencies {
 
     // MongoDB
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:mongodb")
+    testImplementation("org.testcontainers:kafka")   // Redpanda 대체
+    testImplementation("org.springframework.kafka:spring-kafka-test")
+    testImplementation("org.testcontainers:redis")
 }
 
 tasks.withType<Test> {

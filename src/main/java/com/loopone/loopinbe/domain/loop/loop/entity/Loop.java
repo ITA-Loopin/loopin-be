@@ -35,7 +35,7 @@ public class Loop extends BaseEntity {
     @Builder.Default
     private List<LoopChecklist> loopChecklists = new ArrayList<>();
 
-    @Column(nullable = false)
+    @Column
     private String loopGroup; //함께 생성된 루프 그룹핑
 
     //연관관계 편의 메서드

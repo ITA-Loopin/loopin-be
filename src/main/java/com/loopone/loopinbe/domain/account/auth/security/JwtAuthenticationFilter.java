@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.domain.account.auth.security;
 
+import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -9,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,6 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
+    private final AccessTokenDenyListService accessTokenDenyListService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
@@ -42,7 +43,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/rest-api/v1/oauth")
                 || path.startsWith("/rest-api/v1/find-password")
-                || path.startsWith("/api/v1/health-check");
+                || path.startsWith("/api/v1/health-check")
+                || path.startsWith("/ws");
     }
 
     @Override
@@ -60,6 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (!jwtTokenProvider.validateAccessToken(token)) {
                 log.warn("유효하지 않은 Access Token");
                 responseUnauthorized(response, "유효하지 않은 Access Token 입니다.");
+                return;
+            }
+            // Deny-list(즉시 무효화) 체크
+            String jti = null;
+            try {
+                jti = jwtTokenProvider.getJti(token); // jti 없는 과거 토큰 대비
+            } catch (Exception ignore) {} // 과거 토큰 호환
+            if (jti != null && accessTokenDenyListService.isDenied(jti)) {
+                log.warn("Deny-list에 등록된 토큰입니다. jti={}", jti);
+                responseUnauthorized(response, "이미 로그아웃된 토큰입니다.");
                 return;
             }
             // 이메일 추출

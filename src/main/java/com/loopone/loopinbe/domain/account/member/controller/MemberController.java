@@ -76,7 +76,7 @@ public class MemberController {
     // 회원정보 수정
     @Operation(summary = "회원정보 수정", description = "현재 로그인된 사용자의 회원정보를 수정합니다.")
     @PatchMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ApiResponse<Void> updateMemberInfo(@ParameterObject @ModelAttribute MemberUpdateRequest memberUpdateRequest,
+    public ApiResponse<Void> updateMemberInfo(@Valid @ParameterObject @ModelAttribute MemberUpdateRequest memberUpdateRequest,
                                               @RequestPart(value = "imageFile", required = false) MultipartFile imageFile,
                                               @CurrentUser CurrentUserDto currentUser) {
         memberService.updateMember(memberUpdateRequest, imageFile, currentUser);
