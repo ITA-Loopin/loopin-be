@@ -17,7 +17,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     // 해당 채팅방의 메시지 페이지 조회
     @Query("""
         SELECT m FROM ChatMessage m
-        JOIN FETCH m.member
+        LEFT JOIN FETCH m.member
         JOIN FETCH m.chatRoom r
         WHERE r.id = :chatRoomId
     """)

@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.account.oauth.service;
 
 import com.loopone.loopinbe.domain.account.member.dto.SocialUserDto;
+import com.loopone.loopinbe.domain.account.oauth.dto.res.OAuthRedirectResponse;
 import com.loopone.loopinbe.domain.account.oauth.enums.FrontendEnv;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -12,7 +13,7 @@ public interface OAuthService {
     SocialUserDto getUserInfo(String provider, String code);
 
     // 리디렉션 URL 생성
-    String getRedirectUrl(SocialUserDto socialUser, FrontendEnv env);
+    OAuthRedirectResponse buildRedirectResponse(SocialUserDto socialUser, FrontendEnv env);
 
     // OAuth state 토큰 검증
     FrontendEnv resolveEnvFromState(String state);
