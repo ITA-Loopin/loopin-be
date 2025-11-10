@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.auth.security;
+package com.loopone.loopinbe.global.security;
 
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
@@ -29,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
     private final AccessTokenDenyListService accessTokenDenyListService;
+    private final TokenResolver tokenResolver;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
@@ -49,17 +50,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String token = jwtTokenProvider.resolveToken(request);
+        String accessToken = tokenResolver.resolveAccess(request); // 쿠키 우선, 없으면 Bearer
 
         // JWT가 없을 경우
-        if (!StringUtils.hasText(token)) {
+        if (!StringUtils.hasText(accessToken)) {
             log.warn("JWT 토큰이 없습니다.");
             responseUnauthorized(response, "인증 실패");
             return;
         }
         try {
             // 토큰 유효성 검사
-            if (!jwtTokenProvider.validateAccessToken(token)) {
+            if (!jwtTokenProvider.validateAccessToken(accessToken)) {
                 log.warn("유효하지 않은 Access Token");
                 responseUnauthorized(response, "유효하지 않은 Access Token 입니다.");
                 return;
@@ -67,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Deny-list(즉시 무효화) 체크
             String jti = null;
             try {
-                jti = jwtTokenProvider.getJti(token); // jti 없는 과거 토큰 대비
+                jti = jwtTokenProvider.getJti(accessToken); // jti 없는 과거 토큰 대비
             } catch (Exception ignore) {} // 과거 토큰 호환
             if (jti != null && accessTokenDenyListService.isDenied(jti)) {
                 log.warn("Deny-list에 등록된 토큰입니다. jti={}", jti);
@@ -75,7 +76,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             // 이메일 추출
-            String email = jwtTokenProvider.getEmailFromToken(token);
+            String email = jwtTokenProvider.getEmailFromToken(accessToken);
             log.info("정상적으로 사용자 정보를 토큰으로부터 가져왔습니다. Email: {}", email);
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
@@ -86,12 +87,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // SecurityContextHolder에 직접 세팅
             SecurityContextHolder.getContext().setAuthentication(authentication);
-
         } catch (Exception e) {
             log.error("JWT 인증 처리 실패: {}", e.getMessage(), e);
             SecurityContextHolder.clearContext();
             try {
-                String email = jwtTokenProvider.getEmailFromToken(token);
+                String email = jwtTokenProvider.getEmailFromToken(accessToken);
                 refreshTokenService.deleteRefreshToken(email);
             } catch (Exception ignored) {
             }

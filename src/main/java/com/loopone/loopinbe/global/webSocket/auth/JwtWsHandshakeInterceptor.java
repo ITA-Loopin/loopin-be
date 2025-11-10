@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.global.webSocket.auth;
 
-import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
+import com.loopone.loopinbe.global.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
@@ -8,7 +8,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -18,7 +17,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -38,8 +36,8 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
                     ? s.getServletRequest() : null;
 
             // 1) 토큰 추출: Cookie
-            String token = extractFromCookie(servletReq, "ws_access");
-            if (token == null || !jwtTokenProvider.validateAccessToken(token)) {
+            String accessToken = extractFromCookie(servletReq, "access_token");
+            if (accessToken == null || !jwtTokenProvider.validateAccessToken(accessToken)) {
                 log.warn("[WS] invalid/missing token");
                 setStatus(res, HttpStatus.UNAUTHORIZED);
                 return false;
@@ -47,7 +45,7 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
 
             // 2) deny-list (즉시 무효화) 체크 ← 추가 포인트
             String jti = null;
-            try { jti = jwtTokenProvider.getJti(token); } catch (Exception ignore) {}
+            try { jti = jwtTokenProvider.getJti(accessToken); } catch (Exception ignore) {}
             if (jti != null && accessTokenDenyListService.isDenied(jti)) {
                 log.info("[WS] denied by logout. jti={}", jti);
                 setStatus(res, HttpStatus.UNAUTHORIZED);
@@ -55,7 +53,7 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
             }
 
             // 3) 이메일/subject 파싱 → memberId 조회
-            String email = jwtTokenProvider.getEmailFromToken(token);
+            String email = jwtTokenProvider.getEmailFromToken(accessToken);
             if (email == null) {
                 log.warn("[WS] email not found in token");
                 setStatus(res, HttpStatus.UNAUTHORIZED);

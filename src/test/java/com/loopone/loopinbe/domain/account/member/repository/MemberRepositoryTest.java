@@ -14,13 +14,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Import(TestContainersConfig.class) // 아래에 제공
 @ActiveProfiles("test")
 class MemberRepositoryTest {
-
     @PersistenceContext
     EntityManager em;
     private final MemberRepository memberRepository;
@@ -68,6 +67,6 @@ class MemberRepositoryTest {
         var r = page.getContent().get(0);
         assertThat(r.getNickname()).isEqualTo("bobby");
         assertThat(r.getFollowerCount()).isEqualTo(2L);
-        assertThat(r.getFollowingCount()).isZero(); // bob이 팔로우 중인 수 (위 셋업에선 alice 1명이라면 1L로 맞추세요)
+        assertThat(r.getFollowingCount()).isEqualTo(1L); // bob이 팔로우 중인 수
     }
 }
