@@ -49,7 +49,7 @@ public class WebOAuthController {
         ResponseEntity.BodyBuilder res = ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(response.getRedirectUrl()));
 
-        // 로그인 성공인 경우에만 쿠키 셋업 (경로: /ws, HttpOnly)
+        // 로그인 성공인 경우에만 쿠키 셋업 (경로: /, HttpOnly)
         if (response.isLoginSuccess()) {
             // buildRedirectResponse에서 내부 로그인 처리 후 토큰 반환한다고 가정
             if (response.getAccessToken() != null) {
