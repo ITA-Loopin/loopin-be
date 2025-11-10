@@ -35,6 +35,8 @@ public class OAuthServiceImpl implements OAuthService {
     private final AuthService authService;
     private final OAuthStateService stateService;
     private final FrontendRedirectProperties frontendRedirectProperties;
+    private static final String ACCESS_TOKEN = "access_token";
+    private static final String REFRESH_TOKEN = "refresh_token";
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
@@ -98,10 +100,10 @@ public class OAuthServiceImpl implements OAuthService {
         if (existing) {
             // 내부 로그인
             LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
-
-            // 보안상: URL에 토큰을 넣지 말 것(로그/리퍼러/히스토리 유출 위험)
             String redirectUrl = UriComponentsBuilder.fromUriString(base)
                     .queryParam("status", "LOGIN_SUCCESS")
+                    .queryParam(ACCESS_TOKEN, login.getAccessToken())
+                    .queryParam(REFRESH_TOKEN, login.getRefreshToken())
                     .build()
                     .toUriString();
             return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken());
@@ -147,10 +149,10 @@ public class OAuthServiceImpl implements OAuthService {
                 props.tokenUri(), HttpMethod.POST, request, Map.class
         );
         Map body = response.getBody();
-        if (body == null || body.get("access_token") == null) {
+        if (body == null || body.get(ACCESS_TOKEN) == null) {
             throw new RuntimeException("OAuth2 액세스 토큰을 가져올 수 없습니다.");
         }
-        return (String) body.get("access_token");
+        return (String) body.get(ACCESS_TOKEN);
     }
 
     @SuppressWarnings("unchecked")
