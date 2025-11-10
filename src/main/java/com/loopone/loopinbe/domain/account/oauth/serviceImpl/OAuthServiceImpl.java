@@ -104,7 +104,7 @@ public class OAuthServiceImpl implements OAuthService {
                     .queryParam("status", "LOGIN_SUCCESS")
                     .build()
                     .toUriString();
-            return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken());
+            return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken(), login.getRefreshToken());
         } else {
             String redirectUrl = UriComponentsBuilder.fromUriString(base)
                     .queryParam("status", "SIGNUP_REQUIRED")
@@ -113,7 +113,7 @@ public class OAuthServiceImpl implements OAuthService {
                     .queryParam("providerId", socialUser.providerId())
                     .build()
                     .toUriString();
-            return new OAuthRedirectResponse(false, redirectUrl, null);
+            return new OAuthRedirectResponse(false, redirectUrl, null, null);
         }
     }
 
