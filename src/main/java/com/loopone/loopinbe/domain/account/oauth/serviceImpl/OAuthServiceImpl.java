@@ -98,10 +98,10 @@ public class OAuthServiceImpl implements OAuthService {
         if (existing) {
             // 내부 로그인
             LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
-
-            // 보안상: URL에 토큰을 넣지 말 것(로그/리퍼러/히스토리 유출 위험)
             String redirectUrl = UriComponentsBuilder.fromUriString(base)
                     .queryParam("status", "LOGIN_SUCCESS")
+                    .queryParam("access_token", login.getAccessToken())
+                    .queryParam("refresh_token", login.getRefreshToken())
                     .build()
                     .toUriString();
             return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken());
