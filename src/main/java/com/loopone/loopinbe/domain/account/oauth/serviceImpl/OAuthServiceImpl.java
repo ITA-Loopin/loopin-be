@@ -36,7 +36,6 @@ public class OAuthServiceImpl implements OAuthService {
     private final OAuthStateService stateService;
     private final FrontendRedirectProperties frontendRedirectProperties;
     private static final String ACCESS_TOKEN = "access_token";
-    private static final String REFRESH_TOKEN = "refresh_token";
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
@@ -102,8 +101,6 @@ public class OAuthServiceImpl implements OAuthService {
             LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
             String redirectUrl = UriComponentsBuilder.fromUriString(base)
                     .queryParam("status", "LOGIN_SUCCESS")
-                    .queryParam(ACCESS_TOKEN, login.getAccessToken())
-                    .queryParam(REFRESH_TOKEN, login.getRefreshToken())
                     .build()
                     .toUriString();
             return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken(), login.getRefreshToken());
