@@ -11,6 +11,7 @@ import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -36,9 +37,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = MemberController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(MemberControllerTest.TestConfig.class) // @CurrentUser 리졸버 주입
 class MemberControllerTest {
-
     @Autowired
     MockMvc mvc;
 
@@ -247,10 +248,8 @@ class MemberControllerTest {
         verify(memberService).removeFollowed(eq(7L), any(CurrentUserDto.class));
     }
 
-    /**
-     * 테스트 전용 ArgumentResolver: @CurrentUser 주입
-     * 실제 시큐리티 필터/토큰을 피하면서도 Controller 시그니처 유지
-     */
+    // 테스트 전용 ArgumentResolver: @CurrentUser 주입
+    // 실제 시큐리티 필터/토큰을 피하면서도 Controller 시그니처 유지
     static class TestConfig {
         @Bean
         HandlerMethodArgumentResolver currentUserArgumentResolver() {

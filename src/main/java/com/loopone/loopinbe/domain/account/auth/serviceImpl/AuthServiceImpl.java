@@ -3,7 +3,7 @@ package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
-import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
+import com.loopone.loopinbe.global.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.auth.service.RefreshTokenService;
@@ -17,12 +17,9 @@ import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.CloseStatus;
-
-import java.time.Duration;
 
 import java.time.Duration;
 
@@ -94,7 +91,6 @@ public class AuthServiceImpl implements AuthService {
         if (refreshToken.startsWith("Bearer ")) {
             refreshToken = refreshToken.substring(7);
         }
-
         String storedRefreshToken = refreshTokenService.getRefreshToken(currentUser.id().toString());
         if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("유효하지 않은 리프레시 토큰입니다.");
@@ -104,7 +100,6 @@ public class AuthServiceImpl implements AuthService {
         }
         String email = jwtTokenProvider.getEmailFromToken(storedRefreshToken);
         String newAccessToken = jwtTokenProvider.generateToken(email, "ACCESS", accessTokenExpiration);
-
         return new LoginResponse(newAccessToken, storedRefreshToken);
     }
 }
