@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.account.member.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
@@ -8,12 +9,16 @@ import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
+import com.loopone.loopinbe.global.config.WebConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +30,7 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,7 +42,16 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = MemberController.class)
+@WebMvcTest(
+        controllers = MemberController.class,
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
+                        classes = {
+                                WebConfig.class,                   // ← 프로덕션 MVC 설정 제외
+                                CurrentUserArgumentResolver.class  // (안전하게) 실제 리졸버도 제외
+                        })
+        }
+)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(MemberControllerTest.TestConfig.class) // @CurrentUser 리졸버 주입
 class MemberControllerTest {
@@ -250,16 +265,16 @@ class MemberControllerTest {
 
     // 테스트 전용 ArgumentResolver: @CurrentUser 주입
     // 실제 시큐리티 필터/토큰을 피하면서도 Controller 시그니처 유지
-    static class TestConfig {
-        @Bean
-        HandlerMethodArgumentResolver currentUserArgumentResolver() {
-            return new HandlerMethodArgumentResolver() {
+    @TestConfiguration
+    static class TestConfig implements WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new HandlerMethodArgumentResolver() {
                 @Override
                 public boolean supportsParameter(MethodParameter p) {
                     return p.hasParameterAnnotation(CurrentUser.class)
                             || p.getParameterType().equals(CurrentUserDto.class);
                 }
-
                 @Override
                 public Object resolveArgument(
                         MethodParameter parameter,
@@ -268,21 +283,13 @@ class MemberControllerTest {
                         WebDataBinderFactory binderFactory
                 ) {
                     return new CurrentUserDto(
-                            1L,                                 // id
-                            "jun@loop.in",                      // email
-                            null,                               // password (불필요 → null)
-                            "jun",                              // nickname
-                            "010-0000-0000",                    // phone
-                            Member.Gender.MALE,                 // gender
-                            LocalDate.of(2000, 1, 1),           // birthday
-                            null,                      // profileImageUrl
-                            Member.State.NORMAL,                // state
-                            Member.MemberRole.ROLE_USER,             // role
-                            Member.OAuthProvider.GOOGLE,        // provider
-                            "provider-id"                       // providerId
+                            1L, "jun@loop.in", null, "jun", "010-0000-0000",
+                            Member.Gender.MALE, LocalDate.of(2000,1,1),
+                            null, Member.State.NORMAL, Member.MemberRole.ROLE_USER,
+                            Member.OAuthProvider.GOOGLE, "provider-id"
                     );
                 }
-            };
+            });
         }
     }
 }
