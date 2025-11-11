@@ -31,7 +31,7 @@ public class WebAuthController {
     // 회원가입 후 로그인 처리
     @Operation(summary = "회원가입 후 로그인 처리", description = "신규 사용자 회원가입 후 로그인 처리합니다.")
     @PostMapping("/signup-login")
-    public ResponseEntity<ApiResponse<Void>> signUpAndLogin(@Valid @RequestBody MemberCreateRequest memberCreateRequest) {
+    public ResponseEntity<ApiResponse<LoginResponse>> signUpAndLogin(@Valid @RequestBody MemberCreateRequest memberCreateRequest) {
         LoginResponse login = authService.signUpAndLogin(memberCreateRequest);
         ResponseCookie a = authCookieFactory.issueAccess(login.getAccessToken());
         ResponseCookie r = authCookieFactory.issueRefresh(login.getRefreshToken());
@@ -39,7 +39,7 @@ public class WebAuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, a.toString())
                 .header(HttpHeaders.SET_COOKIE, r.toString())
-                .body(ApiResponse.success());
+                .body(ApiResponse.success(login));
     }
 
     // 로그인
