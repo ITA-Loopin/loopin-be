@@ -13,6 +13,9 @@ public class AuthCookieFactory {
     @Value("${app.cookie.secure}")  // dev=false, prod=true
     private boolean secure;
 
+    @Value("${app.cookie.domain}")  // ".loopin.co.kr"
+    private String cookieDomain;
+
     @Value("${custom.accessToken.expiration}")
     private Duration accessTokenExpiration;
 
@@ -27,7 +30,8 @@ public class AuthCookieFactory {
                 .secure(secure)
                 .sameSite(sameSite())
                 .path(path)
-                .maxAge(maxAge);
+                .maxAge(maxAge)
+                .domain(cookieDomain);
         return b.build();
     }
 
