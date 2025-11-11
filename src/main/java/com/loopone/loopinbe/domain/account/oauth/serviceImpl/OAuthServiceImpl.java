@@ -36,7 +36,6 @@ public class OAuthServiceImpl implements OAuthService {
     private final OAuthStateService stateService;
     private final FrontendRedirectProperties frontendRedirectProperties;
     private static final String ACCESS_TOKEN = "access_token";
-    private static final String REFRESH_TOKEN = "refresh_token";
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
