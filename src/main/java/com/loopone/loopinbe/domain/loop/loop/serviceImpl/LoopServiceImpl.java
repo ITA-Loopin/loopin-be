@@ -132,32 +132,32 @@ public class LoopServiceImpl implements LoopService {
 
         //체크리스트 수정
         if(requestDTO.checklists() != null){
-            for(String cl : requestDTO.checklists()){
-                loop.addChecklist(LoopChecklist.builder().content(cl).build());
+            loop.getLoopChecklists().clear(); //기존 목록 삭제
+            if (!requestDTO.checklists().isEmpty()) {
+                for (String cl : requestDTO.checklists()) {
+                    loop.addChecklist(LoopChecklist.builder().content(cl).build());
+                }
             }
         }
-
-        loopRepository.save(loop);
     }
 
     //루프 그룹 전체 수정
     @Override
-    public void updateLoopGroup(Long loopId, LoopGroupUpdateRequest requestDTO, CurrentUserDto currentUser) {
+    public void updateLoopGroup(Long loopRuleId, LoopGroupUpdateRequest requestDTO, CurrentUserDto currentUser) {
         //루프 조회
-        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        LoopRule loopRule = loopRuleRepository.findById(loopRuleId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
 
         //루프의 소유자가 현재 사용자인지 확인
-        validateLoopOwner(loop, currentUser);
+        validateLoopRuleOwner(loopRule, currentUser);
 
-        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
-
+        //LoopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
         //해당 루프 리스트를 삭제
         loopRepository.deleteAll(LoopList);
 
         //새로운 규칙으로 생성
         LoopCreateRequest createRequestDTO = loopMapper.toLoopCreateRequest(requestDTO);
-        createLoop(createRequestDTO, currentUser);
+        createUpdateLoop(createRequestDTO, loopRule, currentUser);
     }
 
     //단일 루프 삭제
@@ -183,7 +183,7 @@ public class LoopServiceImpl implements LoopService {
         //loopRule의 소유자가 현재 사용자인지 확인
         validateLoopRuleOwner(loopRule, currentUser);
 
-        //loopRule의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        //loopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
         List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
         //해당 루프 리스트 삭제
         loopRepository.deleteAll(LoopList);
@@ -287,6 +287,31 @@ public class LoopServiceImpl implements LoopService {
         return loop;
     }
 
+    //전체 수정 시, 추가 루프 생성
+    @Transactional
+    public void createUpdateLoop(LoopCreateRequest requestDTO, LoopRule loopRule, CurrentUserDto currentUser){
+        //입력값으로 loopRule 업데이트
+        loopRule.setScheduleType(requestDTO.scheduleType());
+        loopRule.setDaysOfWeek(requestDTO.daysOfWeek());
+        loopRule.setStartDate(requestDTO.startDate().isBefore(LocalDate.now()) ? LocalDate.now() : requestDTO.startDate());
+        loopRule.setEndDate(requestDTO.endDate());
+
+        switch (requestDTO.scheduleType()) {
+            case NONE:
+                createSingleLoop(requestDTO, currentUser);
+                break;
+            case WEEKLY:
+                createWeeklyLoops(requestDTO, currentUser, loopRule);
+                break;
+            case MONTHLY:
+                createMonthlyLoops(requestDTO, currentUser, loopRule);
+                break;
+            case YEARLY:
+                createYearlyLoops(requestDTO, currentUser, loopRule);
+                break;
+        }
+    }
+
     // ========== 조회 메서드 ==========
     //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
     private List<Loop> findAllByLoopRule(LoopRule loopRule, LocalDate today) {
@@ -310,14 +335,14 @@ public class LoopServiceImpl implements LoopService {
 
     // ========== 검증 메서드 ==========
     //루프 사용자 검증
-    public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
+    public void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
     }
 
     //LoopRule 사용자 검증
-    public static void validateLoopRuleOwner(LoopRule loopRule, CurrentUserDto currentUser) {
+    public void validateLoopRuleOwner(LoopRule loopRule, CurrentUserDto currentUser) {
         if (!loopRule.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }

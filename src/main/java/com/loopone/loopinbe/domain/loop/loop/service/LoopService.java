@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
