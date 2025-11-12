@@ -176,18 +176,24 @@ public class LoopServiceImpl implements LoopService {
     //루프 그룹 전체 삭제
     @Override
     @Transactional
-    public void deleteLoopGroup(Long loopId, CurrentUserDto currentUser) {
+    public void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser) {
         //루프 조회
-        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        LoopRule loopRule = loopRuleRepository.findById(loopRuleId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
 
-        //루프의 소유자가 현재 사용자인지 확인
-        validateLoopOwner(loop, currentUser);
+        //loopRule의 소유자가 현재 사용자인지 확인
+        validateLoopRuleOwner(loopRule, currentUser);
 
-        //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopGroup(loop.getLoopGroup(), LocalDate.now());
-
-        //해당 루프 리스트를 삭제
+        //loopRule의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
+        //해당 루프 리스트 삭제
         loopRepository.deleteAll(LoopList);
+
+        //과거 루프는 연결 끊기
+        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, LocalDate.now());
+        pastLoopList.forEach(loop -> loop.setLoopRule(null));
+
+        //loopRule 삭제 (자식이 없기에 삭제 가능)
+        loopRuleRepository.delete(loopRule);
     }
 
     // ========== 비즈니스 로직 메서드 ==========
@@ -283,8 +289,13 @@ public class LoopServiceImpl implements LoopService {
 
     // ========== 조회 메서드 ==========
     //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
-    private List<Loop> findAllByLoopGroup(String loopGroup, LocalDate today) {
-        List<Loop> loopList = loopRepository.findAllByLoopGroupAndLoopDateAfter(loopGroup, today);
+    private List<Loop> findAllByLoopRule(LoopRule loopRule, LocalDate today) {
+        List<Loop> loopList = loopRepository.findAllByLoopRuleAndLoopDateAfter(loopRule, today);
+        return loopList;
+    }
+
+    private List<Loop> findAllByLoopRulePast(LoopRule loopRule, LocalDate today) {
+        List<Loop> loopList = loopRepository.findAllByLoopRuleAndLoopDateBefore(loopRule, today);
         return loopList;
     }
 
@@ -301,6 +312,13 @@ public class LoopServiceImpl implements LoopService {
     //루프 사용자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+    }
+
+    //LoopRule 사용자 검증
+    public static void validateLoopRuleOwner(LoopRule loopRule, CurrentUserDto currentUser) {
+        if (!loopRule.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
     }

@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Repository
 public interface LoopRepository extends JpaRepository<Loop, Long> {
+    // ========== 멤버 관련 조회 ==========
     //특정 멤버의 모든 루프 목록을 조회
     @Query("""
         SELECT m
@@ -27,6 +28,7 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
     //특정 멤버의 특정 날짜에 해당하는 모든 루프 목록을 조회
     List<Loop> findByMemberIdAndLoopDate(Long memberId, LocalDate loopDate);
 
+    // ========== LoopRule 관련 조회 ==========
     //LoopRule 객체로 첫 번째 루프 찾기
     Optional<Loop> findFirstByLoopRule(LoopRule loopRule);
 
@@ -36,5 +38,13 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
         FROM Loop l
         WHERE l.loopRule = :loopRule AND l.loopDate >= :date
     """)
-    List<Loop> findAllByLoopGroupAndLoopDateAfter(@Param("loopRule") String loopRule, @Param("date") LocalDate date);
+    List<Loop> findAllByLoopRuleAndLoopDateAfter(@Param("loopRule") LoopRule loopRule, @Param("date") LocalDate date);
+
+    //loopRule에 속한 과거의 루프 전체를 리스트로 조회
+    @Query("""
+        SELECT l
+        FROM Loop l
+        WHERE l.loopRule = :loopRule AND l.loopDate < :date
+    """)
+    List<Loop> findAllByLoopRuleAndLoopDateBefore(@Param("loopRule") LoopRule loopRule, @Param("date") LocalDate date);
 }

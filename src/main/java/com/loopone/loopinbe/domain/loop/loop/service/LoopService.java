@@ -29,11 +29,11 @@ public interface LoopService {
     void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser);
 
     //루프 그룹 전체 수정
-    void updateLoopGroup(Long loopId, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
+    void updateLoopGroup(Long loopRuleId, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
 
     //루프 삭제
     void deleteLoop(Long loopId, CurrentUserDto currentUser);
 
     //루프 그룹 전체 삭제
-    void deleteLoopGroup(Long loopId, CurrentUserDto currentUser);
+    void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser);
 }
