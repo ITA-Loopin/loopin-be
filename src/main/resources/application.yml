@@ -79,3 +79,5 @@ security:
 app:
   cookie:
     domain: ".loopin.co.kr"
+  ws:
+    allow-query-token: true
