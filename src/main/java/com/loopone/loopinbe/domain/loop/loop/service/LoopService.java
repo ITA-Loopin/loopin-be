@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -29,11 +30,11 @@ public interface LoopService {
     void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser);
 
     //루프 그룹 전체 수정
-    void updateLoopGroup(Long loopId, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
+    void updateLoopGroup(Long loopRuleId, LoopGroupUpdateRequest loopGroupUpdateRequest, CurrentUserDto currentUser);
 
     //루프 삭제
     void deleteLoop(Long loopId, CurrentUserDto currentUser);
 
     //루프 그룹 전체 삭제
-    void deleteLoopGroup(Long loopId, CurrentUserDto currentUser);
+    void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser);
 }
