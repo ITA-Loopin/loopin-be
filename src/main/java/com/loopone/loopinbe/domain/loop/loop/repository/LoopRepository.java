@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.repository;
 
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,10 +11,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LoopRepository extends JpaRepository<Loop, Long> {
-    // 특정 멤버의 모든 루프 목록을 조회
+    //특정 멤버의 모든 루프 목록을 조회
     @Query("""
         SELECT m
         FROM Loop m
@@ -25,11 +27,14 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
     //특정 멤버의 특정 날짜에 해당하는 모든 루프 목록을 조회
     List<Loop> findByMemberIdAndLoopDate(Long memberId, LocalDate loopDate);
 
-    //그룹의 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
+    //LoopRule 객체로 첫 번째 루프 찾기
+    Optional<Loop> findFirstByLoopRule(LoopRule loopRule);
+
+    //loopRule에 속한 루프 전체를 리스트로 조회 (오늘 포함 미래만 조회)
     @Query("""
         SELECT l
         FROM Loop l
-        WHERE l.loopGroup = :loopGroup AND l.loopDate >= :date
+        WHERE l.loopRule = :loopRule AND l.loopDate >= :date
     """)
-    List<Loop> findAllByLoopGroupAndLoopDateAfter(@Param("loopGroup") String loopGroup, @Param("date") LocalDate date);
+    List<Loop> findAllByLoopGroupAndLoopDateAfter(@Param("loopRule") String loopRule, @Param("date") LocalDate date);
 }
