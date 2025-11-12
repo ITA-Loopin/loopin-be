@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.support;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -11,31 +12,30 @@ import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration
 public class TestContainersConfig {
-
-    // PostgreSQL → spring.datasource.* 자동 연결
-    @Bean
-    @ServiceConnection
+    @Bean @ServiceConnection
     PostgreSQLContainer<?> postgres() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
     }
 
-    // MongoDB → spring.data.mongodb.uri 자동 연결
     @Bean
     @ServiceConnection
+    @ConditionalOnProperty(value = "testcontainers.mongo.enabled", havingValue = "true")
     MongoDBContainer mongodb() {
         return new MongoDBContainer(DockerImageName.parse("mongo:7"));
     }
 
-    // Kafka(Redpanda 대체 테스트) → spring.kafka.bootstrap-servers 자동 연결
     @Bean
     @ServiceConnection
+    @ConditionalOnProperty(value = "testcontainers.kafka.enabled", havingValue = "true")
     KafkaContainer kafka() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+        DockerImageName img = DockerImageName
+                .parse("apache/kafka:3.7.0"); // ← 안전한 기본
+        return new KafkaContainer(img);
     }
 
-    // Redis → spring.redis.host/port 자동 연결 (Boot 3.2+에서 지원)
     @Bean
-    @ServiceConnection
+    @ServiceConnection(name = "redis")
+    @ConditionalOnProperty(value = "testcontainers.redis.enabled", havingValue = "true")
     GenericContainer<?> redis() {
         return new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
                 .withExposedPorts(6379);

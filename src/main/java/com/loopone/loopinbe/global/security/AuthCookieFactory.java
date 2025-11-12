@@ -30,8 +30,12 @@ public class AuthCookieFactory {
                 .secure(secure)
                 .sameSite(sameSite())
                 .path(path)
-                .maxAge(maxAge)
-                .domain(cookieDomain);
+                .maxAge(maxAge);
+        // 로컬(빈값/localhost)일 땐 domain 미지정 → host-only cookie
+        if (cookieDomain != null && !cookieDomain.isBlank()
+                && !"localhost".equalsIgnoreCase(cookieDomain)) {
+            b.domain(cookieDomain);
+        }
         return b.build();
     }
 
