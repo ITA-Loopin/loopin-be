@@ -7,28 +7,22 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
-import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping(value="/rest-api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Loop", description = "루프 API")
-public class ApiV1LoopController {
+public class LoopController {
     private final LoopService loopService;
 
     //루프 생성
