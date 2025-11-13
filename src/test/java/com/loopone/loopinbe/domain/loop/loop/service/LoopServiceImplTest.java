@@ -15,6 +15,7 @@ import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.loop.loop.serviceImpl.LoopServiceImpl;
 import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -77,9 +79,6 @@ class LoopServiceImplTest {
                 .email("user1@example.com")
                 .nickname("testUser")
                 .build();
-
-        //공통 Mock 설정
-        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
     }
 
     // ========== createLoop(루프 생성) 테스트 ==========
@@ -94,6 +93,8 @@ class LoopServiceImplTest {
                 List.of("체크리스트1", "체크리스트2")
         );
         ArgumentCaptor<Loop> loopCaptor = ArgumentCaptor.forClass(Loop.class);
+        //어떤 CurrentUserDto가 들어오든 testMember로 변환
+        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 
         //when
         loopService.createLoop(request, testUser);
@@ -129,6 +130,8 @@ class LoopServiceImplTest {
         //캡처 도구 준비
         ArgumentCaptor<LoopRule> ruleCaptor = ArgumentCaptor.forClass(LoopRule.class);
         ArgumentCaptor<List<Loop>> loopsCaptor = ArgumentCaptor.forClass(List.class);
+
+        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
         //loopRuleRepository.save()가 호출되면, 인자 그대로 반환
         given(loopRuleRepository.save(any(LoopRule.class))).willAnswer(invocation -> {
             return invocation.getArgument(0);
@@ -164,7 +167,7 @@ class LoopServiceImplTest {
         assertThat(savedLoops.stream().allMatch(loop -> loop.getLoopRule() == savedRule)).isTrue();
     }
 
-/*    // ========== getDetailLoop(루프 상세 조회) 테스트 ==========
+    // ========== getDetailLoop(루프 상세 조회) 테스트 ==========
     @Test
     @DisplayName("루프 상세 조회 - 성공")
     void getDetailLoop_Success_ShouldReturnDto() {
@@ -186,21 +189,20 @@ class LoopServiceImplTest {
                 .loopRule(null)
                 .build();
 
-        //Mock 설정 1: loopRepository.findById(1L)이 호출되면, foundLoop를 반환
+        //loopRepository.findById(1L)이 호출되면, foundLoop를 반환
         given(loopRepository.findById(loopId)).willReturn(Optional.of(foundLoop));
-        // Mock 설정 2: loopMapper.toDetailResponse(foundLoop)가 호출되면, mockResponse를 반환
+        //loopMapper.toDetailResponse(foundLoop)가 호출되면, mockResponse를 반환
         given(loopMapper.toDetailResponse(foundLoop)).willReturn(mockResponse);
 
-        // when
-        // testUser(ID: 100L)가 조회를 시도
+        //when
+        //testUser가 조회를 시도
         LoopDetailResponse response = loopService.getDetailLoop(loopId, testUser);
 
-        // then
+        //then
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo(loopId);
         assertThat(response.title()).isEqualTo("테스트 루프");
-
-        // Mock 객체들이 의도대로 호출되었는지 검증
+        
         verify(loopRepository).findById(loopId);
         verify(loopMapper).toDetailResponse(foundLoop);
     }
@@ -208,76 +210,66 @@ class LoopServiceImplTest {
     @Test
     @DisplayName("루프 상세 조회 - 실패 (루프 없음)")
     void getDetailLoop_Fail_LoopNotFound() {
-        // given
+        //given
         Long loopId = 999L;
-        // findById(999L)가 호출되면, 빈 Optional을 반환하도록 설정
+        //findById(999L)가 호출되면, 빈 Optional을 반환하도록 설정
         given(loopRepository.findById(loopId)).willReturn(Optional.empty());
 
-        // when & then
-        // ServiceException이 발생하는지, 그리고 ReturnCode가 LOOP_NOT_FOUND인지 검증
+        //when & then
         assertThatThrownBy(() -> loopService.getDetailLoop(loopId, testUser))
                 .isInstanceOf(ServiceException.class)
-                .extracting("returnCode") // ServiceException의 returnCode 필드
-                .isEqualTo(ReturnCode.LOOP_NOT_FOUND);
+                .extracting("returnCode") 
+                .isEqualTo(ReturnCode.LOOP_NOT_FOUND); //LOOP_NOT_FOUND 발생 검증
     }
 
     @Test
-    @DisplayName("루프 상세 조회 - 실패 (권한 없음 - 다른 사용자 루프)")
+    @DisplayName("루프 상세 조회 - 실패 (권한 없음)")
     void getDetailLoop_Fail_NotAuthorized() {
-        // given
+        //given
         Long loopId = 2L;
-        // 다른 사용자(ID: 999L) 생성
+        //다른 사용자(999L) 생성
         Member otherMember = Member.builder().id(999L).nickname("other").build();
-
-        // 이 루프의 소유자는 otherMember(ID: 999L)
         Loop othersLoop = Loop.builder()
                 .id(loopId)
                 .title("남의 루프")
                 .member(otherMember)
                 .build();
-
-        // 루프 조회는 성공
+        
         given(loopRepository.findById(loopId)).willReturn(Optional.of(othersLoop));
 
-        // when & then
-        // 하지만 testUser(ID: 100L)가 조회를 시도
+        //when & then
+        //testUser(100L)가 조회 시도
         assertThatThrownBy(() -> loopService.getDetailLoop(loopId, testUser))
                 .isInstanceOf(ServiceException.class)
                 .extracting("returnCode")
-                .isEqualTo(ReturnCode.NOT_AUTHORIZED); // validateLoopOwner에서 이 예외가 발생해야 함
-    }*/
-//
-//    // --- 3. getDailyLoops (날짜별 루프 조회) 테스트 ---
-//
-//    @Test
-//    @DisplayName("날짜별 루프 조회 - 성공")
-//    void getDailyLoops_Success() {
-//        // given
-//        LocalDate date = LocalDate.now();
-//        List<Loop> loops = List.of(
-//                Loop.builder().id(1L).member(testMember).title("Loop 1").build(),
-//                Loop.builder().id(2L).member(testMember).title("Loop 2").build()
-//        );
-//
-//        // Mapper가 반환할 가짜 DTO
-//        DailyLoopsResponse mockResponse = DailyLoopsResponse.builder().totalProgress(50.0).loops(List.of()).build();
-//
-//        // Mock 설정: 리포지토리 호출 시 loops 리스트 반환
-//        given(loopRepository.findByMemberIdAndLoopDate(testUser.id(), date)).willReturn(loops);
-//        // Mock 설정: 매퍼 호출 시 mockResponse 반환
-//        given(loopMapper.toDailyLoopsResponse(loops)).willReturn(mockResponse);
-//
-//        // when
-//        DailyLoopsResponse response = loopService.getDailyLoops(date, testUser);
-//
-//        // then
-//        assertThat(response).isNotNull();
-//        assertThat(response.totalProgress()).isEqualTo(50.0);
-//        // Mock 객체 호출 검증
-//        verify(loopRepository).findByMemberIdAndLoopDate(testUser.id(), date);
-//        verify(loopMapper).toDailyLoopsResponse(loops);
-//    }
-//
+                .isEqualTo(ReturnCode.NOT_AUTHORIZED); //NOT_AUTHORIZED 발생 검증
+    }
+
+    // ========== getDailyLoops(날짜별 루프 조회) 테스트 ==========
+    @Test
+    @DisplayName("날짜별 루프 조회 - 성공")
+    void getDailyLoops_Success() {
+        //given
+        LocalDate date = LocalDate.now();
+        List<Loop> loops = List.of(
+                Loop.builder().id(1L).member(testMember).title("Loop1").build(),
+                Loop.builder().id(2L).member(testMember).title("Loop2").build()
+        );
+        DailyLoopsResponse mockResponse = DailyLoopsResponse.builder().totalProgress(50.0).loops(List.of()).build();
+
+        given(loopRepository.findByMemberIdAndLoopDate(testUser.id(), date)).willReturn(loops);
+        given(loopMapper.toDailyLoopsResponse(loops)).willReturn(mockResponse);
+
+        //when
+        DailyLoopsResponse response = loopService.getDailyLoops(date, testUser);
+
+        //then
+        assertThat(response).isNotNull();
+        assertThat(response.totalProgress()).isEqualTo(50.0);
+        verify(loopRepository).findByMemberIdAndLoopDate(testUser.id(), date);
+        verify(loopMapper).toDailyLoopsResponse(loops);
+    }
+
 //    // --- 4. updateLoop (단일 루프 수정) 테스트 ---
 //
 //    @Test
@@ -295,6 +287,7 @@ class LoopServiceImplTest {
 //
 //        LoopUpdateRequest request = new LoopUpdateRequest("New Title", "New Content", LocalDate.now(), List.of("New CL"));
 //
+//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 //        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
 //
 //        // when
@@ -324,6 +317,7 @@ class LoopServiceImplTest {
 //        Long loopId = 1L;
 //        Loop loop = Loop.builder().id(loopId).member(testMember).build(); // 소유자 100L
 //
+//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 //        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
 //
 //        // when
@@ -353,6 +347,7 @@ class LoopServiceImplTest {
 //        List<Loop> pastLoops = List.of(pastLoop);
 //
 //        // Mock 설정
+//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 //        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(rule));
 //        given(loopRepository.findAllByLoopRuleAndLoopDateAfter(rule, today)).willReturn(futureLoops); // 미래 루프
 //        given(loopRepository.findAllByLoopRuleAndLoopDateBefore(rule, today)).willReturn(pastLoops); // 과거 루프
@@ -384,6 +379,7 @@ class LoopServiceImplTest {
 //    void deleteLoopGroup_Fail_RuleNotFound() {
 //        // given
 //        Long loopRuleId = 999L;
+//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 //        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.empty());
 //
 //        // when & then
@@ -401,6 +397,7 @@ class LoopServiceImplTest {
 //        Member otherMember = Member.builder().id(999L).build();
 //        LoopRule othersRule = LoopRule.builder().id(loopRuleId).member(otherMember).build(); // 소유자 999L
 //
+//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
 //        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(othersRule));
 //
 //        // when & then
