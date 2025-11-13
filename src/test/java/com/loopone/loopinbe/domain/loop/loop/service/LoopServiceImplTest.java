@@ -163,7 +163,7 @@ class LoopServiceImplTest {
         assertThat(savedLoops.get(2).getLoopDate()).isEqualTo(LocalDate.of(2025, 11, 10));
         assertThat(savedLoops.get(3).getLoopDate()).isEqualTo(LocalDate.of(2025, 11, 12));
 
-        //모든 Loop가 동일한 LoopRule 객체 인스턴스를 참조하는지 확인
+        //모든 Loop가 동일한 LoopRule 객체 인스턴스를 참조하는지 검증
         assertThat(savedLoops.stream().allMatch(loop -> loop.getLoopRule() == savedRule)).isTrue();
     }
 
@@ -270,141 +270,125 @@ class LoopServiceImplTest {
         verify(loopMapper).toDailyLoopsResponse(loops);
     }
 
-//    // --- 4. updateLoop (단일 루프 수정) 테스트 ---
-//
-//    @Test
-//    @DisplayName("단일 루프 수정 - 성공 (LoopRule 연결이 해제되어야 함)")
-//    void updateLoop_Success_ShouldDisconnectLoopRule() {
-//        // given
-//        Long loopId = 1L;
-//        LoopRule oldRule = LoopRule.builder().id(10L).build();
-//        Loop loop = Loop.builder()
-//                .id(loopId)
-//                .member(testMember)
-//                .title("Old Title")
-//                .loopRule(oldRule) // ★ 기존에 그룹에 속해있었음
-//                .build();
-//
-//        LoopUpdateRequest request = new LoopUpdateRequest("New Title", "New Content", LocalDate.now(), List.of("New CL"));
-//
-//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
-//        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
-//
-//        // when
-//        loopService.updateLoop(loopId, request, testUser);
-//
-//        // then
-//        // 1. findById로 루프를 잘 찾아왔는지
-//        verify(loopRepository).findById(loopId);
-//
-//        // 2. 루프 객체의 필드가 잘 변경되었는지
-//        assertThat(loop.getTitle()).isEqualTo("New Title");
-//        assertThat(loop.getContent()).isEqualTo("New Content");
-//        assertThat(loop.getLoopDate()).isEqualTo(LocalDate.now());
-//        assertThat(loop.getLoopChecklists()).hasSize(1);
-//        assertThat(loop.getLoopChecklists().get(0).getContent()).isEqualTo("New CL");
-//
-//        // 3. ★ 핵심: LoopRule과의 연결이 해제되었는지
-//        assertThat(loop.getLoopRule()).isNull();
-//    }
-//
-//    // --- 5. deleteLoop (단일 루프 삭제) 테스트 ---
-//
-//    @Test
-//    @DisplayName("단일 루프 삭제 - 성공")
-//    void deleteLoop_Success() {
-//        // given
-//        Long loopId = 1L;
-//        Loop loop = Loop.builder().id(loopId).member(testMember).build(); // 소유자 100L
-//
-//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
-//        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
-//
-//        // when
-//        loopService.deleteLoop(loopId, testUser); // 요청자 100L
-//
-//        // then
-//        verify(loopRepository).findById(loopId);
-//        verify(loopRepository).delete(loop); // 올바른 Loop 객체를 delete에 넘겼는지 검증
-//    }
-//
-//    // --- 6. deleteLoopGroup (루프 그룹 삭제) 테스트 ---
-//
-//    @Test
-//    @DisplayName("루프 그룹 삭제 - 성공 (미래 루프 삭제, 과거 루프 연결 해제)")
-//    void deleteLoopGroup_Success_ShouldDeleteFutureAndDisconnectPast() {
-//        // given
-//        Long loopRuleId = 1L;
-//        LocalDate today = LocalDate.now();
-//        LoopRule rule = LoopRule.builder().id(loopRuleId).member(testMember).build(); // 소유자 100L
-//
-//        // 1. 삭제 대상인 미래 루프
-//        Loop futureLoop = Loop.builder().id(10L).loopDate(today.plusDays(1)).loopRule(rule).build();
-//        List<Loop> futureLoops = List.of(futureLoop);
-//
-//        // 2. 연결 해제 대상인 과거 루프
-//        Loop pastLoop = Loop.builder().id(11L).loopDate(today.minusDays(1)).loopRule(rule).build();
-//        List<Loop> pastLoops = List.of(pastLoop);
-//
-//        // Mock 설정
-//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
-//        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(rule));
-//        given(loopRepository.findAllByLoopRuleAndLoopDateAfter(rule, today)).willReturn(futureLoops); // 미래 루프
-//        given(loopRepository.findAllByLoopRuleAndLoopDateBefore(rule, today)).willReturn(pastLoops); // 과거 루프
-//
-//        // when
-//        loopService.deleteLoopGroup(loopRuleId, testUser); // 요청자 100L
-//
-//        // then
-//        // 1. 규칙 조회 및 권한 확인
-//        verify(loopRuleRepository).findById(loopRuleId);
-//
-//        // 2. 미래 루프 삭제
-//        verify(loopRepository).findAllByLoopRuleAndLoopDateAfter(rule, today);
-//        verify(loopRepository).deleteAll(futureLoops); // ★ 미래 루프 리스트가 삭제됨
-//
-//        // 3. 과거 루프 연결 해제
-//        verify(loopRepository).findAllByLoopRuleAndLoopDateBefore(rule, today);
-//        // (JPA) pastLoop 객체는 영속성 컨텍스트에서 변경(loopRule=null)되었으므로,
-//        // 별도 save 호출 없이 트랜잭션 커밋 시 UPDATE 쿼리가 나감.
-//        // 우리는 객체 자체가 변경되었는지(연결이 끊겼는지) 검증
-//        assertThat(pastLoop.getLoopRule()).isNull();
-//
-//        // 4. 규칙 자체 삭제
-//        verify(loopRuleRepository).delete(rule);
-//    }
-//
-//    @Test
-//    @DisplayName("루프 그룹 삭제 - 실패 (규칙 없음)")
-//    void deleteLoopGroup_Fail_RuleNotFound() {
-//        // given
-//        Long loopRuleId = 999L;
-//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
-//        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.empty());
-//
-//        // when & then
-//        assertThatThrownBy(() -> loopService.deleteLoopGroup(loopRuleId, testUser))
-//                .isInstanceOf(ServiceException.class)
-//                .extracting("returnCode")
-//                .isEqualTo(ReturnCode.LOOP_RULE_NOT_FOUND);
-//    }
-//
-//    @Test
-//    @DisplayName("루프 그룹 삭제 - 실패 (권한 없음)")
-//    void deleteLoopGroup_Fail_NotAuthorized() {
-//        // given
-//        Long loopRuleId = 2L;
-//        Member otherMember = Member.builder().id(999L).build();
-//        LoopRule othersRule = LoopRule.builder().id(loopRuleId).member(otherMember).build(); // 소유자 999L
-//
-//        given(memberConverter.toMember(any(CurrentUserDto.class))).willReturn(testMember);
-//        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(othersRule));
-//
-//        // when & then
-//        // 요청자 100L
-//        assertThatThrownBy(() -> loopService.deleteLoopGroup(loopRuleId, testUser))
-//                .isInstanceOf(ServiceException.class)
-//                .extracting("returnCode")
-//                .isEqualTo(ReturnCode.NOT_AUTHORIZED);
-//    }
+    // ========== updateLoop (단일 루프 수정) 테스트 ==========
+    @Test
+    @DisplayName("단일 루프 수정 - 성공")
+    void updateLoop_Success_ShouldDisconnectLoopRule() {
+        //given
+        Long loopId = 1L;
+        LoopRule oldRule = LoopRule.builder().id(10L).build();
+        Loop loop = Loop.builder()
+                .id(loopId)
+                .member(testMember)
+                .title("Old Title")
+                .loopRule(oldRule) //기존 그룹
+                .build();
+        LoopUpdateRequest request = new LoopUpdateRequest("New Title", "New Content", LocalDate.now(), List.of("New CL"));
+
+        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
+
+        //when
+        loopService.updateLoop(loopId, request, testUser);
+
+        //then
+        verify(loopRepository).findById(loopId);
+
+        //루프 객체의 필드가 잘 변경되었는지 검증
+        assertThat(loop.getTitle()).isEqualTo("New Title");
+        assertThat(loop.getContent()).isEqualTo("New Content");
+        assertThat(loop.getLoopDate()).isEqualTo(LocalDate.now());
+        assertThat(loop.getLoopChecklists()).hasSize(1);
+        assertThat(loop.getLoopChecklists().get(0).getContent()).isEqualTo("New CL");
+
+        //LoopRule과의 연결이 해제되었는지 검증
+        assertThat(loop.getLoopRule()).isNull();
+    }
+
+    // ========== deleteLoop (단일 루프 삭제) 테스트 ==========
+    @Test
+    @DisplayName("단일 루프 삭제 - 성공")
+    void deleteLoop_Success() {
+        // given
+        Long loopId = 1L;
+        Loop loop = Loop.builder().id(loopId).member(testMember).build(); // 소유자 100L
+
+        given(loopRepository.findById(loopId)).willReturn(Optional.of(loop));
+
+        //when
+        loopService.deleteLoop(loopId, testUser);
+
+        //then
+        verify(loopRepository).findById(loopId);
+        verify(loopRepository).delete(loop);
+    }
+
+    // ========== deleteLoopGroup (루프 그룹 삭제) 테스트 ==========
+    @Test
+    @DisplayName("루프 그룹 삭제 - 성공")
+    void deleteLoopGroup_Success_ShouldDeleteFutureAndDisconnectPast() {
+        //given
+        Long loopRuleId = 1L;
+        LocalDate today = LocalDate.now();
+        LoopRule rule = LoopRule.builder().id(loopRuleId).member(testMember).build();
+
+        //삭제 대상인 미래 루프
+        Loop futureLoop = Loop.builder().id(10L).loopDate(today.plusDays(1)).loopRule(rule).build();
+        List<Loop> futureLoops = List.of(futureLoop);
+
+        //연결 해제 대상인 과거 루프
+        Loop pastLoop = Loop.builder().id(11L).loopDate(today.minusDays(1)).loopRule(rule).build();
+        List<Loop> pastLoops = List.of(pastLoop);
+
+        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(rule));
+        given(loopRepository.findAllByLoopRuleAndLoopDateAfter(rule, today)).willReturn(futureLoops); // 미래 루프
+        given(loopRepository.findAllByLoopRuleAndLoopDateBefore(rule, today)).willReturn(pastLoops); // 과거 루프
+
+        //when
+        loopService.deleteLoopGroup(loopRuleId, testUser);
+
+        //then
+        verify(loopRuleRepository).findById(loopRuleId);
+
+        //미래 루프 삭제
+        verify(loopRepository).findAllByLoopRuleAndLoopDateAfter(rule, today);
+        verify(loopRepository).deleteAll(futureLoops);
+
+        //과거 루프 연결 해제
+        verify(loopRepository).findAllByLoopRuleAndLoopDateBefore(rule, today);
+        assertThat(pastLoop.getLoopRule()).isNull(); //연결이 끊겼는지 검증
+
+        //LoopRule 삭제되었는지 검증
+        verify(loopRuleRepository).delete(rule);
+    }
+
+    @Test
+    @DisplayName("루프 그룹 삭제 - 실패 (loopRule 없음)")
+    void deleteLoopGroup_Fail_RuleNotFound() {
+        //given
+        Long loopRuleId = 999L;
+        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.empty());
+
+        //when & then
+        assertThatThrownBy(() -> loopService.deleteLoopGroup(loopRuleId, testUser))
+                .isInstanceOf(ServiceException.class)
+                .extracting("returnCode")
+                .isEqualTo(ReturnCode.LOOP_RULE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("루프 그룹 삭제 - 실패 (권한 없음)")
+    void deleteLoopGroup_Fail_NotAuthorized() {
+        //given
+        Long loopRuleId = 2L;
+        Member otherMember = Member.builder().id(999L).build();
+        LoopRule othersRule = LoopRule.builder().id(loopRuleId).member(otherMember).build();
+
+        given(loopRuleRepository.findById(loopRuleId)).willReturn(Optional.of(othersRule));
+
+        //when & then
+        assertThatThrownBy(() -> loopService.deleteLoopGroup(loopRuleId, testUser))
+                .isInstanceOf(ServiceException.class)
+                .extracting("returnCode")
+                .isEqualTo(ReturnCode.NOT_AUTHORIZED);
+    }
 }
