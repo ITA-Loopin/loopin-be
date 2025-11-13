@@ -35,8 +35,9 @@ public class Loop extends BaseEntity {
     @Builder.Default
     private List<LoopChecklist> loopChecklists = new ArrayList<>();
 
-    @Column
-    private String loopGroup; //함께 생성된 루프 그룹핑
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loop_rule_id", nullable = true)
+    private LoopRule loopRule; //단일 루프일 때는 null, 반복 루프일 때만 생성
 
     //연관관계 편의 메서드
     public void addChecklist(LoopChecklist checklist) {

@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import org.mapstruct.Mapper;
@@ -42,7 +43,11 @@ public interface LoopMapper {
     //Loop 엔티티를 LoopDetailResponse로 변환
     @Mapping(target = "progress", source = "loop.loopChecklists", qualifiedByName = "calculateProgress")
     @Mapping(target = "checklists", source = "loopChecklists")
+    @Mapping(target = "loopRule", source = "loopRule")
     LoopDetailResponse toDetailResponse(Loop loop);
+
+    @Mapping(target = "ruleId", source = "id")
+    LoopDetailResponse.LoopRuleDTO loopRuleToLoopRuleDTO(LoopRule loopRule);
 
     //LoopChecklist 엔티티를 LoopChecklistResponse로 변환
     LoopChecklistResponse toChecklistResponse(LoopChecklist checklist);
