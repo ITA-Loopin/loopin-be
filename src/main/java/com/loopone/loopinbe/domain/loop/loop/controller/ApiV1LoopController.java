@@ -101,7 +101,7 @@ public class ApiV1LoopController {
     }
 
     //루프 삭제
-    @DeleteMapping("/loops/{loopRuleId}")
+    @DeleteMapping("/loops/{loopId}")
     @Operation(summary = "루프 삭제", description = "해당 루프를 삭제합니다.")
     public ApiResponse<Void> deleteLoop(
             @PathVariable Long loopId,
