@@ -42,6 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+//LoopController 단위 테스트
 @WebMvcTest(
         controllers = LoopController.class,
         excludeFilters = { //WebConfig, SecurityConfig 제외하여 테스트
