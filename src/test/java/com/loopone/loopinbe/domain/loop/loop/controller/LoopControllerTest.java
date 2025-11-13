@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(
-        controllers = ApiV1LoopController.class,
+        controllers = LoopController.class,
         excludeFilters = { //WebConfig, SecurityConfig 제외하여 테스트
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
                         JwtAuthenticationFilter.class,
@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 )
 @AutoConfigureMockMvc(addFilters = false) //모든 Spring Security 필터 비활성화
 @ActiveProfiles("test")
-class ApiV1LoopControllerTest {
+class LoopControllerTest {
 
     @Autowired
     private MockMvc mvc;
