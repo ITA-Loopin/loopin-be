@@ -42,6 +42,9 @@ app:
         redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth/kakao"
         tokenUri: "https://kauth.kakao.com/oauth/token"
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
+  cookie:
+    secure: true
+    domain: ".loopin.co.kr"
 
 fcm:
   service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json

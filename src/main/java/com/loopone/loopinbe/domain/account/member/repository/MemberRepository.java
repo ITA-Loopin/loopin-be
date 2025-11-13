@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
     // 이메일로 회원 존재여부 확인
@@ -40,3 +39,4 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             "GROUP BY m.id, m.nickname, m.profileImageUrl, m.chatRoomId")
     Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
 }
+

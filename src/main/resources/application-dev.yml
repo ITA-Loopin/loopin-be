@@ -46,6 +46,9 @@ app:
         redirectUri: "http://localhost:8080/rest-api/v1/oauth/kakao"
         tokenUri: "https://kauth.kakao.com/oauth/token"
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
+  cookie:
+    secure: false
+    domain: ""
 
 fcm:
   service-account-file: classpath:fcm-service-account.json

@@ -31,7 +31,7 @@ public record LoopCreateRequest (
         @Schema(description = "반복 시작일 (WEEKLY, MONTHLY, YEARLY일 때 사용, 기본값은 당일로 설정)")
         LocalDate startDate,
 
-        @Schema(description = "반복 종료일 (WEEKLY, MONTHLY, YEARLY일 때 사용, null이면 1년 후로 설정)")
+        @Schema(description = "반복 종료일 (WEEKLY, MONTHLY, YEARLY일 때 사용, null이면 5년 후로 설정)")
         LocalDate endDate,
 
         @Schema(description = "각 루프에 포함될 체크리스트 내용 목록")

@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.member.dto.SocialUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.account.oauth.dto.res.OAuthRedirectResponse;
 import com.loopone.loopinbe.global.config.properties.OAuthWebProperties;
 import com.loopone.loopinbe.domain.account.oauth.enums.FrontendEnv;
 import com.loopone.loopinbe.domain.account.oauth.service.OAuthService;
@@ -34,6 +35,8 @@ public class OAuthServiceImpl implements OAuthService {
     private final AuthService authService;
     private final OAuthStateService stateService;
     private final FrontendRedirectProperties frontendRedirectProperties;
+    private static final String ACCESS_TOKEN = "access_token";
+    private static final String REFRESH_TOKEN = "refresh_token";
 
     // 소셜 로그인 리디렉션 URL 생성
     @Override
@@ -89,32 +92,30 @@ public class OAuthServiceImpl implements OAuthService {
 
     // 리디렉션 URL 생성 (env 별 분기)
     @Override
-    public String getRedirectUrl(SocialUserDto socialUser, FrontendEnv env) {
+    public OAuthRedirectResponse buildRedirectResponse(SocialUserDto socialUser, FrontendEnv env) {
         String base = frontendRedirectProperties.urlFor(env);
         String email = socialUser.email();
-        boolean isExistingMember = memberRepository.existsByEmail(email);
+        boolean existing = memberRepository.existsByEmail(email);
 
-        UriComponentsBuilder b = UriComponentsBuilder.fromUriString(base);
-        if (isExistingMember) {
-            // 로그인 처리
-            LoginRequest loginRequest = LoginRequest.builder()
-                    .email(email)
-                    .build();
-            LoginResponse loginResponse = authService.login(loginRequest);
-
-            return b.queryParam("status", "LOGIN_SUCCESS")
-                    .queryParam("accessToken", loginResponse.getAccessToken())
-                    .queryParam("refreshToken", loginResponse.getRefreshToken())
+        if (existing) {
+            // 내부 로그인
+            LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
+            String redirectUrl = UriComponentsBuilder.fromUriString(base)
+                    .queryParam("status", "LOGIN_SUCCESS")
+                    .queryParam(ACCESS_TOKEN,  login.getAccessToken())
+                    .queryParam(REFRESH_TOKEN,  login.getRefreshToken())
                     .build()
                     .toUriString();
+            return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken(), login.getRefreshToken());
         } else {
-            // 신규 가입 유도
-            return b.queryParam("status", "SIGNUP_REQUIRED")
+            String redirectUrl = UriComponentsBuilder.fromUriString(base)
+                    .queryParam("status", "SIGNUP_REQUIRED")
                     .queryParam("email", email)
                     .queryParam("provider", socialUser.provider().name())
                     .queryParam("providerId", socialUser.providerId())
                     .build()
                     .toUriString();
+            return new OAuthRedirectResponse(false, redirectUrl, null, null);
         }
     }
 
@@ -148,10 +149,10 @@ public class OAuthServiceImpl implements OAuthService {
                 props.tokenUri(), HttpMethod.POST, request, Map.class
         );
         Map body = response.getBody();
-        if (body == null || body.get("access_token") == null) {
+        if (body == null || body.get(ACCESS_TOKEN) == null) {
             throw new RuntimeException("OAuth2 액세스 토큰을 가져올 수 없습니다.");
         }
-        return (String) body.get("access_token");
+        return (String) body.get(ACCESS_TOKEN);
     }
 
     @SuppressWarnings("unchecked")

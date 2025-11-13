@@ -1,46 +1,82 @@
 package com.loopone.loopinbe.domain.account.member.controller;
 
-import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.global.common.response.PageResponse;
+import com.loopone.loopinbe.global.config.SecurityConfig;
+import com.loopone.loopinbe.global.config.WebConfig;
+import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.core.MethodParameter;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.support.WebDataBinderFactory;
-import org.springframework.web.context.request.NativeWebRequest;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = MemberController.class)
-@Import(MemberControllerTest.TestConfig.class) // @CurrentUser 리졸버 주입
+@WebMvcTest(
+        controllers = MemberController.class,
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                        JwtAuthenticationFilter.class,     // ← 보안 필터 컴포넌트 제외
+                        SecurityConfig.class,              // ← 전역 보안 설정 클래스를 쓰고 있다면 같이 제외
+                        WebConfig.class                    // ← 전역 WebMvcConfigurer가 보안/리졸버를 끌어오면 제외
+                })
+        },
+        excludeAutoConfiguration = {
+                SecurityAutoConfiguration.class,
+                SecurityFilterAutoConfiguration.class,
+                OAuth2ResourceServerAutoConfiguration.class
+        }
+)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class MemberControllerTest {
+    @Autowired MockMvc mvc;
+    @MockitoBean MemberService memberService;
+    @MockitoBean CurrentUserArgumentResolver currentUserArgumentResolver;
 
-    @Autowired
-    MockMvc mvc;
-
-    @MockitoBean
-    MemberService memberService;
+    @BeforeEach
+    void setUp() throws Exception {
+        given(currentUserArgumentResolver.supportsParameter(any()))
+                .willReturn(true);
+        given(currentUserArgumentResolver.resolveArgument(any(), any(), any(), any()))
+                .willReturn(new CurrentUserDto(
+                        1L, "jun@loop.in", null, "jun", "010-0000-0000",
+                        Member.Gender.MALE, LocalDate.of(2000,1,1),
+                        null, Member.State.NORMAL, Member.MemberRole.ROLE_USER,
+                        Member.OAuthProvider.GOOGLE, "provider-id"
+                ));
+    }
 
     // --- 성공 케이스: 본인 회원정보 조회 ---
     @Test
@@ -162,26 +198,34 @@ class MemberControllerTest {
     @Test
     @DisplayName("GET /rest-api/v1/member/search?keyword=kw&page=0&size=2 → 200 OK")
     void searchMemberInfo_success() throws Exception {
-        var list = List.of(
-                new MemberResponse(10L, "alice", "https://a", 1L, 2L, 11L),
-                new MemberResponse(20L, "bob", "https://b", 3L, 4L, 22L)
-        );
-        given(memberService.searchMemberInfo(any(Pageable.class), eq("kw"), any(CurrentUserDto.class)))
-                .willReturn(list);
+        var m1 = new MemberResponse(3L, "gangneung", null, 0L, 0L, 3L);
+        var m2 = new MemberResponse(4L, "busan",     null, 0L, 0L, 4L);
 
+        var pageable = PageRequest.of(0, 15); // 기본값
+        Page<MemberResponse> springPage = new PageImpl<>(List.of(m1, m2), pageable, 2);
+        PageResponse<MemberResponse> pageResponse = PageResponse.of(springPage);
+
+        given(memberService.searchMemberInfo(
+                any(Pageable.class), anyString(), any(CurrentUserDto.class))
+        ).willReturn(pageResponse);
+
+        // when & then
         mvc.perform(get("/rest-api/v1/member/search")
-                        .param("keyword", "kw")
-                        .param("page", "0")
-                        .param("size", "2"))
+                        .param("keyword", "a"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.data.length()").value(2))
-                .andExpect(jsonPath("$.data[0].id").value(10))
-                .andExpect(jsonPath("$.data[0].nickname").value("alice"))
-                .andExpect(jsonPath("$.data[1].id").value(20))
-                .andExpect(jsonPath("$.data[1].nickname").value("bob"));
-
-        verify(memberService).searchMemberInfo(any(Pageable.class), eq("kw"), any(CurrentUserDto.class));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                // data: 배열 크기와 닉네임 구성 확인
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[*].nickname",
+                        containsInAnyOrder("gangneung", "busan")))
+                // page: 루트 레벨 메타 확인
+                .andExpect(jsonPath("$.page.page").value(0))
+                .andExpect(jsonPath("$.page.size").value(15))
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.totalPages").value(1))
+                .andExpect(jsonPath("$.page.first").value(true))
+                .andExpect(jsonPath("$.page.last").value(true))
+                .andExpect(jsonPath("$.page.hasNext").value(false));
     }
 
     // --- 성공 케이스: 팔로우 요청하기 ---
@@ -242,45 +286,5 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
         verify(memberService).removeFollowed(eq(7L), any(CurrentUserDto.class));
-    }
-
-    /**
-     * 테스트 전용 ArgumentResolver: @CurrentUser 주입
-     * 실제 시큐리티 필터/토큰을 피하면서도 Controller 시그니처 유지
-     */
-    static class TestConfig {
-        @Bean
-        HandlerMethodArgumentResolver currentUserArgumentResolver() {
-            return new HandlerMethodArgumentResolver() {
-                @Override
-                public boolean supportsParameter(MethodParameter p) {
-                    return p.hasParameterAnnotation(CurrentUser.class)
-                            || p.getParameterType().equals(CurrentUserDto.class);
-                }
-
-                @Override
-                public Object resolveArgument(
-                        MethodParameter parameter,
-                        ModelAndViewContainer mavContainer,
-                        NativeWebRequest webRequest,
-                        WebDataBinderFactory binderFactory
-                ) {
-                    return new CurrentUserDto(
-                            1L,                                 // id
-                            "jun@loop.in",                      // email
-                            null,                               // password (불필요 → null)
-                            "jun",                              // nickname
-                            "010-0000-0000",                    // phone
-                            Member.Gender.MALE,                 // gender
-                            LocalDate.of(2000, 1, 1),           // birthday
-                            null,                      // profileImageUrl
-                            Member.State.NORMAL,                // state
-                            Member.MemberRole.ROLE_USER,             // role
-                            Member.OAuthProvider.GOOGLE,        // provider
-                            "provider-id"                       // providerId
-                    );
-                }
-            };
-        }
     }
 }

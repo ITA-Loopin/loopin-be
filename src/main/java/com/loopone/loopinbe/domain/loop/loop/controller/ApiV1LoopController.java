@@ -89,14 +89,14 @@ public class ApiV1LoopController {
     }
 
     //루프 그룹 전체 수정
-    @PutMapping("/loops/group/{loopId}")
+    @PutMapping("/loops/group/{loopRuleId}")
     @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
     public ApiResponse<Void> updateGroupLoop(
-            @Parameter(description = "수정할 루프 ID") @PathVariable Long loopId,
+            @Parameter(description = "수정할 루프 그룹의 ID") @PathVariable Long loopRuleId,
             @RequestBody @Valid LoopGroupUpdateRequest loopGroupUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopService.updateLoopGroup(loopId, loopGroupUpdateRequest, currentUser);
+        loopService.updateLoopGroup(loopRuleId, loopGroupUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
@@ -112,13 +112,13 @@ public class ApiV1LoopController {
     }
 
     //루프 그룹 삭제
-    @DeleteMapping("/loops/group/{loopId}")
+    @DeleteMapping("/loops/group/{loopRuleId}")
     @Operation(summary = "루프 그룹 전체 삭제", description = "해당 그룹의 루프 전체를 삭제합니다.")
     public ApiResponse<Void> deleteLoopGroup(
-            @PathVariable Long loopId,
+            @Parameter(description = "삭제할 루프 그룹의 ID") @PathVariable Long loopRuleId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopService.deleteLoopGroup(loopId, currentUser);
+        loopService.deleteLoopGroup(loopRuleId, currentUser);
         return ApiResponse.success();
     }
 }

@@ -12,6 +12,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRep
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.converter.ChatRoomConverter;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
@@ -151,5 +152,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             }
             chatRoomRepository.save(chatRoom);
         }
+    }
+
+    @Override
+    public ChatRoomListResponse getChatRooms(Long memberId) {
+        List<ChatRoom> chatRoomList = chatRoomRepository.findByMemberId(memberId);
+        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
     }
 }
