@@ -44,6 +44,7 @@ app:
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
   cookie:
     secure: true
+    domain: ".loopin.co.kr"
 
 fcm:
   service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
