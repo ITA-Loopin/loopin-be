@@ -1,0 +1,63 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/meta_db
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        show-sql: false      # 운영 환경에서는 보통 false로 설정
+        format_sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: loopin-redis
+      port: 6379
+    mongodb:
+      uri: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@loopin-mongodb:27017/meta_db?authSource=admin
+      database: meta_db
+  kafka:
+    bootstrap-servers: loopin-redpanda:9092
+
+app:
+  oauth:
+    providers:
+      google:
+        clientId: ${GOOGLE_CLIENT_ID}
+        clientSecret: ${GOOGLE_CLIENT_SECRET}
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth/google"
+        tokenUri: "https://oauth2.googleapis.com/token"
+        userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
+      naver:
+        clientId: ${NAVER_CLIENT_ID}
+        clientSecret: ${NAVER_CLIENT_SECRET}
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth/naver"
+        tokenUri: "https://nid.naver.com/oauth2.0/token"
+        userInfoUri: "https://openapi.naver.com/v1/nid/me"
+      kakao:
+        clientId: ${KAKAO_CLIENT_ID}
+        redirectUri: "https://api.loopin.co.kr/rest-api/v1/oauth/kakao"
+        tokenUri: "https://kauth.kakao.com/oauth/token"
+        userInfoUri: "https://kapi.kakao.com/v2/user/me"
+
+fcm:
+  service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
+
+openai:
+  api:
+    key: ${GPT_API_KEY}
+
+logging:
+  level:
+    org.springframework.web: INFO
+    com.loopin: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+
+springdoc:
+  server-url: https://api.loopin.co.kr
+server:
+  forward-headers-strategy: framework
