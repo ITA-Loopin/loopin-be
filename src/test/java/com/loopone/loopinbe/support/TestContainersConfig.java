@@ -12,7 +12,8 @@ import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration
 public class TestContainersConfig {
-    @Bean @ServiceConnection
+    @Bean
+    @ServiceConnection
     PostgreSQLContainer<?> postgres() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
     }
