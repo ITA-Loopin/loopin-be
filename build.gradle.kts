@@ -83,7 +83,11 @@ dependencies {
     testImplementation("org.testcontainers:mongodb")
     testImplementation("org.testcontainers:kafka")   // Redpanda 대체
     testImplementation("org.springframework.kafka:spring-kafka-test")
-    testImplementation("org.testcontainers:redis")
+    //testImplementation("org.testcontainers:redis")
+
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
+    testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
 }
 
 tasks.withType<Test> {
