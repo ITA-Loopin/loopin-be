@@ -1,6 +1,5 @@
 package com.loopone.loopinbe.domain.account.member.repository;
 
-import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
 import com.loopone.loopinbe.support.TestContainersConfig;
@@ -8,25 +7,30 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@Import(TestContainersConfig.class) // 아래에 제공
+@Import(TestContainersConfig.class)
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE) // Testcontainers 사용 고정
 class MemberRepositoryTest {
-
     @PersistenceContext
     EntityManager em;
-    private final MemberRepository memberRepository;
 
-    MemberRepositoryTest(MemberRepository memberRepository) {
-        this.memberRepository = memberRepository;
+    @Autowired
+    MemberRepository memberRepository;
+
+    private void flushAndClear() {
+        em.flush();
+        em.clear();
     }
 
     @Test
@@ -43,16 +47,46 @@ class MemberRepositoryTest {
     }
 
     @Test
+    @DisplayName("findIdByEmail: 이메일로 ID만 조회된다")
+    void findIdByEmail_returnsIdOnly() {
+        var m = Member.builder().email("idonly@x").nickname("idonly").build();
+        em.persist(m);
+        flushAndClear();
+
+        var found = memberRepository.findIdByEmail("idonly@x");
+        assertThat(found).isPresent();
+        assertThat(found.get()).isEqualTo(m.getId());
+
+        assertThat(memberRepository.findIdByEmail("nope@x")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findByEmail: 엔티티 그래프 기반으로 멤버를 제대로 로딩한다")
+    void findByEmail_entityGraphLoadsMember() {
+        var alice = Member.builder().email("alice@x").nickname("alice").build();
+        var bob   = Member.builder().email("bob@x").nickname("bobby").build();
+        em.persist(alice);
+        em.persist(bob);
+        em.persist(MemberFollow.builder().follow(alice).followed(bob).build());
+        flushAndClear();
+
+        var loaded = memberRepository.findByEmail("bob@x");
+        assertThat(loaded).isPresent();
+        var m = loaded.get();
+        assertThat(m.getId()).isNotNull();
+        assertThat(m.getEmail()).isEqualTo("bob@x");
+        assertThat(m.getNickname()).isEqualTo("bobby");
+    }
+
+    @Test
     @DisplayName("findByKeyword: 팔로워/팔로잉 집계 및 본인 제외")
     void findByKeyword_aggregates() {
-        // 사용자 3명: me(1), alice(2), bob(3)
         var me    = Member.builder().email("me@x").nickname("me").build();
         var alice = Member.builder().email("alice@x").nickname("alice").build();
         var bob   = Member.builder().email("bob@x").nickname("bobby").build();
         em.persist(me); em.persist(alice); em.persist(bob);
         em.flush();
 
-        // 팔로우 관계:
         // alice -> bob, me -> bob  (bob의 follower = 2)
         em.persist(MemberFollow.builder().follow(alice).followed(bob).build());
         em.persist(MemberFollow.builder().follow(me).followed(bob).build());
@@ -60,14 +94,12 @@ class MemberRepositoryTest {
         em.persist(MemberFollow.builder().follow(bob).followed(alice).build());
         em.flush();
 
-        Page<MemberResponse> page = memberRepository.findByKeyword(
-                PageRequest.of(0, 10), "b", me.getId());
+        var page = memberRepository.findByKeyword(PageRequest.of(0, 10), "b", me.getId());
 
-        // keyword 'b' ⇒ bobby(bob)만 매치, 본인(me) 제외
         assertThat(page.getContent()).hasSize(1);
         var r = page.getContent().get(0);
         assertThat(r.getNickname()).isEqualTo("bobby");
         assertThat(r.getFollowerCount()).isEqualTo(2L);
-        assertThat(r.getFollowingCount()).isZero(); // bob이 팔로우 중인 수 (위 셋업에선 alice 1명이라면 1L로 맞추세요)
+        assertThat(r.getFollowingCount()).isEqualTo(1L);
     }
 }

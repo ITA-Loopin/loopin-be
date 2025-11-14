@@ -25,8 +25,6 @@ import com.loopone.loopinbe.global.s3.S3Service;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -38,7 +36,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
@@ -46,19 +46,18 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
-
     @org.mockito.Mock MemberRepository memberRepository;
     @org.mockito.Mock MemberFollowReqRepository memberFollowReqRepository;
     @org.mockito.Mock MemberFollowRepository memberFollowRepository;
     @org.mockito.Mock S3Service s3Service;
     @org.mockito.Mock MemberConverter memberConverter;
-    @org.mockito.Mock ChatRoomService chatRoomService;
+    @org.mockito.Mock
+    ChatRoomService chatRoomService;
     @org.mockito.Mock NotificationEventPublisher notificationEventPublisher;
-
     @org.mockito.InjectMocks MemberServiceImpl memberService;
 
     // ====== 헬퍼 ======
-    private CurrentUserDto cu(Long id, String email, String nickname, String profileUrl, Member.MemberRole role) {
+    private CurrentUserDto cu(Long id, String email, String nickname, String profileUrl) {
         return new CurrentUserDto(
                 id,
                 email,
@@ -69,7 +68,7 @@ class MemberServiceTest {
                 null,               // birthday
                 profileUrl,
                 Member.State.NORMAL,
-                role,
+                Member.MemberRole.ROLE_USER,
                 Member.OAuthProvider.GOOGLE,
                 "pid"
         );
@@ -132,7 +131,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("내 정보 조회: 성공")
     void getMyInfo_success() {
-        var me = cu(1L, "jun@loop.in", "jun", "https://img", Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", "https://img");
         var member = Member.builder().id(1L).email("jun@loop.in").nickname("jun").build();
         var resp = MemberResponse.builder()
                 .id(1L)
@@ -142,7 +141,6 @@ class MemberServiceTest {
                 .followedMemberCount(0L)
                 .chatRoomId(null)
                 .build();
-
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(memberConverter.toMemberResponse(member)).willReturn(resp);
 
@@ -153,7 +151,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("내 정보 조회: 존재 X → USER_NOT_FOUND")
     void getMyInfo_notFound() {
-        var me = cu(100L, "x@x", "nope", null, Member.MemberRole.ROLE_USER);
+        var me = cu(100L, "x@x", "nope", null);
         given(memberRepository.findById(100L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberService.getMyInfo(me))
@@ -164,7 +162,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("내 상세정보 조회: 성공")
     void getMyDetailInfo_success() {
-        var me = cu(1L, "jun@loop.in", "jun", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", null);
         var member = Member.builder().id(1L).email("jun@loop.in").build();
         var detail = DetailMemberResponse.builder().id(1L).email("jun@loop.in").build();
 
@@ -178,7 +176,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("내 상세정보 조회: 존재 X → USER_NOT_FOUND")
     void getMyDetailInfo_notFound() {
-        var me = cu(2L, "x@x", "x", null, Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "x@x", "x", null);
         given(memberRepository.findById(2L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberService.getMyDetailInfo(me))
@@ -198,7 +196,6 @@ class MemberServiceTest {
                 .followedMemberCount(0L)
                 .chatRoomId(null)
                 .build();
-
         given(memberRepository.findById(10L)).willReturn(Optional.of(member));
         given(memberConverter.toMemberResponse(member)).willReturn(resp);
 
@@ -257,7 +254,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원정보 수정: 이미지 업로드 성공 & 기존 삭제")
     void updateMember_uploadImage() throws Exception {
-        var me = cu(1L, "jun@loop.in", "jun", "https://old", Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", "https://old");
         var member = Member.builder().id(1L).email("jun@loop.in").nickname("jun").build();
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
@@ -270,7 +267,6 @@ class MemberServiceTest {
         given(file.isEmpty()).willReturn(false);
 
         memberService.updateMember(req, file, me);
-
         verify(s3Service).deleteFile("https://old");
         assertThat(member.getProfileImageUrl()).isEqualTo("https://new");
     }
@@ -278,17 +274,15 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원정보 수정: 이미지 파일 null → 기존 이미지 있으면 삭제하고 null로 세팅")
     void updateMember_removeImageWhenNull() {
-        var me = cu(1L, "jun@loop.in", "jun", "https://old", Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", "https://old");
         var member = Member.builder()
                 .id(1L).email("jun@loop.in").nickname("jun").profileImageUrl("https://old")
                 .build();
-
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(memberRepository.existsByNickname("jun")).willReturn(false);
 
         var req = new MemberUpdateRequest("jun@loop.in", "jun");
         memberService.updateMember(req, null, me);
-
         verify(s3Service).deleteFile("https://old");
         assertThat(member.getProfileImageUrl()).isNull();
     }
@@ -296,7 +290,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원정보 수정: 업로드 중 IOException → INTERNAL_ERROR")
     void updateMember_uploadIOException() throws Exception {
-        var me = cu(1L, "jun@loop.in", "jun", "", Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", "");
         var member = Member.builder().id(1L).email("jun@loop.in").nickname("jun").build();
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
@@ -317,7 +311,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원정보 수정: 닉네임 중복 → NICKNAME_ALREADY_USED")
     void updateMember_nicknameDuplicate() {
-        var me = cu(1L, "jun@loop.in", "jun", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "jun@loop.in", "jun", null);
         var member = Member.builder().id(1L).email("jun@loop.in").nickname("jun").build();
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
@@ -334,13 +328,12 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원탈퇴: 성공(채팅방 탈퇴 후 삭제)")
     void deleteMember_success() {
-        var me = cu(3L, "x@x", "x", null, Member.MemberRole.ROLE_USER);
+        var me = cu(3L, "x@x", "x", null);
         var member = Member.builder().id(3L).email("x@x").build();
 
         given(memberRepository.findById(3L)).willReturn(Optional.of(member));
 
         memberService.deleteMember(me);
-
         verify(chatRoomService).leaveAllChatRooms(3L);
         verify(memberRepository).delete(member);
     }
@@ -348,7 +341,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("회원탈퇴: 존재 X → USER_NOT_FOUND")
     void deleteMember_notFound() {
-        var me = cu(3L, "x@x", "x", null, Member.MemberRole.ROLE_USER);
+        var me = cu(3L, "x@x", "x", null);
         given(memberRepository.findById(3L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberService.deleteMember(me))
@@ -364,7 +357,7 @@ class MemberServiceTest {
             mocked.when(MemberPage::getMaxPageSize).thenReturn(50); // 최대 50
             Pageable pageable = PageRequest.of(0, 100); // 100으로 요청
 
-            assertThatThrownBy(() -> memberService.searchMemberInfo(pageable, "kw", cu(1L, "e", "n", null, Member.MemberRole.ROLE_USER)))
+            assertThatThrownBy(() -> memberService.searchMemberInfo(pageable, "kw", cu(1L, "e", "n", null)))
                     .isInstanceOf(ServiceException.class)
                     .extracting("returnCode").isEqualTo(ReturnCode.PAGE_REQUEST_FAIL);
         }
@@ -376,7 +369,7 @@ class MemberServiceTest {
         try (MockedStatic<MemberPage> mocked = mockStatic(MemberPage.class)) {
             mocked.when(MemberPage::getMaxPageSize).thenReturn(50);
             Pageable pageable = PageRequest.of(0, 10);
-            var current = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+            var current = cu(1L, "me@me", "me", null);
 
             var list = List.of(MemberResponse.builder()
                     .id(2L)
@@ -401,7 +394,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청: 자기 자신 팔로우 → CANNOT_FOLLOW_SELF")
     void followReq_self() {
-        var me = cu(10L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(10L, "me@me", "me", null);
         assertThatThrownBy(() -> memberService.followReq(10L, me))
                 .isInstanceOf(ServiceException.class)
                 .extracting("returnCode").isEqualTo(ReturnCode.CANNOT_FOLLOW_SELF);
@@ -410,7 +403,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청: 성공(중복/요청중 아님)")
     void followReq_success() {
-        var me = cu(1L, "me@me", "me", "img", Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", "img");
         var meEntity = Member.builder().id(1L).nickname("me").profileImageUrl("img").build();
         var target = Member.builder().id(2L).nickname("you").build();
 
@@ -428,7 +421,6 @@ class MemberServiceTest {
         });
 
         memberService.followReq(2L, me);
-
         verify(memberFollowReqRepository).save(any(MemberFollowReq.class));
         verify(notificationEventPublisher).publishFollowRequest(any(Notification.class));
     }
@@ -436,7 +428,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청: 이미 팔로우 중 → ALREADY_FOLLOW")
     void followReq_alreadyFollow() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
 
@@ -452,7 +444,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청: 이미 요청 중 → ALREADY_REQUESTED")
     void followReq_alreadyRequested() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
 
@@ -469,7 +461,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청 취소: 성공")
     void cancelFollowReq_success() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
         var req = MemberFollowReq.builder().id(10L).followReq(meEntity).followRec(target).build();
@@ -479,14 +471,13 @@ class MemberServiceTest {
         given(memberFollowReqRepository.findByFollowReqAndFollowRec(meEntity, target)).willReturn(Optional.of(req));
 
         memberService.cancelFollowReq(2L, me);
-
         verify(memberFollowReqRepository).delete(req);
     }
 
     @Test
     @DisplayName("팔로우 요청 취소: 해당 요청 없음 → REQUEST_NOT_FOUND")
     void cancelFollowReq_notFound() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
 
@@ -502,7 +493,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청 수락: 성공(요청 삭제 → 팔로우 저장 → 알림 발행)")
     void acceptFollowReq_success() {
-        var me = cu(2L, "you@you", "you", "img2", Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "you@you", "you", "img2");
         var requester = Member.builder().id(1L).nickname("me").build();
         var receiver = Member.builder().id(2L).nickname("you").build();
         var followReq = MemberFollowReq.builder().id(10L).followReq(requester).followRec(receiver).build();
@@ -514,7 +505,6 @@ class MemberServiceTest {
         given(memberFollowRepository.save(any(MemberFollow.class))).willReturn(savedFollow);
 
         memberService.acceptFollowReq(1L, me);
-
         verify(memberFollowReqRepository).delete(followReq);
         verify(memberFollowRepository).save(any(MemberFollow.class));
         verify(notificationEventPublisher).publishFollowRequest(any(Notification.class));
@@ -523,7 +513,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청 수락: 요청 없음 → REQUEST_NOT_FOUND")
     void acceptFollowReq_notFound() {
-        var me = cu(2L, "you@you", "you", null, Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "you@you", "you", null);
         var requester = Member.builder().id(1L).build();
         var receiver = Member.builder().id(2L).build();
 
@@ -539,7 +529,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 요청 거절: 성공(요청 삭제)")
     void refuseFollowReq_success() {
-        var me = cu(2L, "you@you", "you", null, Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "you@you", "you", null);
         var requester = Member.builder().id(1L).build();
         var receiver = Member.builder().id(2L).build();
         var followReq = MemberFollowReq.builder().id(10L).followReq(requester).followRec(receiver).build();
@@ -549,14 +539,13 @@ class MemberServiceTest {
         given(memberFollowReqRepository.findByFollowReqAndFollowRec(requester, receiver)).willReturn(Optional.of(followReq));
 
         memberService.refuseFollowReq(1L, me);
-
         verify(memberFollowReqRepository).delete(followReq);
     }
 
     @Test
     @DisplayName("팔로우 요청 거절: 요청 없음 → REQUEST_NOT_FOUND")
     void refuseFollowReq_notFound() {
-        var me = cu(2L, "you@you", "you", null, Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "you@you", "you", null);
         var requester = Member.builder().id(1L).build();
         var receiver = Member.builder().id(2L).build();
 
@@ -573,7 +562,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로우 취소: 성공")
     void cancelFollow_success() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
         var relation = MemberFollow.builder().id(5L).follow(meEntity).followed(target).build();
@@ -583,14 +572,13 @@ class MemberServiceTest {
         given(memberFollowRepository.findByFollowAndFollowed(meEntity, target)).willReturn(Optional.of(relation));
 
         memberService.cancelFollow(2L, me);
-
         verify(memberFollowRepository).delete(relation);
     }
 
     @Test
     @DisplayName("팔로우 취소: 관계 없음 → FOLLOW_NOT_FOUND")
     void cancelFollow_notFound() {
-        var me = cu(1L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(1L, "me@me", "me", null);
         var meEntity = Member.builder().id(1L).build();
         var target = Member.builder().id(2L).build();
 
@@ -606,7 +594,7 @@ class MemberServiceTest {
     @Test
     @DisplayName("팔로워 목록에서 삭제: 성공")
     void removeFollowed_success() {
-        var me = cu(2L, "me@me", "me", null, Member.MemberRole.ROLE_USER); // me가 followed
+        var me = cu(2L, "me@me", "me", null); // me가 followed
         var follower = Member.builder().id(1L).build();                     // follower가 follow
         var meEntity = Member.builder().id(2L).build();
         var relation = MemberFollow.builder().id(7L).follow(follower).followed(meEntity).build();
@@ -616,14 +604,13 @@ class MemberServiceTest {
         given(memberFollowRepository.findByFollowAndFollowed(follower, meEntity)).willReturn(Optional.of(relation));
 
         memberService.removeFollowed(1L, me);
-
         verify(memberFollowRepository).delete(relation);
     }
 
     @Test
     @DisplayName("팔로워 목록에서 삭제: 관계 없음 → FOLLOWER_NOT_FOUND")
     void removeFollowed_notFound() {
-        var me = cu(2L, "me@me", "me", null, Member.MemberRole.ROLE_USER);
+        var me = cu(2L, "me@me", "me", null);
         var follower = Member.builder().id(1L).build();
         var meEntity = Member.builder().id(2L).build();
 

@@ -48,6 +48,7 @@ app:
         userInfoUri: "https://kapi.kakao.com/v2/user/me"
   cookie:
     secure: false
+    domain: ""
 
 fcm:
   service-account-file: classpath:fcm-service-account.json

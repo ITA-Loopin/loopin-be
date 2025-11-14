@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.auth.security;
+package com.loopone.loopinbe.global.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.Jwts;
@@ -18,8 +18,6 @@ import java.util.UUID;
 @Slf4j
 @Component
 public class JwtTokenProvider {
-    public static final String AUTHORIZATION_HEADER = "Authorization";
-    public static final String BEARER_PREFIX = "Bearer ";
     private final SecretKey key;
 
     // SecretKey 초기화 (한 번만 생성)
@@ -80,15 +78,6 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
-    }
-
-    // 요청 헤더에서 JWT 추출
-    public String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (bearerToken != null && bearerToken.startsWith(BEARER_PREFIX)) {
-            return bearerToken.substring(BEARER_PREFIX.length());
-        }
-        return null;
     }
 
     // jti/TTL 헬퍼

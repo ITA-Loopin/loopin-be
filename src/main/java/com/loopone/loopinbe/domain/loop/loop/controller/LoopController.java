@@ -3,31 +3,26 @@ package com.loopone.loopinbe.domain.loop.loop.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopSimpleResponse;
-import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping(value="/rest-api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Loop", description = "루프 API")
-public class ApiV1LoopController {
+public class LoopController {
     private final LoopService loopService;
 
     //루프 생성
@@ -87,7 +82,17 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 그룹 전체 루프 수정 API 구현
+    //루프 그룹 전체 수정
+    @PutMapping("/loops/group/{loopRuleId}")
+    @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
+    public ApiResponse<Void> updateGroupLoop(
+            @Parameter(description = "수정할 루프 그룹의 ID") @PathVariable Long loopRuleId,
+            @RequestBody @Valid LoopGroupUpdateRequest loopGroupUpdateRequest,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.updateLoopGroup(loopRuleId, loopGroupUpdateRequest, currentUser);
+        return ApiResponse.success();
+    }
 
     //루프 삭제
     @DeleteMapping("/loops/{loopId}")
@@ -100,5 +105,14 @@ public class ApiV1LoopController {
         return ApiResponse.success();
     }
 
-    //TODO: 그룹 전체 루프 삭제 API 구현
+    //루프 그룹 삭제
+    @DeleteMapping("/loops/group/{loopRuleId}")
+    @Operation(summary = "루프 그룹 전체 삭제", description = "해당 그룹의 루프 전체를 삭제합니다.")
+    public ApiResponse<Void> deleteLoopGroup(
+            @Parameter(description = "삭제할 루프 그룹의 ID") @PathVariable Long loopRuleId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.deleteLoopGroup(loopRuleId, currentUser);
+        return ApiResponse.success();
+    }
 }

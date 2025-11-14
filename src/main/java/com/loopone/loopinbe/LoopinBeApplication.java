@@ -8,7 +8,6 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@EnableJpaAuditing
 @SpringBootApplication
 @EnableConfigurationProperties(OAuthWebProperties.class)
 @ConfigurationPropertiesScan(basePackages = "com.loopone.loopinbe")

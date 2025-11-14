@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.global.webSocket.auth;
 
-import com.loopone.loopinbe.domain.account.auth.security.JwtTokenProvider;
+import com.loopone.loopinbe.global.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -18,8 +19,9 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
+
+import static org.springframework.util.StringUtils.hasText;
 
 @Slf4j
 @Component
@@ -29,6 +31,8 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
     private final MemberRepository memberRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final AccessTokenDenyListService accessTokenDenyListService;
+    @Value("${app.ws.allow-query-token}")
+    private boolean allowQueryToken;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest req, ServerHttpResponse res,
@@ -37,17 +41,17 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
             HttpServletRequest servletReq = (req instanceof ServletServerHttpRequest s)
                     ? s.getServletRequest() : null;
 
-            // 1) 토큰 추출: Cookie
-            String token = extractFromCookie(servletReq, "ws_access");
-            if (token == null || !jwtTokenProvider.validateAccessToken(token)) {
-                log.warn("[WS] invalid/missing token");
+            // 1) 토큰 추출: Cookie → (옵션) Query → Authorization: Bearer
+            String accessToken = resolveAccessToken(req, servletReq);
+            if (!hasText(accessToken) || !jwtTokenProvider.validateAccessToken(accessToken)) {
+                log.warn("[WS] invalid/missing token (cookie/query/header 모두 실패)");
                 setStatus(res, HttpStatus.UNAUTHORIZED);
                 return false;
             }
 
             // 2) deny-list (즉시 무효화) 체크 ← 추가 포인트
             String jti = null;
-            try { jti = jwtTokenProvider.getJti(token); } catch (Exception ignore) {}
+            try { jti = jwtTokenProvider.getJti(accessToken); } catch (Exception ignore) {}
             if (jti != null && accessTokenDenyListService.isDenied(jti)) {
                 log.info("[WS] denied by logout. jti={}", jti);
                 setStatus(res, HttpStatus.UNAUTHORIZED);
@@ -55,7 +59,7 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
             }
 
             // 3) 이메일/subject 파싱 → memberId 조회
-            String email = jwtTokenProvider.getEmailFromToken(token);
+            String email = jwtTokenProvider.getEmailFromToken(accessToken);
             if (email == null) {
                 log.warn("[WS] email not found in token");
                 setStatus(res, HttpStatus.UNAUTHORIZED);
@@ -104,22 +108,75 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
         }
     }
 
+    private String resolveAccessToken(ServerHttpRequest req, HttpServletRequest servletReq) {
+        // 1) Cookie
+        String token = extractFromCookie(servletReq, "access_token");
+        if (hasText(token)) return token;
+
+        // 2) (옵션) Query: access_token / token / t
+        if (allowQueryToken && req != null) {
+            URI uri = req.getURI();
+            token = firstNonNull(
+                    resolveQueryParam(uri, "access_token")
+            );
+            if (hasText(token)) {
+                // 쿼리 토큰은 서버/액세스 로그에 남을 수 있으니 로깅 금지!
+                return token;
+            }
+        }
+
+        // 3) Authorization: Bearer <token>
+        String bearer = extractBearer(servletReq);
+        if (hasText(bearer)) return bearer;
+
+        return null;
+    }
+
     private static String extractFromCookie(HttpServletRequest req, String name) {
         if (req == null || req.getCookies() == null) return null;
         for (Cookie c : req.getCookies()) if (name.equals(c.getName())) return c.getValue();
         return null;
     }
 
-    private static Long resolveLongQueryParam(URI uri, String key) {
-        String q = uri.getQuery();
+    private static String extractBearer(HttpServletRequest req) {
+        if (req == null) return null;
+        String auth = req.getHeader(HttpHeaders.AUTHORIZATION);
+        if (hasText(auth) && auth.startsWith("Bearer ")) {
+            return auth.substring(7);
+        }
+        return null;
+    }
+
+    private static String resolveQueryParam(URI uri, String key) {
+        String q = (uri != null ? uri.getQuery() : null);
         if (q == null) return null;
         for (String p : q.split("&")) {
             int i = p.indexOf('=');
             if (i > 0 && key.equals(p.substring(0, i))) {
-                try { return Long.parseLong(p.substring(i + 1)); }
-                catch (NumberFormatException ignored) {}
+                return urlDecodeSafe(p.substring(i + 1));
             }
         }
         return null;
+    }
+
+    private static Long resolveLongQueryParam(URI uri, String key) {
+        String v = resolveQueryParam(uri, key);
+        if (v == null) return null;
+        try { return Long.parseLong(v); }
+        catch (NumberFormatException ignored) { return null; }
+    }
+
+    private static String firstNonNull(String... vs) {
+        for (String v : vs) if (hasText(v)) return v;
+        return null;
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private static String urlDecodeSafe(String s) {
+        try { return java.net.URLDecoder.decode(s, java.nio.charset.StandardCharsets.UTF_8); }
+        catch (Exception ignored) { return s; }
     }
 }
