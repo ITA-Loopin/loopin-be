@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.chat.chatmessage.repository;
+package com.loopone.loopinbe.domain.chat.chatmessage.repository;
 
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.MessageContent;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRepository;

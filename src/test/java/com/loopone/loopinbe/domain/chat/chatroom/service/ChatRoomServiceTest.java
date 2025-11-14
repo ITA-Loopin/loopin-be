@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.chat.chatroom.service;
+package com.loopone.loopinbe.domain.chat.chatroom.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
