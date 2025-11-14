@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.chat.chatmessage.controller;
+package com.loopone.loopinbe.domain.chat.chatmessage.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
