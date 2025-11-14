@@ -21,8 +21,8 @@ services:
     container_name: loopin-mongodb
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: loopinAdmin
-      MONGO_INITDB_ROOT_PASSWORD: loopinAdmin0906
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
       MONGO_INITDB_DATABASE: meta_db
     ports:
       - "27017:27017"
@@ -36,8 +36,8 @@ services:
     container_name: loopin-postgres
     restart: always
     environment:
-      POSTGRES_USER: loopinAdmin
-      POSTGRES_PASSWORD: loopinAdmin0906
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: meta_db
     ports:
       - "5432:5432"
@@ -147,6 +147,4 @@ networks:
   loopin-backend:
     driver: bridge
   loopin-proxy:
-    driver: bridge
-  loopin-monitor:
     driver: bridge
