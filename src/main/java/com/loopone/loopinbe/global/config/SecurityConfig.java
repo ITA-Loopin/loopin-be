@@ -77,6 +77,7 @@ public class SecurityConfig {
                 "http://localhost:8080",
                 "http://localhost:3000",
                 "http://local.loopin.co.kr",
+                "https://local.loopin.co.kr",
                 "https://loopin.co.kr",
                 "https://develop.loopin.co.kr"
         ));
