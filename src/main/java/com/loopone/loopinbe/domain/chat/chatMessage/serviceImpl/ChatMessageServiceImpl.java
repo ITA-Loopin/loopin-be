@@ -128,6 +128,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Override
     @Transactional
     public ChatMessageSavedResult processInbound(ChatInboundMessagePayload in) {
+        log.info("Mongo업서트 요청 처리 시작: messageKey={}", in.messageKey());
         // 1) 권한 검증 (비재시도 예외로 던지는 게 운영에 유리)
         // BOT 메시지는 멤버 검증을 생략
         if (in.authorType() != ChatMessage.AuthorType.BOT) {
@@ -163,6 +164,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 });
         // 3) Mongo 업서트 (id = messageKey)
         messageContentRepository.upsert(in.messageKey(), in.content(), in.recommendations());
+        log.info("Mongo업서트 완료: messageKey={}", in.messageKey());
         // 4) 봇 방 여부는 ChatRoom에서!
         boolean isBotRoom = (msg.getChatRoom() != null)
                 ? msg.getChatRoom().isBotRoom()
