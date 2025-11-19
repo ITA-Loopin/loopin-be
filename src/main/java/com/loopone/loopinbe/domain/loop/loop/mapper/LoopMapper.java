@@ -57,18 +57,27 @@ public interface LoopMapper {
 
     //진행률(progress)을 계산하는 헬퍼 메서드
     @Named("calculateProgress")
-    default double calculateProgress(List<LoopChecklist> checklists) {
+    default double calculateProgress(Loop loop) {
+        List<LoopChecklist> checklists = loop.getLoopChecklists();
+
+        //체크리스트 없는 경우
         if (checklists == null || checklists.isEmpty()) {
-            return 0.0;
+            return loop.isCompleted() ? 100.0 : 0.0;
         }
+
+        //체크리스트 있는 경우
         long completedCount = checklists.stream().filter(LoopChecklist::getCompleted).count();
         return ((double) completedCount / checklists.size()) * 100.0;
     }
 
     //루프 자체의 완료 여부를 확인하는 헬퍼 메서드
     @Named("isCompleted")
-    default boolean isCompleted(List<LoopChecklist> checklists) {
-        if (checklists == null || checklists.isEmpty()) return false;
+    default boolean isCompleted(Loop loop) {
+        List<LoopChecklist> checklists = loop.getLoopChecklists();
+
+        if (checklists == null || checklists.isEmpty()) {
+            return loop.isCompleted();
+        }
         return checklists.stream().allMatch(LoopChecklist::getCompleted);
     }
 
