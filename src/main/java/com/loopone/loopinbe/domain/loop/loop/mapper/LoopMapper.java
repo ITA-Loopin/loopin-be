@@ -18,7 +18,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface LoopMapper {
     //Loop 엔티티를 LoopSimpleResponse로 변환
-    @Mapping(target = "completed", source = "loop.loopChecklists", qualifiedByName = "isCompleted")
+    @Mapping(target = "completed", source = "loop", qualifiedByName = "isCompleted")
     @Mapping(target = "totalChecklists", source = "loop.loopChecklists", qualifiedByName = "calculateTotal")
     @Mapping(target = "completedChecklists", source = "loop.loopChecklists", qualifiedByName = "calculateCompleted")
     LoopSimpleResponse toSimpleResponse(Loop loop);
@@ -41,7 +41,7 @@ public interface LoopMapper {
     }
 
     //Loop 엔티티를 LoopDetailResponse로 변환
-    @Mapping(target = "progress", source = "loop.loopChecklists", qualifiedByName = "calculateProgress")
+    @Mapping(target = "progress", source = "loop", qualifiedByName = "calculateProgress")
     @Mapping(target = "checklists", source = "loopChecklists")
     @Mapping(target = "loopRule", source = "loopRule")
     LoopDetailResponse toDetailResponse(Loop loop);
