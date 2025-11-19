@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
@@ -25,6 +26,9 @@ public interface LoopService {
 
     //루프 전체 리스트 조회
     //PageResponse<LoopSimpleResponse> getAllLoop(Pageable pageable, CurrentUserDto currentUser);
+
+    //루프 완료 처리
+    void updateLoopCompletion(Long loopId, LoopCompletionUpdateRequest loopCompletionUpdateRequest, CurrentUserDto currentUser);
 
     //루프 수정
     void updateLoop(Long loopId, LoopUpdateRequest loopUpdateRequest, CurrentUserDto currentUser);
