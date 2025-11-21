@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
@@ -77,7 +78,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
-        //루프의 소유자가 현재 사용자인지 확인
+        //루프 검증
         validateLoopOwner(loop, currentUser);
 
         return loopMapper.toDetailResponse(loop);
@@ -113,6 +114,27 @@ public class LoopServiceImpl implements LoopService {
         return PageResponse.of(simpleDtoPage);
     }*/
 
+    //루프 완료 처리
+    @Override
+    @Transactional
+    public void updateLoopCompletion(Long loopId, LoopCompletionUpdateRequest requestDTO, CurrentUserDto currentUser) {
+        //루프 조회
+        Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+
+        //루프 검증
+        validateLoopOwner(loop, currentUser);
+
+        //루프 완료 상태 변경
+        loop.setCompleted(requestDTO.completed());
+
+        //체크리스트가 있는 경우 체크리스트의 완료 상태 변경
+        if(!loop.getLoopChecklists().isEmpty()){
+            loop.getLoopChecklists().forEach(loopChecklist ->
+                loopChecklist.setCompleted(requestDTO.completed())
+            );
+        }
+    }
+
     //단일 루프 수정
     @Override
     @Transactional
@@ -120,7 +142,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
-        //루프의 소유자가 현재 사용자인지 확인
+        //루프 검증
         validateLoopOwner(loop, currentUser);
 
         //LoopRule 연결 해제 (단일 수정을 하는 경우, 독립적인 루프가 되기에)
@@ -148,7 +170,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 조회
         LoopRule loopRule = loopRuleRepository.findById(loopRuleId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
 
-        //루프의 소유자가 현재 사용자인지 확인
+        //loopRule 검증
         validateLoopRuleOwner(loopRule, currentUser);
 
         //LoopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
@@ -168,7 +190,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
 
-        //루프의 소유자가 현재 사용자인지 확인
+        //루프 검증
         validateLoopOwner(loop, currentUser);
 
         loopRepository.delete(loop);
@@ -181,7 +203,7 @@ public class LoopServiceImpl implements LoopService {
         //루프 조회
         LoopRule loopRule = loopRuleRepository.findById(loopRuleId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
 
-        //loopRule의 소유자가 현재 사용자인지 확인
+        //loopRule 검증
         validateLoopRuleOwner(loopRule, currentUser);
 
         //loopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
