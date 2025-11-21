@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.loop.loop.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
@@ -47,7 +48,6 @@ public class LoopController {
         return ApiResponse.success(detailLoop);
     }
 
-
     //날짜별 루프 리스트 조회
     @GetMapping("/loops/date/{loopDate}")
     @Operation(summary = "날짜별 루프 리스트 조회", description = "해당 날짜의 루프 리스트를 조회합니다.")
@@ -69,6 +69,18 @@ public class LoopController {
         Pageable pageable = PageRequest.of(loopPage.getPage(), loopPage.getSize());
         return ApiResponse.success(loopService.getAllLoop(pageable, currentUser));
     }*/
+
+    //루프 완료 처리
+    @PatchMapping("/loops/{loopId}/completion")
+    @Operation(summary = "루프 완료 처리", description = "해당 루프를 완료(진행도 100%) 처리하거나 미완료(진행도 0%) 처리합니다.")
+    public ApiResponse<Void> updateLoopCompletion(
+            @PathVariable Long loopId,
+            @RequestBody @Valid LoopCompletionUpdateRequest loopCompletionUpdateRequest,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ){
+        loopService.updateLoopCompletion(loopId, loopCompletionUpdateRequest, currentUser);
+        return ApiResponse.success();
+    }
 
     //단일 루프 수정
     @PutMapping("/loops/{loopId}")
