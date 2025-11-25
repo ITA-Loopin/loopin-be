@@ -1,5 +1,7 @@
 package com.loopone.loopinbe.global.kafka.event.ai;
 
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
+
 // AI 요청 페이로드 (필요 최소)
 public record AiRequestPayload(
         String requestId,
@@ -7,5 +9,6 @@ public record AiRequestPayload(
         Long userMessageId,
         Long userId,
         String userContent,
-        java.time.Instant requestedAt
-) {}
+        LoopDetailResponse loopDetailResponse,
+        java.time.Instant requestedAt) {
+}
