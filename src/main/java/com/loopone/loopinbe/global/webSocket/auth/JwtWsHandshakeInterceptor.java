@@ -21,8 +21,6 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import java.net.URI;
 import java.util.Map;
 
-import static org.springframework.util.StringUtils.hasText;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
