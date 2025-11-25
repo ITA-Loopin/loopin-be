@@ -13,7 +13,7 @@ public class AuthCookieFactory {
     @Value("${app.cookie.secure}")  // dev=false, prod=true
     private boolean secure;
 
-    @Value("${app.cookie.domain}")  // ".loopin.co.kr"
+    @Value("${app.cookie.domain}")  // dev="", prod=".loopin.co.kr"
     private String cookieDomain;
 
     @Value("${custom.accessToken.expiration}")
