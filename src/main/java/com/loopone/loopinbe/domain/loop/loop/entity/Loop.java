@@ -31,6 +31,10 @@ public class Loop extends BaseEntity {
     @Column(length = 500)
     private String content; //루프 설명 (메모 또는 부가정보)
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean completed = false;
+
     @OneToMany(mappedBy = "loop", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<LoopChecklist> loopChecklists = new ArrayList<>();
