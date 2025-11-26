@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,5 +16,6 @@ public class ChatRoomResponse {
     private Long id;
     private Long memberId;
     private String title;
+    private boolean loopSelect;
     private List<SimpleMemberResponse> chatRoomMembers;
 }

@@ -5,10 +5,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
-import com.loopone.loopinbe.global.common.response.PageResponse;
-import org.springframework.data.domain.Pageable;
-
-import java.util.List;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 
 public interface ChatRoomService {
     // 채팅방 생성(DM/그룹)
@@ -22,4 +19,9 @@ public interface ChatRoomService {
 
     // 채팅방 리스트 조회
     ChatRoomListResponse getChatRooms(Long memberId);
+
+    // 채팅방 루프 선택 완료
+    void selectLoop(Long chatRoomId, Long loopId);
+
+    LoopDetailResponse findLoopDetailResponse(Long chatRoomId);
 }

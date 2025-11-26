@@ -1,14 +1,9 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.dto.res.SimpleMemberResponse;
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
-import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
-import com.loopone.loopinbe.domain.chat.chatMessage.entity.MessageContent;
-import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageRepository;
-import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.converter.ChatRoomConverter;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
@@ -16,24 +11,24 @@ import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
-import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomPage;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
-import com.loopone.loopinbe.global.common.response.PageResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
+import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
+import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
+import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -45,6 +40,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final MemberConverter memberConverter;
     private final ChatRoomConverter chatRoomConverter;
+    private final LoopRepository loopRepository;
+    private final LoopMapper loopMapper;
 
     // 채팅방 생성(DM/그룹)
     @Override
@@ -84,7 +81,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         addedMemberIds.add(currentUser.id()); // 본인 ID 추가
         for (ChatRoomMember chatRoomMember : chatRoomRequest.getChatRoomMembers()) {
             Long memberId = chatRoomMember.getMember().getId();
-            if (!addedMemberIds.add(memberId)) continue; // 중복 제거만 하고, 예외는 던지지 않음
+            if (!addedMemberIds.add(memberId))
+                continue; // 중복 제거만 하고, 예외는 던지지 않음
             ChatRoomMember memberInChatRoom = ChatRoomMember.builder()
                     .member(chatRoomMember.getMember())
                     .chatRoom(chatRoom)
@@ -99,7 +97,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     // AI 채팅방 생성
     @Override
     @Transactional
-    public ChatRoomResponse createAiChatRoom(ChatRoomRequest chatRoomRequest, Member member){
+    public ChatRoomResponse createAiChatRoom(ChatRoomRequest chatRoomRequest, Member member) {
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .title(null)
@@ -121,7 +119,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     @Override
     @Transactional
-    public void leaveAllChatRooms(Long memberId){
+    public void leaveAllChatRooms(Long memberId) {
         List<ChatRoom> chatRooms = chatRoomRepository.findByMemberId(memberId);
         for (ChatRoom chatRoom : chatRooms) {
             // 현재 멤버가 속한 ChatRoomMember 찾기
@@ -129,7 +127,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                     .filter(member -> member.getMember().getId().equals(memberId))
                     .findFirst()
                     .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-            chatRoom.getChatRoomMembers().remove(chatRoomMember);  // ChatRoomMember 제거
+            chatRoom.getChatRoomMembers().remove(chatRoomMember); // ChatRoomMember 제거
             chatRoomMemberRepository.delete(chatRoomMember);
 
             // 방장인지 확인
@@ -158,5 +156,24 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public ChatRoomListResponse getChatRooms(Long memberId) {
         List<ChatRoom> chatRoomList = chatRoomRepository.findByMemberId(memberId);
         return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+    }
+
+    @Override
+    @Transactional
+    public void selectLoop(Long chatRoomId, Long loopId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+        Loop loop = loopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        chatRoom.selectLoop(loop);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoopDetailResponse findLoopDetailResponse(Long chatRoomId) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        return loopMapper.toDetailResponse(chatRoom.getLoop());
     }
 }

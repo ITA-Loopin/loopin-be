@@ -3,6 +3,8 @@ package com.loopone.loopinbe.global.webSocket.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
@@ -19,13 +21,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.MESSAGE;
+import static com.loopone.loopinbe.global.constants.KafkaKey.CREATE_LOOP_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.UPDATE_LOOP_TOPIC;
+import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.CREATE_LOOP;
+import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.UPDATE_LOOP;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatMessageEventPublisher publisher;
+    private final ChatRoomRepository chatRoomRepository;
+    private final LoopMapper loopMapper;
     private final ObjectMapper objectMapper;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Long> sessionRoomMap = new ConcurrentHashMap<>(); // 세션 -> 방 매핑
@@ -75,7 +82,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private Long resolveMemberId(WebSocketSession session) {
         // 레지스트리 매핑에서 즉시 조회
         Long memberId = sessionMemberMap.get(session);
-        if (memberId == null) throw new IllegalStateException("Unauthenticated WS session");
+        if (memberId == null)
+            throw new IllegalStateException("Unauthenticated WS session");
         return memberId;
     }
 
@@ -86,8 +94,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             ChatWebSocketPayload in = objectMapper.readValue(message.getPayload(), ChatWebSocketPayload.class);
 
             // 2) 필수 검증 (필요 최소)
-            if (in.getMessageType() != MESSAGE) {
-                sendWsError(session, "INVALID_TYPE", "messageType must be MESSAGE");
+            if (in.getMessageType() != CREATE_LOOP && in.getMessageType() != UPDATE_LOOP) {
+                sendWsError(session, "INVALID_TYPE", "messageType must be CREATE_LOOP or UPDATE_LOOP");
                 return;
             }
             Long roomId = in.getChatRoomId();
@@ -104,7 +112,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             // 3) 인증(세션) 확인
             Long memberId = resolveMemberId(session); // 없으면 IllegalStateException
 
-            // 4) 퍼블리시 (멱등키 포함)
             ChatInboundMessagePayload payload = new ChatInboundMessagePayload(
                     java.util.UUID.randomUUID().toString(),
                     roomId,
@@ -112,9 +119,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     content,
                     null,
                     ChatMessage.AuthorType.USER,
-                    java.time.LocalDateTime.now()
-            );
-            publisher.publishInbound(payload);
+                    java.time.LocalDateTime.now());
+
+            if (in.getMessageType() == CREATE_LOOP) {
+                // 4) 퍼블리시 (멱등키 포함)
+                publisher.publishInbound(payload, CREATE_LOOP_TOPIC);
+            } else if (in.getMessageType() == UPDATE_LOOP) {
+                // 4) 퍼블리시 (멱등키 포함)
+                publisher.publishInbound(payload, UPDATE_LOOP_TOPIC);
+            }
         } catch (com.fasterxml.jackson.core.JsonProcessingException jpe) {
             // 잘못된 JSON
             log.warn("WS BAD_JSON: {}", jpe.getOriginalMessage());
@@ -149,7 +162,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     // 실시간 메시지 채팅방에 브로드캐스트
     public void broadcastToRoom(Long chatRoomId, String payload) {
         CopyOnWriteArrayList<WebSocketSession> sessions = chatRoomSessions.get(chatRoomId);
-        if (sessions == null) return;
+        if (sessions == null)
+            return;
         for (WebSocketSession s : sessions) {
             try {
                 if (s.isOpen()) {
@@ -162,7 +176,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sessions.remove(s);
             }
         }
-        if (sessions.isEmpty()) chatRoomSessions.remove(chatRoomId);
+        if (sessions.isEmpty())
+            chatRoomSessions.remove(chatRoomId);
     }
 
     @Override
@@ -172,7 +187,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             var sessions = chatRoomSessions.get(chatRoomId);
             if (sessions != null) {
                 sessions.remove(session);
-                if (sessions.isEmpty()) chatRoomSessions.remove(chatRoomId);
+                if (sessions.isEmpty())
+                    chatRoomSessions.remove(chatRoomId);
             }
         }
         // 멤버 세션 해제
