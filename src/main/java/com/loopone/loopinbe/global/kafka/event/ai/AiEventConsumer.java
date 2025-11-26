@@ -3,7 +3,6 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
@@ -53,11 +52,11 @@ public class AiEventConsumer {
                 // 1) AI 결과 기반 Inbound 메시지 생성
                 ChatMessagePayload inbound = botInboundMessage(req, loopRecommend, message);
 
-                // 2) 저장 (멱등 처리 포함)
-                ChatMessageSavedResult saved = chatMessageService.processInbound(inbound);
+                // 2) 브로드캐스트
+                sendWebSocket(inbound);
 
-                // 3) 브로드캐스트
-                sendWebSocket(saved);
+                // 3) 저장
+                chatMessageService.processInbound(inbound);
 
             }).exceptionally(ex -> {
                 log.error("AI 이벤트 처리 중 비동기 오류: {}", ex.getMessage());
@@ -70,9 +69,9 @@ public class AiEventConsumer {
         }
     }
 
-    private ChatMessagePayload botInboundMessage(AiPayload req, RecommendationsLoop recommendationsLoop,
-                                                 String message) {
-        return new ChatMessagePayload(
+    private ChatInboundMessagePayload botInboundMessage(AiRequestPayload req, RecommendationsLoop recommendationsLoop,
+            String message) {
+        return new ChatInboundMessagePayload(
                 deterministicMessageKey(req),
                 req.chatRoomId(),
                 null,
@@ -88,28 +87,30 @@ public class AiEventConsumer {
         return "ai:" + req.requestId();
     }
 
-    // WebSocket 전송만 수행
-    private void sendWebSocket(ChatMessageSavedResult saved) {
+    /**
+     * WebSocket 전송만 수행 (저장 전)
+     */
+    private void sendWebSocket(ChatInboundMessagePayload inbound) {
         try {
             ChatMessageDto resp = ChatMessageDto.builder()
-                    .id(saved.messageId())
-                    .chatRoomId(saved.chatRoomId())
-                    .memberId(saved.memberId())
-                    .content(saved.content())
-                    .recommendations(saved.recommendations())
-                    .authorType(saved.authorType())
-                    .createdAt(saved.createdAt())
+                    .tempId(inbound.messageKey())
+                    .chatRoomId(inbound.chatRoomId())
+                    .memberId(inbound.memberId())
+                    .content(inbound.content())
+                    .recommendations(inbound.recommendations())
+                    .authorType(inbound.authorType())
+                    .createdAt(inbound.createdAt())
                     .build();
 
             ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                     .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
-                    .chatRoomId(saved.chatRoomId())
+                    .chatRoomId(inbound.chatRoomId())
                     .chatMessageDto(resp)
                     .lastMessageCreatedAt(resp.getCreatedAt())
                     .build();
 
             chatWebSocketHandler.broadcastToRoom(
-                    saved.chatRoomId(),
+                    inbound.chatRoomId(),
                     objectMapper.writeValueAsString(out));
 
         } catch (Exception e) {
