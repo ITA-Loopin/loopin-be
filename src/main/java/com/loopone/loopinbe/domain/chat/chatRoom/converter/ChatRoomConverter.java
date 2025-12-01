@@ -16,12 +16,22 @@ public interface ChatRoomConverter {
     // ---------- ChatRoom -> ChatRoomResponse ----------
     @Mapping(target = "memberId", source = "chatRoom.member.id")
     @Mapping(target = "chatRoomMembers", source = "chatRoomMembers")
+    @Mapping(target = "loopSelect", source = "chatRoom")
     ChatRoomResponse toChatRoomResponse(ChatRoom chatRoom, List<ChatRoomMember> chatRoomMembers);
+
+    @Mapping(target = "memberId", source = "chatRoom.member.id")
+    @Mapping(target = "chatRoomMembers", source = "chatRoom.chatRoomMembers")
+    @Mapping(target = "loopSelect", source = "chatRoom")
+    ChatRoomResponse toChatRoomResponse(ChatRoom chatRoom);
 
     // ---------- ChatRoomList -> ChatRoomListResponse ----------
     List<ChatRoomResponse> toChatRoomResponses(List<ChatRoom> chatRooms);
 
     default ChatRoomListResponse toChatRoomListResponse(List<ChatRoom> chatRooms) {
         return new ChatRoomListResponse(toChatRoomResponses(chatRooms));
+    }
+
+    default boolean toLoopSelect(ChatRoom chatRoom) {
+        return chatRoom.getLoop() != null;
     }
 }

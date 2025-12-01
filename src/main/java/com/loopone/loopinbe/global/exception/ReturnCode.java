@@ -114,6 +114,7 @@ public enum ReturnCode {
     OPEN_AI_UNAUTHORIZED(401, "LOOP_007", "OpenAI 인증에 실패했습니다."),
     OPEN_AI_RATE_LIMIT(429, "LOOP_008", "OpenAI 요청 수를 초과하였습니다."),
     OPEN_AI_JSON_PROCESSING_ERROR(500, "LOOP_009", "OpenAI JSON 직렬화에 실패했습니다."),
+    UNKNOWN_SCHEDULE_TYPE(404, "LOOP_010", "올바르지 않은 스케쥴 타입입니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),

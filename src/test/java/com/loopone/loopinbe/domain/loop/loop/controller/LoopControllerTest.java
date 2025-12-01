@@ -98,7 +98,7 @@ class LoopControllerTest {
         //컨트롤러에 전송할 Request 생성
         LoopCreateRequest request = new LoopCreateRequest(
                 "루프 생성", "내용", RepeatType.NONE,
-                LocalDate.now(), null, null, null, List.of("체크리스트1")
+                LocalDate.now(), null, null, null, List.of("체크리스트1"), null
         );
         //createLoop 메서드가 호출되면, 아무것도 하지 않도록 설정
         willDoNothing().given(loopService).createLoop(any(LoopCreateRequest.class), any(CurrentUserDto.class));

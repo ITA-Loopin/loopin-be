@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.entity;
 
 import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +29,15 @@ public class ChatRoom extends BaseEntity {
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loop_id")
+    private Loop loop;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean isBotRoom = true;
+
+    public void selectLoop(Loop loop) {
+        this.loop = loop;
+    }
 }

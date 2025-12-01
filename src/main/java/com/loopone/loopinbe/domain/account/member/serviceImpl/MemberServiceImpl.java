@@ -22,6 +22,8 @@ import com.loopone.loopinbe.domain.notification.entity.Notification;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomCreatePayload;
+import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import com.loopone.loopinbe.global.kafka.event.notification.NotificationEventPublisher;
 import com.loopone.loopinbe.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Random;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -51,6 +54,7 @@ public class MemberServiceImpl implements MemberService {
     private final MemberConverter memberConverter;
     private final ChatRoomService chatRoomService;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final ChatRoomEventPublisher chatRoomEventPublisher;
 
     // 회원가입
     @Override
@@ -73,9 +77,6 @@ public class MemberServiceImpl implements MemberService {
                 .providerId(memberCreateRequest.getProviderId())
                 .build();
         memberRepository.save(member);
-        ChatRoomRequest chatRoomRequest = ChatRoomRequest.builder().build();
-        ChatRoomResponse chatRoomResponse = chatRoomService.createAiChatRoom(chatRoomRequest, member);
-        member.setChatRoomId(chatRoomResponse.getId());
         return member;
     }
 
@@ -287,6 +288,16 @@ public class MemberServiceImpl implements MemberService {
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
                 .orElseThrow(() -> new ServiceException(ReturnCode.FOLLOWER_NOT_FOUND));
         memberFollowRepository.delete(memberFollow);
+    }
+
+    // 채팅방 생성 이벤트
+    @Override
+    public void publishChatRoomCreateEvent(Long memberId) {
+        ChatRoomCreatePayload payload = new ChatRoomCreatePayload(
+                UUID.randomUUID().toString(),
+                memberId
+        );
+        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 
     // ----------------- 헬퍼 메서드 -----------------
