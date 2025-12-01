@@ -74,7 +74,7 @@ public class LoopController {
             @PathVariable Long loopId,
             @RequestBody @Valid LoopCompletionUpdateRequest loopCompletionUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ) {
+    ){
         loopService.updateLoopCompletion(loopId, loopCompletionUpdateRequest, currentUser);
         return ApiResponse.success();
     }
