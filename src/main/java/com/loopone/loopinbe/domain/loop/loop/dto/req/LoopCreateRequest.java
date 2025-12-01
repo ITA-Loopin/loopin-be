@@ -35,6 +35,14 @@ public record LoopCreateRequest (
         LocalDate endDate,
 
         @Schema(description = "각 루프에 포함될 체크리스트 내용 목록")
-        List<String> checklists
+        List<String> checklists,
 
-){}
+        @Schema(description = "루프의 AI 생성 여부")
+        Boolean isAiCreated
+){
+    public LoopCreateRequest {
+        if (isAiCreated == null) {
+            isAiCreated = false;
+        }
+    }
+}

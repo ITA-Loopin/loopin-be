@@ -20,30 +20,28 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping(value="/rest-api/v1")
+@RequestMapping(value = "/rest-api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Loop", description = "루프 API")
 public class LoopController {
     private final LoopService loopService;
 
-    //루프 생성
+    // 루프 생성
     @PostMapping("/loops")
     @Operation(summary = "루프 생성", description = "새로운 루프를 생성합니다.")
-    public ApiResponse<Void> addLoop(
+    public ApiResponse<Long> addLoop(
             @RequestBody @Valid LoopCreateRequest loopCreateRequest,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
-        loopService.createLoop(loopCreateRequest, currentUser);
-        return ApiResponse.success();
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
+        Long loopId = loopService.createLoop(loopCreateRequest, currentUser);
+        return ApiResponse.success(loopId);
     }
 
-    //루프 상세 조회
+    // 루프 상세 조회
     @GetMapping("/loops/{loopId}")
     @Operation(summary = "루프 상세 조회", description = "해당 루프의 상세 정보를 조회합니다.")
     public ApiResponse<LoopDetailResponse> getDetailLoop(
             @PathVariable Long loopId,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         LoopDetailResponse detailLoop = loopService.getDetailLoop(loopId, currentUser);
         return ApiResponse.success(detailLoop);
     }
@@ -53,8 +51,7 @@ public class LoopController {
     @Operation(summary = "날짜별 루프 리스트 조회", description = "해당 날짜의 루프 리스트를 조회합니다.")
     public ApiResponse<DailyLoopsResponse> getDailyLoops(
             @PathVariable LocalDate loopDate,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         DailyLoopsResponse dailyLoops = loopService.getDailyLoops(loopDate, currentUser);
         return ApiResponse.success(dailyLoops);
     }
@@ -77,7 +74,7 @@ public class LoopController {
             @PathVariable Long loopId,
             @RequestBody @Valid LoopCompletionUpdateRequest loopCompletionUpdateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+    ) {
         loopService.updateLoopCompletion(loopId, loopCompletionUpdateRequest, currentUser);
         return ApiResponse.success();
     }
@@ -88,42 +85,38 @@ public class LoopController {
     public ApiResponse<Void> updateLoop(
             @PathVariable Long loopId,
             @RequestBody @Valid LoopUpdateRequest loopUpdateRequest,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         loopService.updateLoop(loopId, loopUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
-    //루프 그룹 전체 수정
+    // 루프 그룹 전체 수정
     @PutMapping("/loops/group/{loopRuleId}")
     @Operation(summary = "루프 그룹 전체 수정", description = "해당 그룹의 루프 전체를 수정합니다.")
     public ApiResponse<Void> updateGroupLoop(
             @Parameter(description = "수정할 루프 그룹의 ID") @PathVariable Long loopRuleId,
             @RequestBody @Valid LoopGroupUpdateRequest loopGroupUpdateRequest,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         loopService.updateLoopGroup(loopRuleId, loopGroupUpdateRequest, currentUser);
         return ApiResponse.success();
     }
 
-    //루프 삭제
+    // 루프 삭제
     @DeleteMapping("/loops/{loopId}")
     @Operation(summary = "루프 삭제", description = "해당 루프를 삭제합니다.")
     public ApiResponse<Void> deleteLoop(
             @PathVariable Long loopId,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         loopService.deleteLoop(loopId, currentUser);
         return ApiResponse.success();
     }
 
-    //루프 그룹 삭제
+    // 루프 그룹 삭제
     @DeleteMapping("/loops/group/{loopRuleId}")
     @Operation(summary = "루프 그룹 전체 삭제", description = "해당 그룹의 루프 전체를 삭제합니다.")
     public ApiResponse<Void> deleteLoopGroup(
             @Parameter(description = "삭제할 루프 그룹의 ID") @PathVariable Long loopRuleId,
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ){
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
         loopService.deleteLoopGroup(loopRuleId, currentUser);
         return ApiResponse.success();
     }
