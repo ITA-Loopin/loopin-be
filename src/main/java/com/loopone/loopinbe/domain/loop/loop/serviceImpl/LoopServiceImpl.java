@@ -19,6 +19,8 @@ import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomCreatePayload;
+import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -36,6 +39,7 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
+    private final ChatRoomEventPublisher chatRoomEventPublisher;
 
     // 루프 생성
     @Override
@@ -43,19 +47,30 @@ public class LoopServiceImpl implements LoopService {
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
         LoopRule loopRule;
         switch (requestDTO.scheduleType()) {
-            case NONE:
-                return createSingleLoop(requestDTO, currentUser);
-            case WEEKLY:
+            case NONE -> {
+                Long loopId = createSingleLoop(requestDTO, currentUser);
+                publishAiChatRoom(requestDTO, currentUser);
+                return loopId;
+            }
+            case WEEKLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createWeeklyLoops(requestDTO, currentUser, loopRule);
-            case MONTHLY:
+                Long loopId = createWeeklyLoops(requestDTO, currentUser, loopRule);
+                publishAiChatRoom(requestDTO, currentUser);
+                return loopId;
+            }
+            case MONTHLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createMonthlyLoops(requestDTO, currentUser, loopRule);
-            case YEARLY:
+                Long loopId = createMonthlyLoops(requestDTO, currentUser, loopRule);
+                publishAiChatRoom(requestDTO, currentUser);
+                return loopId;
+            }
+            case YEARLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createYearlyLoops(requestDTO, currentUser, loopRule);
-            default:
-                return null;
+                Long loopId = createYearlyLoops(requestDTO, currentUser, loopRule);
+                publishAiChatRoom(requestDTO, currentUser);
+                return loopId;
+            }
+            default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
     }
 
@@ -381,6 +396,18 @@ public class LoopServiceImpl implements LoopService {
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }
+    }
+
+    // 채팅방 생성(AI루프 생성한 경우에만)
+    private void publishAiChatRoom(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        if (!requestDTO.isAiCreated()) {
+            return;
+        }
+        ChatRoomCreatePayload payload = new ChatRoomCreatePayload(
+                UUID.randomUUID().toString(),
+                currentUser.id()
+        );
+        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 
     // ========== 검증 메서드 ==========
