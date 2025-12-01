@@ -32,7 +32,6 @@ public record LoopDetailResponse (
 
         @Schema(description = "이 루프가 속한 반복 규칙 정보 (단일 루프일 경우 null)")
         LoopRuleDTO loopRule
-
 ){
     @Builder
     @Schema(description = "반복 규칙 정보")

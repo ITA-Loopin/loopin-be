@@ -16,10 +16,13 @@ import java.util.List;
 @AllArgsConstructor
 public class ChatWebSocketPayload {
     @Enumerated(EnumType.STRING)
-    @Column(length = 7)
+    @Column(length = 12)
     private MessageType messageType;
+
     public enum MessageType {
         MESSAGE,
+        CREATE_LOOP,
+        UPDATE_LOOP,
         READ,
         READALL,
         PING
