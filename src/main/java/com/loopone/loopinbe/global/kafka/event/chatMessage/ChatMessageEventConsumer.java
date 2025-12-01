@@ -23,7 +23,7 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ChatMessageEventListener {
+public class ChatMessageEventConsumer {
     private final ObjectMapper objectMapper;
     private final ChatMessageService chatMessageService; // 저장/검증은 서비스에서
     private final ChatWebSocketHandler chatWebSocketHandler; // 브로드캐스트

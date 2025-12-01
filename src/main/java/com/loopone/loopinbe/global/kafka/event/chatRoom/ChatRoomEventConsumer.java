@@ -20,7 +20,7 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ChatRoomEventListener {
+public class ChatRoomEventConsumer {
     private final ObjectMapper objectMapper;
     private final ChatRoomService chatRoomService;
     private final MemberRepository memberRepository;

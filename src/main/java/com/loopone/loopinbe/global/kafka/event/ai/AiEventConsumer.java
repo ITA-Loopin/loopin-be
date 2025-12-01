@@ -16,7 +16,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.net.http.WebSocket;
 import java.time.LocalDateTime;
 
 import static com.loopone.loopinbe.global.constants.Constant.AI_CREATE_MESSAGE;
@@ -26,7 +25,7 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AiEventListener {
+public class AiEventConsumer {
 
     private final ObjectMapper objectMapper;
     private final LoopAIService loopAIService;
