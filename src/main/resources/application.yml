@@ -74,7 +74,7 @@ springdoc:
 
 security:
   auth:
-    dummy-password: "{noop}social-user"  # 실제 인증에 쓰이지 않지만, 빈값 방지용
+    dummy-password: "{noop}social-user"  # 실제 인증에 쓰이지 않지만, 빈값 방지용 
 
 app:
   ws:
