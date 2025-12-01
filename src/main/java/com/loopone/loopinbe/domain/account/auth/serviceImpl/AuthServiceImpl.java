@@ -42,9 +42,9 @@ public class AuthServiceImpl implements AuthService {
 
     // 회원가입 후 로그인 처리
     @Override
-    @Transactional
     public LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest) {
         Member newMember = memberService.regularSignUp(memberCreateRequest);
+        memberService.publishChatRoomCreateEvent(newMember.getId());
         // 회원가입 직후 로그인 처리
         LoginRequest loginRequest = LoginRequest.builder()
                 .email(newMember.getEmail())

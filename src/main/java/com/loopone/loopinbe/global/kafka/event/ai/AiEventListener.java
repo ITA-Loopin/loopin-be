@@ -16,6 +16,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.net.http.WebSocket;
 import java.time.LocalDateTime;
 
 import static com.loopone.loopinbe.global.constants.Constant.AI_CREATE_MESSAGE;
@@ -42,9 +43,7 @@ public class AiEventListener {
         handleAiEvent(rec, AI_UPDATE_MESSAGE);
     }
 
-    /**
-     * 공통 흐름 처리
-     */
+    // 공통 흐름 처리
     private void handleAiEvent(
             ConsumerRecord<String, String> rec, String message) {
         try {
@@ -84,17 +83,13 @@ public class AiEventListener {
                 LocalDateTime.now());
     }
 
-    /**
-     * 멱등 키 생성
-     */
+    // 멱등 키 생성
     private String deterministicMessageKey(AiRequestPayload req) {
         // 예시 1) 요청ID 기반 or 사용자 메시지ID 기반: "ai-reply:"+req.userMessageId()
         return "ai:" + req.requestId();
     }
 
-    /**
-     * WebSocket 전송만 수행
-     */
+    // WebSocket 전송만 수행
     private void sendWebSocket(ChatMessageSavedResult saved) {
         try {
             ChatMessageDto resp = ChatMessageDto.builder()

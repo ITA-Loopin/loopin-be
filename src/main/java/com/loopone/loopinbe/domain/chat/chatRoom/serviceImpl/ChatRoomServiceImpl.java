@@ -103,7 +103,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .title(null)
                 .member(member)
                 .build();
-
         // 본인을 맨 앞에 추가
         List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
         ChatRoomMember enterChatRoomMyself = ChatRoomMember.builder()

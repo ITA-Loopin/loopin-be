@@ -10,5 +10,5 @@ public record AiRequestPayload(
         Long userId,
         String userContent,
         LoopDetailResponse loopDetailResponse,
-        java.time.Instant requestedAt) {
-}
+        java.time.Instant requestedAt
+) {}

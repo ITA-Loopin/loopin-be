@@ -28,6 +28,7 @@ public class NotProdMemberService {
                     .email("user" + (i + 1) + "@example.com")
                     .build();
             Member member = memberService.regularSignUp(memberCreateRequest);
+            memberService.publishChatRoomCreateEvent(member.getId());
             memberEmails.add(member.getEmail());
         }
     }
