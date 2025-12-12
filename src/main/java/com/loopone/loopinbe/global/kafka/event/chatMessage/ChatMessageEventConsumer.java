@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.global.kafka.event.chatMessage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
@@ -9,7 +9,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.global.kafka.event.ai.AiEventPublisher;
-import com.loopone.loopinbe.global.kafka.event.ai.AiRequestPayload;
+import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +47,7 @@ public class ChatMessageEventConsumer {
     }
 
     private void handleEvent(ConsumerRecord<String, String> record, String aiTopic) {
-        ChatInboundMessagePayload payload = deserialize(record.value());
+        ChatMessagePayload payload = deserialize(record.value());
 
         ChatMessageSavedResult saved = chatMessageService.processInbound(payload);
 
@@ -65,9 +65,9 @@ public class ChatMessageEventConsumer {
     }
 
     // JSON을 payload로 변경
-    private ChatInboundMessagePayload deserialize(String json) {
+    private ChatMessagePayload deserialize(String json) {
         try {
-            return objectMapper.readValue(json, ChatInboundMessagePayload.class);
+            return objectMapper.readValue(json, ChatMessagePayload.class);
         } catch (Exception e) {
             throw new RuntimeException("Invalid JSON: " + json, e);
         }
@@ -110,7 +110,7 @@ public class ChatMessageEventConsumer {
 
     // AI 호출
     private void publishAI(ChatMessageSavedResult saved, LoopDetailResponse loopDetailResponse, String topic) {
-        AiRequestPayload req = new AiRequestPayload(
+        AiPayload req = new AiPayload(
                 java.util.UUID.randomUUID().toString(),
                 saved.chatRoomId(),
                 saved.messageId(),

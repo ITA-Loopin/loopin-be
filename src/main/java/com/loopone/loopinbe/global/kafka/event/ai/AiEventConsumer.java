@@ -1,11 +1,12 @@
 package com.loopone.loopinbe.global.kafka.event.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
+import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
@@ -26,7 +27,6 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Component
 @RequiredArgsConstructor
 public class AiEventConsumer {
-
     private final ObjectMapper objectMapper;
     private final LoopAIService loopAIService;
     private final ChatWebSocketHandler chatWebSocketHandler;
@@ -46,12 +46,12 @@ public class AiEventConsumer {
     private void handleAiEvent(
             ConsumerRecord<String, String> rec, String message) {
         try {
-            AiRequestPayload req = objectMapper.readValue(rec.value(), AiRequestPayload.class);
+            AiPayload req = objectMapper.readValue(rec.value(), AiPayload.class);
 
             loopAIService.chat(req).thenAccept(loopRecommend -> {
 
                 // 1) AI 결과 기반 Inbound 메시지 생성
-                ChatInboundMessagePayload inbound = botInboundMessage(req, loopRecommend, message);
+                ChatMessagePayload inbound = botInboundMessage(req, loopRecommend, message);
 
                 // 2) 저장 (멱등 처리 포함)
                 ChatMessageSavedResult saved = chatMessageService.processInbound(inbound);
@@ -70,9 +70,9 @@ public class AiEventConsumer {
         }
     }
 
-    private ChatInboundMessagePayload botInboundMessage(AiRequestPayload req, RecommendationsLoop recommendationsLoop,
-                                                        String message) {
-        return new ChatInboundMessagePayload(
+    private ChatMessagePayload botInboundMessage(AiPayload req, RecommendationsLoop recommendationsLoop,
+                                                 String message) {
+        return new ChatMessagePayload(
                 deterministicMessageKey(req),
                 req.chatRoomId(),
                 null,
@@ -83,7 +83,7 @@ public class AiEventConsumer {
     }
 
     // 멱등 키 생성
-    private String deterministicMessageKey(AiRequestPayload req) {
+    private String deterministicMessageKey(AiPayload req) {
         // 예시 1) 요청ID 기반 or 사용자 메시지ID 기반: "ai-reply:"+req.userMessageId()
         return "ai:" + req.requestId();
     }

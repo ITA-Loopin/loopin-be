@@ -13,8 +13,11 @@ public interface AuthService {
     LoginResponse login(LoginRequest loginRequest);
 
     // 로그아웃
-    void logout(CurrentUserDto currentUser, String accessToken);
+    void logout(Long currentUserId, String accessToken);
 
     // accessToken 재발급
     LoginResponse refreshToken(String refreshToken, CurrentUserDto currentUser);
+
+    // 채팅방 생성 이벤트
+    void publishChatRoomCreateEvent(Long memberId);
 }

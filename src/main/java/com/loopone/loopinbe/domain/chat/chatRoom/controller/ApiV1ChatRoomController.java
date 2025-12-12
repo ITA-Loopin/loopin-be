@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class ApiV1ChatRoomController {
     private final ChatRoomService chatRoomService;
 
-    @GetMapping("")
+    @GetMapping
     @Operation(summary = "채팅방 리스트 조회", description = "AI채팅방 리스트를 조회합니다.")
     public ApiResponse<ChatRoomListResponse> getChatRooms(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto user) {

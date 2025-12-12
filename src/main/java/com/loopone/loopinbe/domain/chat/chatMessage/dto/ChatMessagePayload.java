@@ -6,7 +6,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record ChatInboundMessagePayload(
+public record ChatMessagePayload(
         String messageKey,   // UUID/ULID (멱등키, UNIQUE)
         Long chatRoomId,
         Long memberId,

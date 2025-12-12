@@ -33,7 +33,7 @@ public interface MemberService {
     void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser);
 
     // 회원탈퇴
-    void deleteMember(CurrentUserDto currentUser);
+    void deleteMember(CurrentUserDto currentUser, String accessToken);
 
     // 회원 검색하기
     PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword,  CurrentUserDto currentUser);

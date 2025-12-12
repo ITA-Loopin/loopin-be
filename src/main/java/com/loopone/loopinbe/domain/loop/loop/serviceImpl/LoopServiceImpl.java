@@ -19,7 +19,7 @@ import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomCreatePayload;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
 import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -403,7 +403,7 @@ public class LoopServiceImpl implements LoopService {
         if (!requestDTO.isAiCreated()) {
             return;
         }
-        ChatRoomCreatePayload payload = new ChatRoomCreatePayload(
+        ChatRoomPayload payload = new ChatRoomPayload(
                 UUID.randomUUID().toString(),
                 currentUser.id()
         );

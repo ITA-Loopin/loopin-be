@@ -30,13 +30,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // 회원 검색하기
     @Query("SELECT new com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse(" +
             "m.id, m.nickname, m.profileImageUrl, " +
-            "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id), m.chatRoomId) " +
+            "COUNT(DISTINCT f1.id), COUNT(DISTINCT f2.id), m.recentChatRoomId) " +
             "FROM Member m " +
             "LEFT JOIN MemberFollow f1 ON f1.follow.id = m.id " +
             "LEFT JOIN MemberFollow f2 ON f2.followed.id = m.id " +
             "WHERE m.nickname LIKE %:keyword% " +
             "AND m.id <> :currentUserId " +   // 본인 제외
-            "GROUP BY m.id, m.nickname, m.profileImageUrl, m.chatRoomId")
+            "GROUP BY m.id, m.nickname, m.profileImageUrl, m.recentChatRoomId")
     Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
 }
 

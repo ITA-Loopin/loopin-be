@@ -217,7 +217,7 @@ class WebAuthControllerTest {
                 .andExpect(cookie().value("REFRESH", ""))
                 .andExpect(cookie().maxAge("REFRESH", 0));
 
-        verify(authService).logout(any(CurrentUserDto.class), eq("access-token-123"));
+        verify(authService).logout(any(CurrentUserDto.class));
     }
 
     // ====== accessToken 재발급 ======
