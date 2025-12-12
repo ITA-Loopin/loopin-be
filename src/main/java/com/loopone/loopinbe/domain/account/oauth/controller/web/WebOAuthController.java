@@ -26,16 +26,16 @@ public class WebOAuthController {
     private final AuthCookieFactory authCookieFactory;
 
     // 소셜 로그인 리디렉션 URL
-    @Operation(summary = "소셜 로그인 리디렉션 URL", description = "소셜 로그인 리디렉션 URL을 제공합니다.(provider=google|kakao|naver)")
     @GetMapping("/redirect-url/{provider}")
+    @Operation(summary = "소셜 로그인 리디렉션 URL", description = "소셜 로그인 리디렉션 URL을 제공합니다.(provider=google|kakao|naver)")
     public ApiResponse<String> redirectToProvider(@PathVariable("provider") String provider, HttpServletRequest request) {
         FrontendEnv env = FrontendEnv.fromRequest(request);
         return ApiResponse.success(oAuthService.getAuthUrl(provider, env));
     }
 
     // 소셜 로그인 콜백
-    @Operation(summary = "소셜 로그인 콜백", description = "소셜인증 제공자가 자동 호출합니다.(완료시 AccessToken, RefreshToken 제공)")
     @GetMapping("/{provider}")
+    @Operation(summary = "소셜 로그인 콜백", description = "소셜인증 제공자가 자동 호출합니다.(완료시 AccessToken, RefreshToken 제공)")
     public ResponseEntity<Void> socialLogin(
             @PathVariable("provider") String provider,
             @RequestParam("code") String code,

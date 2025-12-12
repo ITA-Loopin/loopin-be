@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.global.initData.service;
 
+import com.loopone.loopinbe.domain.account.auth.service.AuthService;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
@@ -18,6 +19,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class NotProdMemberService {
     private final MemberService memberService;
+    private final AuthService authService;
 
     // 유저 1 ~ 5 생성
     public void createMembers(List<String> memberEmails) {
@@ -28,7 +30,7 @@ public class NotProdMemberService {
                     .email("user" + (i + 1) + "@example.com")
                     .build();
             Member member = memberService.regularSignUp(memberCreateRequest);
-            memberService.publishChatRoomCreateEvent(member.getId());
+            authService.publishChatRoomCreateEvent(member.getId());
             memberEmails.add(member.getEmail());
         }
     }

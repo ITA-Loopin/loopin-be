@@ -25,16 +25,16 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     // 알림 목록 조회
-    @Operation(summary = "알림 목록 조회", description = "알림 목록을 조회합니다.(기본설정: page=0, size=20)")
     @GetMapping
+    @Operation(summary = "알림 목록 조회", description = "알림 목록을 조회합니다.(기본설정: page=0, size=20)")
     public ApiResponse<List<NotificationResponse>> getNotifications(@ModelAttribute NotificationPage request, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
         return ApiResponse.success(notificationService.getNotifications(pageable, currentUser));
     }
 
     // 알림 읽음 처리
-    @Operation(summary = "알림 읽음 처리", description = "알림을 읽음 처리합니다.")
     @PatchMapping
+    @Operation(summary = "알림 읽음 처리", description = "알림을 읽음 처리합니다.")
     public ApiResponse<Void> markAsRead(@RequestBody @Valid NotificationRequest notificationRequest,
                                           @CurrentUser CurrentUserDto currentUser) {
         notificationService.markAsRead(notificationRequest, currentUser);

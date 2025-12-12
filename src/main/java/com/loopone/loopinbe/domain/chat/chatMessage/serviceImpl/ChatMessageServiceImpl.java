@@ -4,7 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
@@ -17,7 +17,6 @@ import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -127,7 +126,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // Kafka 인바운드 메시지 처리(권한검증 + 멱등 저장 + Mongo 업서트)
     @Override
     @Transactional
-    public ChatMessageSavedResult processInbound(ChatInboundMessagePayload in) {
+    public ChatMessageSavedResult processInbound(ChatMessagePayload in) {
         log.info("Mongo업서트 요청 처리 시작: messageKey={}", in.messageKey());
         // 1) 권한 검증 (비재시도 예외로 던지는 게 운영에 유리)
         // BOT 메시지는 멤버 검증을 생략

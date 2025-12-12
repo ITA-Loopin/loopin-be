@@ -33,7 +33,7 @@ public interface MemberService {
     void updateMember(MemberUpdateRequest memberUpdateRequest, MultipartFile imageFile, CurrentUserDto currentUser);
 
     // 회원탈퇴
-    void deleteMember(CurrentUserDto currentUser);
+    void deleteMember(CurrentUserDto currentUser, String accessToken);
 
     // 회원 검색하기
     PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword,  CurrentUserDto currentUser);
@@ -55,7 +55,4 @@ public interface MemberService {
 
     // 팔로워 목록에서 해당 유저 삭제하기
     void removeFollowed(Long memberId, CurrentUserDto currentUser);
-
-    // 채팅방 생성 이벤트
-    void publishChatRoomCreateEvent(Long memberId);
 }

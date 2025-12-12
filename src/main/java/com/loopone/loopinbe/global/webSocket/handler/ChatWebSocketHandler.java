@@ -1,10 +1,8 @@
 package com.loopone.loopinbe.global.webSocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
-import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
@@ -31,8 +29,6 @@ import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatMessageEventPublisher publisher;
-    private final ChatRoomRepository chatRoomRepository;
-    private final LoopMapper loopMapper;
     private final ObjectMapper objectMapper;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Long> sessionRoomMap = new ConcurrentHashMap<>(); // 세션 -> 방 매핑
@@ -112,7 +108,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             // 3) 인증(세션) 확인
             Long memberId = resolveMemberId(session); // 없으면 IllegalStateException
 
-            ChatInboundMessagePayload payload = new ChatInboundMessagePayload(
+            ChatMessagePayload payload = new ChatMessagePayload(
                     java.util.UUID.randomUUID().toString(),
                     roomId,
                     memberId,
@@ -123,10 +119,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             if (in.getMessageType() == CREATE_LOOP) {
                 // 4) 퍼블리시 (멱등키 포함)
-                publisher.publishInbound(payload, CREATE_LOOP_TOPIC);
+                publisher.publishChatMessageRequest(payload, CREATE_LOOP_TOPIC);
             } else if (in.getMessageType() == UPDATE_LOOP) {
                 // 4) 퍼블리시 (멱등키 포함)
-                publisher.publishInbound(payload, UPDATE_LOOP_TOPIC);
+                publisher.publishChatMessageRequest(payload, UPDATE_LOOP_TOPIC);
             }
         } catch (com.fasterxml.jackson.core.JsonProcessingException jpe) {
             // 잘못된 JSON

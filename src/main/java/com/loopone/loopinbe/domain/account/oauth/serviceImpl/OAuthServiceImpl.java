@@ -102,8 +102,6 @@ public class OAuthServiceImpl implements OAuthService {
             LoginResponse login = authService.login(LoginRequest.builder().email(email).build());
             String redirectUrl = UriComponentsBuilder.fromUriString(base)
                     .queryParam("status", "LOGIN_SUCCESS")
-                    .queryParam(ACCESS_TOKEN,  login.getAccessToken())
-                    .queryParam(REFRESH_TOKEN,  login.getRefreshToken())
                     .build()
                     .toUriString();
             return new OAuthRedirectResponse(true, redirectUrl, login.getAccessToken(), login.getRefreshToken());
