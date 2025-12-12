@@ -112,6 +112,9 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoomMembers.add(enterChatRoomMyself);
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
+        // member에 recentChatRoomId 세팅 후 저장
+        member.setRecentChatRoomId(chatRoom.getId());
+        memberRepository.save(member);
         return chatRoomConverter.toChatRoomResponse(chatRoom, chatRoomMembers);
     }
 

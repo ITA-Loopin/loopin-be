@@ -12,7 +12,7 @@ import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.global.kafka.event.ai.AiRequestPayload;
+import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -39,7 +39,7 @@ public class LoopAIServiceImpl implements LoopAIService {
     private final ObjectMapper objectMapper;
 
     @Override
-    public CompletableFuture<RecommendationsLoop> chat(AiRequestPayload request) {
+    public CompletableFuture<RecommendationsLoop> chat(AiPayload request) {
         log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
         String prompt;
 

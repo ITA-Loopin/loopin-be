@@ -23,8 +23,8 @@ public class ChatMessageController {
     private final ChatMessageService chatMessageService;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
-    @Operation(summary = "채팅방 과거 메시지 조회", description = "AI채팅방의 과거 메시지를 조회합니다.(기본설정: page=0, size=20)")
     @GetMapping("/{chatRoomId}")
+    @Operation(summary = "채팅방 과거 메시지 조회", description = "AI채팅방의 과거 메시지를 조회합니다.(기본설정: page=0, size=20)")
     public ApiResponse<List<ChatMessageDto>> findByChatRoomId(@ModelAttribute ChatMessagePage request,
                                                               @PathVariable("chatRoomId") Long chatRoomId, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
@@ -32,8 +32,8 @@ public class ChatMessageController {
     }
 
     // 채팅방 메시지 검색(내용) [참여자 권한]
-    @Operation(summary = "채팅방 메시지 검색(내용)", description = "AI채팅방에서 채팅방 메시지를 검색합니다.")
     @GetMapping("/{chatRoomId}/search")
+    @Operation(summary = "채팅방 메시지 검색(내용)", description = "AI채팅방에서 채팅방 메시지를 검색합니다.")
     public ApiResponse<List<ChatMessageDto>> searchChatMessage(@ModelAttribute ChatMessagePage request, @PathVariable("chatRoomId") Long chatRoomId,
                                                                @RequestParam("keyword") String keyword, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());

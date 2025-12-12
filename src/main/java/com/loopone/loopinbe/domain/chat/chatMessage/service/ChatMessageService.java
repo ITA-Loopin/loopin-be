@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.chat.chatMessage.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.global.common.response.PageResponse;
@@ -15,7 +15,7 @@ public interface ChatMessageService {
     PageResponse<ChatMessageDto> searchByKeyword(Long chatRoomId, String keyword, Pageable pageable, CurrentUserDto currentUser);
 
     // Kafka 인바운드 메시지 처리(권한검증 + 멱등 저장 + Mongo 업서트)
-    ChatMessageSavedResult processInbound(ChatInboundMessagePayload in);
+    ChatMessageSavedResult processInbound(ChatMessagePayload in);
 
     // 채팅방의 모든 메시지 삭제
     void deleteAllChatMessages(Long chatRoomId);

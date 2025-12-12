@@ -29,63 +29,61 @@ public class WebAuthController {
     private final TokenResolver tokenResolver;
 
     // 회원가입 후 로그인 처리
-    @Operation(summary = "회원가입 후 로그인 처리", description = "신규 사용자 회원가입 후 로그인 처리합니다.")
     @PostMapping("/signup-login")
-    public ResponseEntity<ApiResponse<LoginResponse>> signUpAndLogin(@Valid @RequestBody MemberCreateRequest memberCreateRequest) {
+    @Operation(summary = "회원가입 후 로그인 처리", description = "신규 사용자 회원가입 후 로그인 처리합니다.")
+    public ResponseEntity<ApiResponse<Void>> signUpAndLogin(@Valid @RequestBody MemberCreateRequest memberCreateRequest) {
         LoginResponse login = authService.signUpAndLogin(memberCreateRequest);
-        ResponseCookie a = authCookieFactory.issueAccess(login.getAccessToken());
-        ResponseCookie r = authCookieFactory.issueRefresh(login.getRefreshToken());
+        ResponseCookie accessCookie = authCookieFactory.issueAccess(login.getAccessToken());
+        ResponseCookie refreshCookie = authCookieFactory.issueRefresh(login.getRefreshToken());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, a.toString())
-                .header(HttpHeaders.SET_COOKIE, r.toString())
-                .body(ApiResponse.success(login));
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(ApiResponse.success());
     }
 
     // 로그인
-    @Operation(summary = "로그인", description = "이메일로 로그인합니다.")
     @PostMapping("/login")
+    @Operation(summary = "로그인", description = "이메일로 로그인합니다.")
     public ResponseEntity<ApiResponse<Void>> login(@RequestBody @Valid LoginRequest loginRequest) {
         LoginResponse login = authService.login(loginRequest);
-        ResponseCookie a = authCookieFactory.issueAccess(login.getAccessToken());
-        ResponseCookie r = authCookieFactory.issueRefresh(login.getRefreshToken());
+        ResponseCookie accessCookie = authCookieFactory.issueAccess(login.getAccessToken());
+        ResponseCookie refreshCookie = authCookieFactory.issueRefresh(login.getRefreshToken());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, a.toString())
-                .header(HttpHeaders.SET_COOKIE, r.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(ApiResponse.success());
     }
 
     // 로그아웃
-    @Operation(summary = "로그아웃", description = "현재 로그인된 사용자가 로그아웃합니다.")
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
-            HttpServletRequest request,
-            @CurrentUser CurrentUserDto currentUser
-    ) {
+    @Operation(summary = "로그아웃", description = "현재 로그인된 사용자가 로그아웃합니다.")
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request,
+                                                    @CurrentUser CurrentUserDto currentUser) {
         String accessToken = tokenResolver.resolveAccess(request);
-        authService.logout(currentUser, accessToken);
+        authService.logout(currentUser.id(), accessToken);
 
-        ResponseCookie a = authCookieFactory.expireAccess();
-        ResponseCookie r = authCookieFactory.expireRefresh();
+        ResponseCookie accessCookie = authCookieFactory.expireAccess();
+        ResponseCookie refreshCookie = authCookieFactory.expireRefresh();
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, a.toString())
-                .header(HttpHeaders.SET_COOKIE, r.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(ApiResponse.success());
     }
 
     // accessToken 재발급
-    @Operation(summary = "accessToken 재발급", description = "refresh 토큰을 사용하여 access 토큰을 재발급합니다.")
     @GetMapping("/refresh-token")
+    @Operation(summary = "accessToken 재발급", description = "refresh 토큰을 사용하여 access 토큰을 재발급합니다.")
     public ResponseEntity<ApiResponse<Void>> refreshToken(
             HttpServletRequest request,
             @CurrentUser CurrentUserDto currentUser) {
         String refreshToken = tokenResolver.resolveRefresh(request);
         LoginResponse refreshed = authService.refreshToken(refreshToken, currentUser);
 
-        ResponseCookie a = authCookieFactory.issueAccess(refreshed.getAccessToken()); // access만 갱신
+        ResponseCookie accessCookie = authCookieFactory.issueAccess(refreshed.getAccessToken()); // access만 갱신
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, a.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                 .body(ApiResponse.success());
     }
 }

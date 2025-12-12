@@ -3,6 +3,8 @@ package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
+import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import com.loopone.loopinbe.global.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.CloseStatus;
 
 import java.time.Duration;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -31,8 +34,9 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final MemberService memberService;
-    private final WsSessionRegistry wsSessionRegistry;
     private final AccessTokenDenyListService accessTokenDenyListService;
+    private final WsSessionRegistry wsSessionRegistry;
+    private final ChatRoomEventPublisher chatRoomEventPublisher;
 
     @Value("${custom.accessToken.expiration}")
     private Duration accessTokenExpiration;
@@ -44,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest) {
         Member newMember = memberService.regularSignUp(memberCreateRequest);
-        memberService.publishChatRoomCreateEvent(newMember.getId());
+        publishChatRoomCreateEvent(newMember.getId());
         // 회원가입 직후 로그인 처리
         LoginRequest loginRequest = LoginRequest.builder()
                 .email(newMember.getEmail())
@@ -67,9 +71,9 @@ public class AuthServiceImpl implements AuthService {
 
     // 로그아웃
     @Override
-    public void logout(CurrentUserDto currentUser, String accessToken) {
+    public void logout(Long currentUserId, String accessToken) {
         // Redis에서 Refresh Token 삭제
-        refreshTokenService.deleteRefreshToken(currentUser.id().toString());
+        refreshTokenService.deleteRefreshToken(currentUserId.toString());
         // access 즉시 차단(deny-list)
         if (accessToken != null && jwtTokenProvider.validateAccessToken(accessToken)) {
             String jti = jwtTokenProvider.getJti(accessToken);
@@ -79,9 +83,8 @@ public class AuthServiceImpl implements AuthService {
             }
         }
         // WS 모두 종료 (4401: Unauthorized/Logged out)
-        wsSessionRegistry.closeAll(currentUser.id(), new CloseStatus(4401, "Logged out"));
-        log.info("Logout: memberId={}, closedWsSessions={}", currentUser.id(),
-                wsSessionRegistry.count(currentUser.id()));
+        wsSessionRegistry.closeAll(currentUserId, new CloseStatus(4401, "Logged out"));
+        log.info("Logout: memberId={}, closedWsSessions={}", currentUserId, wsSessionRegistry.count(currentUserId));
     }
 
     // accessToken 재발급
@@ -101,5 +104,17 @@ public class AuthServiceImpl implements AuthService {
         String email = jwtTokenProvider.getEmailFromToken(storedRefreshToken);
         String newAccessToken = jwtTokenProvider.generateToken(email, "ACCESS", accessTokenExpiration);
         return new LoginResponse(newAccessToken, storedRefreshToken);
+    }
+
+    // ----------------- 헬퍼 메서드 -----------------
+
+    // 채팅방 생성 이벤트
+    @Override
+    public void publishChatRoomCreateEvent(Long memberId) {
+        ChatRoomPayload payload = new ChatRoomPayload(
+                UUID.randomUUID().toString(),
+                memberId
+        );
+        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 }

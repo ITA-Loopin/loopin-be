@@ -191,7 +191,7 @@ class MemberControllerTest {
         mvc.perform(delete("/rest-api/v1/member"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-        verify(memberService).deleteMember(any(CurrentUserDto.class));
+        verify(memberService).deleteMember(any(CurrentUserDto.class), "accessToken");
     }
 
     // --- 성공 케이스: 회원 검색 (page/size 기본 파라미터 포함) ---
