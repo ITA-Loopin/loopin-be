@@ -1,5 +1,10 @@
 package com.loopone.loopinbe.global.config;
 
+import com.loopone.loopinbe.global.oauth.authorization.CustomOAuth2AuthorizationRequestResolver;
+import com.loopone.loopinbe.global.oauth.authorization.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.loopone.loopinbe.global.oauth.handler.WebOAuth2FailureHandler;
+import com.loopone.loopinbe.global.oauth.handler.WebOAuth2SuccessHandler;
+import com.loopone.loopinbe.global.oauth.user.CustomOAuth2UserService;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
 import com.loopone.loopinbe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +17,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -28,6 +32,12 @@ import java.util.Arrays;
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsServiceImpl customUserDetailsServiceImpl;
+    private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthRequestRepo;
+    private final CustomOAuth2AuthorizationRequestResolver customAuthRequestResolver;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final WebOAuth2SuccessHandler webOAuth2SuccessHandler;
+    private final WebOAuth2FailureHandler webOAuth2FailureHandler;
+    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -45,10 +55,21 @@ public class SecurityConfig {
                                 "/rest-api/v1/member/available",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/rest-api/v1/oauth/**",
                                 "/api/v1/health-check",
-                                "/ws/**").permitAll()
+                                "/ws/**",
+                                "/oauth2/**",              // OAuth2 시작 엔드포인트
+                                "/login/oauth2/**"         // OAuth2 콜백 엔드포인트
+                        ).permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(ae -> ae
+                                .authorizationRequestRepository(cookieAuthRequestRepo)
+                                .authorizationRequestResolver(customAuthRequestResolver)
+                        )
+                        .userInfoEndpoint(ui -> ui.userService(customOAuth2UserService))
+                        .successHandler(webOAuth2SuccessHandler)
+                        .failureHandler(webOAuth2FailureHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -57,17 +78,11 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authenticationManagerBuilder =
-                http.getSharedObject(AuthenticationManagerBuilder.class);
+        AuthenticationManagerBuilder authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
         authenticationManagerBuilder
                 .userDetailsService(customUserDetailsServiceImpl)
-                .passwordEncoder(passwordEncoder());
+                .passwordEncoder(passwordEncoder);
         return authenticationManagerBuilder.build();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     @Bean

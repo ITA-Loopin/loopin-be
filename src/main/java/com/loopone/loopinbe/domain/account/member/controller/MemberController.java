@@ -2,14 +2,13 @@ package com.loopone.loopinbe.domain.account.member.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
-import com.loopone.loopinbe.global.security.AuthCookieFactory;
+import com.loopone.loopinbe.global.web.cookie.WebAuthCookieFactory;
 import com.loopone.loopinbe.global.security.TokenResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +34,7 @@ import java.util.List;
 public class MemberController {
     private final MemberService memberService;
     private final TokenResolver tokenResolver;
-    private final AuthCookieFactory authCookieFactory;
+    private final WebAuthCookieFactory webAuthCookieFactory;
 
 //    // 회원가입
 //    @Operation(summary = "회원가입", description = "이메일과 닉네임으로 회원가입합니다.")
@@ -99,8 +98,8 @@ public class MemberController {
         String accessToken = tokenResolver.resolveAccess(request);
         memberService.deleteMember(currentUser, accessToken);
 
-        ResponseCookie accessCookie = authCookieFactory.expireAccess();
-        ResponseCookie refreshCookie = authCookieFactory.expireRefresh();
+        ResponseCookie accessCookie = webAuthCookieFactory.expireAccess();
+        ResponseCookie refreshCookie = webAuthCookieFactory.expireRefresh();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
