@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.oauth.enums;
+package com.loopone.loopinbe.global.oauth.enums;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -11,7 +11,6 @@ public enum FrontendEnv {
 
     private final String host;
     FrontendEnv(String host) { this.host = host; }
-    public String host() { return host; }
 
     public static FrontendEnv fromRequest(HttpServletRequest request) {
         String originOrRef = Optional.ofNullable(request.getHeader("Origin"))

@@ -7,7 +7,7 @@ import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 
 public interface AuthService {
     // 회원가입 후 로그인 처리
-    LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest);
+    LoginResponse signUpAndLogin(String nickname, String ticket);
 
     // 로그인
     LoginResponse login(LoginRequest loginRequest);

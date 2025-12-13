@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.global.initData.utils;
+package com.loopone.loopinbe.global.initData.util;
 
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
