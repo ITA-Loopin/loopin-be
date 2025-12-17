@@ -1,8 +1,8 @@
 package com.loopone.loopinbe.global.kafka.event.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
@@ -69,9 +69,9 @@ public class AiEventConsumer {
         }
     }
 
-    private ChatInboundMessagePayload botInboundMessage(AiRequestPayload req, RecommendationsLoop recommendationsLoop,
-            String message) {
-        return new ChatInboundMessagePayload(
+    private ChatMessagePayload botInboundMessage(AiPayload req, RecommendationsLoop recommendationsLoop,
+                                                 String message) {
+        return new ChatMessagePayload(
                 deterministicMessageKey(req),
                 req.chatRoomId(),
                 null,
@@ -90,7 +90,7 @@ public class AiEventConsumer {
     /**
      * WebSocket 전송만 수행 (저장 전)
      */
-    private void sendWebSocket(ChatInboundMessagePayload inbound) {
+    private void sendWebSocket(ChatMessagePayload inbound) {
         try {
             ChatMessageDto resp = ChatMessageDto.builder()
                     .tempId(inbound.messageKey())
