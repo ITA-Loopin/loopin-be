@@ -9,7 +9,7 @@ import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.global.config.SecurityConfig;
 import com.loopone.loopinbe.global.config.WebConfig;
-import com.loopone.loopinbe.global.security.AuthCookieFactory;
+import com.loopone.loopinbe.global.web.cookie.WebAuthCookieFactory;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
 import com.loopone.loopinbe.global.security.TokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,9 +30,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
@@ -69,7 +67,8 @@ class WebAuthControllerTest {
     @Autowired ObjectMapper objectMapper;
 
     @MockitoBean AuthService authService;
-    @MockitoBean AuthCookieFactory authCookieFactory;
+    @MockitoBean
+    WebAuthCookieFactory webAuthCookieFactory;
     @MockitoBean TokenResolver tokenResolver;
     @MockitoBean CurrentUserArgumentResolver currentUserArgumentResolver;
 
@@ -113,8 +112,8 @@ class WebAuthControllerTest {
                 .build();
 
         given(authService.signUpAndLogin(any(MemberCreateRequest.class))).willReturn(loginResp);
-        given(authCookieFactory.issueAccess("access-token-123")).willReturn(accessCookie);
-        given(authCookieFactory.issueRefresh("refresh-token-456")).willReturn(refreshCookie);
+        given(webAuthCookieFactory.issueAccess("access-token-123")).willReturn(accessCookie);
+        given(webAuthCookieFactory.issueRefresh("refresh-token-456")).willReturn(refreshCookie);
 
         // when & then
         mvc.perform(post("/rest-api/v1/auth/signup-login")
@@ -168,8 +167,8 @@ class WebAuthControllerTest {
                 .build();
 
         given(authService.login(any())).willReturn(loginResp);
-        given(authCookieFactory.issueAccess("access-token-123")).willReturn(accessCookie);
-        given(authCookieFactory.issueRefresh("refresh-token-456")).willReturn(refreshCookie);
+        given(webAuthCookieFactory.issueAccess("access-token-123")).willReturn(accessCookie);
+        given(webAuthCookieFactory.issueRefresh("refresh-token-456")).willReturn(refreshCookie);
 
         mvc.perform(post("/rest-api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -203,8 +202,8 @@ class WebAuthControllerTest {
                 .maxAge(0)
                 .build();
 
-        given(authCookieFactory.expireAccess()).willReturn(expiredAccess);
-        given(authCookieFactory.expireRefresh()).willReturn(expiredRefresh);
+        given(webAuthCookieFactory.expireAccess()).willReturn(expiredAccess);
+        given(webAuthCookieFactory.expireRefresh()).willReturn(expiredRefresh);
 
         // when & then
         mvc.perform(post("/rest-api/v1/auth/logout"))
@@ -240,7 +239,7 @@ class WebAuthControllerTest {
 
         given(authService.refreshToken(eq("refresh-token-456"), any(CurrentUserDto.class)))
                 .willReturn(refreshed);
-        given(authCookieFactory.issueAccess("new-access-token"))
+        given(webAuthCookieFactory.issueAccess("new-access-token"))
                 .willReturn(newAccessCookie);
 
         // when & then

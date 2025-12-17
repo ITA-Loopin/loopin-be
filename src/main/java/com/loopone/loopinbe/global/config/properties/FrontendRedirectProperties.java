@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.global.config.properties;
 
-import com.loopone.loopinbe.domain.account.oauth.enums.FrontendEnv;
+import com.loopone.loopinbe.global.oauth.enums.FrontendEnv;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "frontend.redirect")

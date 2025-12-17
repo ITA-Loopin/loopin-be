@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.global.security;
+package com.loopone.loopinbe.global.web.cookie;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +9,7 @@ import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
-public class AuthCookieFactory {
+public class WebAuthCookieFactory {
     @Value("${app.cookie.secure}")  // dev=false, prod=true
     private boolean secure;
 

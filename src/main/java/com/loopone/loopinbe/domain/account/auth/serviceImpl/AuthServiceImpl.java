@@ -5,6 +5,8 @@ import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
 import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
+import com.loopone.loopinbe.domain.account.oauth.ticket.dto.OAuthTicketPayload;
+import com.loopone.loopinbe.domain.account.oauth.ticket.service.OAuthTicketService;
 import com.loopone.loopinbe.global.security.JwtTokenProvider;
 import com.loopone.loopinbe.domain.account.auth.service.AccessTokenDenyListService;
 import com.loopone.loopinbe.domain.account.auth.service.AuthService;
@@ -37,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private final AccessTokenDenyListService accessTokenDenyListService;
     private final WsSessionRegistry wsSessionRegistry;
     private final ChatRoomEventPublisher chatRoomEventPublisher;
+    private final OAuthTicketService oAuthTicketService;
 
     @Value("${custom.accessToken.expiration}")
     private Duration accessTokenExpiration;
@@ -46,7 +49,15 @@ public class AuthServiceImpl implements AuthService {
 
     // 회원가입 후 로그인 처리
     @Override
-    public LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest) {
+    @Transactional
+    public LoginResponse signUpAndLogin(String nickname, String ticket) {
+        OAuthTicketPayload payload = oAuthTicketService.consume(ticket);
+        MemberCreateRequest memberCreateRequest = MemberCreateRequest.builder()
+                .email(payload.email())
+                .nickname(nickname)
+                .provider(payload.provider())
+                .providerId(payload.providerId())
+                .build();
         Member newMember = memberService.regularSignUp(memberCreateRequest);
         publishChatRoomCreateEvent(newMember.getId());
         // 회원가입 직후 로그인 처리
