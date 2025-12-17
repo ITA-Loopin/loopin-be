@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.CREATE_LOOP;
+import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.UPDATE_LOOP;
 import static com.loopone.loopinbe.global.constants.KafkaKey.CREATE_LOOP_TOPIC;
 import static com.loopone.loopinbe.global.constants.KafkaKey.UPDATE_LOOP_TOPIC;
-import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.CREATE_LOOP;
-import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.UPDATE_LOOP;
 
 @Slf4j
 @Component

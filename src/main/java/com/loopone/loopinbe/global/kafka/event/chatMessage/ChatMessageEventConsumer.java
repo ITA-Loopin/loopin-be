@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -86,7 +87,7 @@ public class ChatMessageEventConsumer {
                 .build();
 
         return ChatWebSocketPayload.builder()
-                .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
+                .messageType(MessageType.MESSAGE)
                 .chatRoomId(saved.chatRoomId())
                 .chatMessageDto(resp)
                 .lastMessageCreatedAt(resp.getCreatedAt())

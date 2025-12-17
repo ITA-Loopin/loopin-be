@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
@@ -103,7 +104,7 @@ public class AiEventConsumer {
                     .build();
 
             ChatWebSocketPayload out = ChatWebSocketPayload.builder()
-                    .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
+                    .messageType(MessageType.MESSAGE)
                     .chatRoomId(inbound.chatRoomId())
                     .chatMessageDto(resp)
                     .lastMessageCreatedAt(resp.getCreatedAt())
