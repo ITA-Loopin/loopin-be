@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.chat.chatMessage.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
@@ -38,5 +39,15 @@ public class ChatMessageController {
                                                                @RequestParam("keyword") String keyword, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
         return ApiResponse.success(chatMessageService.searchByKeyword(chatRoomId, keyword, pageable, currentUser));
+    }
+
+    @PostMapping("/{chatRoomId}/chat")
+    public ApiResponse<Void> sendChatMessage(
+            @PathVariable("chatRoomId") Long chatRoomId,
+            @RequestBody ChatMessageRequest request,
+            @CurrentUser CurrentUserDto currentUser
+            ) {
+        chatMessageService.sendChatMessage(chatRoomId, request, currentUser);
+        return ApiResponse.success();
     }
 }

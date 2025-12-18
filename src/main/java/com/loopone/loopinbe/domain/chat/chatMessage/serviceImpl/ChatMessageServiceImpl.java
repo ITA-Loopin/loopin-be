@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
@@ -21,6 +22,8 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
+import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -29,6 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.CREATE_LOOP;
+import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.UPDATE_LOOP;
+import static com.loopone.loopinbe.global.constants.KafkaKey.CREATE_LOOP_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.UPDATE_LOOP_TOPIC;
 
 @Slf4j
 @Service
@@ -40,6 +48,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final MessageContentRepository messageContentRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageEventPublisher chatMessageEventPublisher;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -192,6 +201,36 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             messageContentRepository.deleteById(String.valueOf(message.getId()));
         });
         chatMessageRepository.deleteAll(messages);
+    }
+
+    @Override
+    public void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser) {
+        if (request.type() != CREATE_LOOP && request.type() != UPDATE_LOOP) {
+            throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
+        }
+
+        chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        String content = (request.message() != null) ? request.message() : null;
+        if (content == null || content.isBlank()) {
+            throw new ServiceException(ReturnCode.CHATMESSAGE_EMPTY_CONTENT);
+        }
+
+        ChatMessagePayload payload = new ChatMessagePayload(
+                java.util.UUID.randomUUID().toString(),
+                chatRoomId,
+                currentUser.id(),
+                content,
+                null,
+                ChatMessage.AuthorType.USER,
+                java.time.LocalDateTime.now());
+
+        if (request.type() == CREATE_LOOP) {
+            chatMessageEventPublisher.publishChatMessageRequest(payload, CREATE_LOOP_TOPIC);
+        } else {
+            chatMessageEventPublisher.publishChatMessageRequest(payload, UPDATE_LOOP_TOPIC);
+        }
     }
 
     // ----------------- 헬퍼 메서드 -----------------
