@@ -4,8 +4,8 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
@@ -18,12 +18,15 @@ import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
+import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
+import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
-import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
+import com.loopone.loopinbe.global.kafka.event.ai.AiEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -35,8 +38,8 @@ import java.util.stream.Collectors;
 
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.CREATE_LOOP;
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.UPDATE_LOOP;
-import static com.loopone.loopinbe.global.constants.KafkaKey.CREATE_LOOP_TOPIC;
-import static com.loopone.loopinbe.global.constants.KafkaKey.UPDATE_LOOP_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
 
 @Slf4j
 @Service
@@ -48,7 +51,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final MessageContentRepository messageContentRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageConverter chatMessageConverter;
-    private final ChatMessageEventPublisher chatMessageEventPublisher;
+    private final AiEventPublisher aiEventPublisher;
+    private final LoopMapper loopMapper;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -204,12 +208,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     @Override
+    @Transactional
     public void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser) {
         if (request.type() != CREATE_LOOP && request.type() != UPDATE_LOOP) {
             throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
         }
 
-        chatRoomRepository.findById(chatRoomId)
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
         String content = (request.message() != null) ? request.message() : null;
@@ -217,19 +222,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             throw new ServiceException(ReturnCode.CHATMESSAGE_EMPTY_CONTENT);
         }
 
-        ChatMessagePayload payload = new ChatMessagePayload(
-                java.util.UUID.randomUUID().toString(),
-                chatRoomId,
-                currentUser.id(),
-                content,
-                null,
-                ChatMessage.AuthorType.USER,
-                java.time.LocalDateTime.now());
+        ChatMessagePayload payload = toChatMessagePayload(chatRoomId, currentUser.id(), content);
+
+        ChatMessageSavedResult saved = processInbound(payload);
+
+        Loop loop = chatRoom.getLoop();
+        LoopDetailResponse loopDetailResponse = (loop != null) ? loopMapper.toDetailResponse(loop) : null;
 
         if (request.type() == CREATE_LOOP) {
-            chatMessageEventPublisher.publishChatMessageRequest(payload, CREATE_LOOP_TOPIC);
+            publishAI(saved, loopDetailResponse, OPEN_AI_CREATE_TOPIC);
         } else {
-            chatMessageEventPublisher.publishChatMessageRequest(payload, UPDATE_LOOP_TOPIC);
+            publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
         }
     }
 
@@ -241,5 +244,28 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }
+    }
+
+    private ChatMessagePayload toChatMessagePayload(Long chatRoomId, Long userId, String content) {
+        return new ChatMessagePayload(
+                java.util.UUID.randomUUID().toString(),
+                chatRoomId,
+                userId,
+                content,
+                null,
+                ChatMessage.AuthorType.USER,
+                java.time.LocalDateTime.now());
+    }
+
+    private void publishAI(ChatMessageSavedResult saved, LoopDetailResponse loopDetailResponse, String topic) {
+        AiPayload req = new AiPayload(
+                java.util.UUID.randomUUID().toString(),
+                saved.chatRoomId(),
+                saved.messageId(),
+                saved.memberId(),
+                saved.content(),
+                loopDetailResponse,
+                java.time.Instant.now());
+        aiEventPublisher.publishAiRequest(req, topic);
     }
 }
