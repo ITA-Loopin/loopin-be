@@ -1,5 +1,6 @@
 package com.loopone.loopinbe.domain.sse.service;
 
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.sse.repository.SseEmitterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ public class SseEmitterServiceImpl implements SseEmitterService {
 
         // 503 에러를 방지하기 위한 더미 이벤트 전송
         String eventId = makeTimeIncludeId(chatRoomId);
-        sendNotification(emitter, eventId, emitterId, "connect", "connected!");
+        sendNotification(emitter, eventId, emitterId, MessageType.CONNECT, "connected!");
 
         // 클라이언트가 미수신한 Event 목록이 존재할 경우 전송하여 유실 방지
         if (!lastEventId.isEmpty()) {
@@ -35,14 +36,14 @@ public class SseEmitterServiceImpl implements SseEmitterService {
             events.entrySet().stream()
                     .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
                     .sorted(Map.Entry.comparingByKey())
-                    .forEach(entry -> sendNotification(emitter, entry.getKey(), emitterId, "message", entry.getValue()));
+                    .forEach(entry -> sendNotification(emitter, entry.getKey(), emitterId, MessageType.MESSAGE, entry.getValue()));
         }
 
         return emitter;
     }
 
     @Override
-    public void sendToClient(Long chatRoomId, String eventName, Object data) {
+    public void sendToClient(Long chatRoomId, MessageType eventName, Object data) {
         String eventId = makeTimeIncludeId(chatRoomId);
         sseEmitterRepository.saveEventCache(eventId, data); // 데이터 유실 방지를 위해 캐시 저장
 
@@ -52,11 +53,11 @@ public class SseEmitterServiceImpl implements SseEmitterService {
         });
     }
 
-    private void sendNotification(SseEmitter emitter, String eventId, String emitterId, String eventName, Object data) {
+    private void sendNotification(SseEmitter emitter, String eventId, String emitterId, MessageType eventName, Object data) {
         try {
             emitter.send(SseEmitter.event()
                     .id(eventId)
-                    .name(eventName)
+                    .name(eventName.name())
                     .data(data));
         } catch (IOException e) {
             sseEmitterRepository.deleteById(emitterId);
