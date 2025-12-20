@@ -2,6 +2,8 @@ package com.loopone.loopinbe.domain.chat.chatRoom.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.CreateChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
@@ -31,6 +33,15 @@ public class ApiV1ChatRoomController {
             @Parameter(description = "루프 ID") @PathVariable Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto user) {
         chatRoomService.selectLoop(chatRoomId, loopId);
+        return ApiResponse.success();
+    }
+
+    @PostMapping("/create")
+    public ApiResponse<Void> createChatRoom(
+            @RequestBody CreateChatRoomRequest request,
+            @CurrentUser  CurrentUserDto currentUserDto
+    ) {
+        chatRoomService.createAiChatRoom(request.title(), currentUserDto.id());
         return ApiResponse.success();
     }
 }

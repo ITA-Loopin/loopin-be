@@ -59,7 +59,6 @@ public class AuthServiceImpl implements AuthService {
                 .providerId(payload.providerId())
                 .build();
         Member newMember = memberService.regularSignUp(memberCreateRequest);
-        publishChatRoomCreateEvent(newMember.getId());
         // 회원가입 직후 로그인 처리
         LoginRequest loginRequest = LoginRequest.builder()
                 .email(newMember.getEmail())
