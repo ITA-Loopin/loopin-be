@@ -12,7 +12,7 @@ public interface ChatRoomService {
     ChatRoomResponse addChatRoom(ChatRoomRequest chatRoomRequest, CurrentUserDto currentUser);
 
     // AI 채팅방 생성
-    ChatRoomResponse createAiChatRoom(ChatRoomRequest chatRoomRequest, Member member);
+    ChatRoomResponse createAiChatRoom(String title, Long userId);
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     void leaveAllChatRooms(Long memberId);

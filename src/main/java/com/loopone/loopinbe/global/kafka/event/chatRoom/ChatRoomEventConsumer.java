@@ -33,14 +33,12 @@ public class ChatRoomEventConsumer {
             Long memberId = payload.memberId();
             log.info("Consume ChatRoom create event. memberId={}, requestId={}",
                     memberId, payload.requestId());
-            Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
 
             // 기존 createAiChatRoom 로직 재사용
             ChatRoomRequest chatRoomRequest = ChatRoomRequest.builder().build();
-            ChatRoomResponse chatRoomResponse = chatRoomService.createAiChatRoom(chatRoomRequest, member);
+            ChatRoomResponse chatRoomResponse = chatRoomService.createAiChatRoom(chatRoomRequest.getTitle(), memberId);
             log.info("AI chat room created. chatRoomId={} for memberId={}, requestId={}",
-                    chatRoomResponse.getId(), member.getId(), payload.requestId());
+                    chatRoomResponse.getId(), memberId, payload.requestId());
         } catch (Exception e) {
             log.error("Failed to handle ChatRoom create event", e);
             // 재시도/데드레터 큐 전략에 따라 처리
