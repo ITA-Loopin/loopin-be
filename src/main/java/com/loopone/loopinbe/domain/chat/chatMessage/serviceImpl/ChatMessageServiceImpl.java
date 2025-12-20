@@ -11,6 +11,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.MessageContent;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.MessageContentRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -23,6 +24,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
+import com.loopone.loopinbe.domain.sse.service.SseEmitterService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
@@ -53,6 +55,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatMessageConverter chatMessageConverter;
     private final AiEventPublisher aiEventPublisher;
     private final LoopMapper loopMapper;
+    private final SseEmitterService sseEmitterService;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -225,6 +228,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessagePayload payload = toChatMessagePayload(chatRoomId, currentUser.id(), content);
 
         ChatMessageSavedResult saved = processInbound(payload);
+
+        sseEmitterService.sendToClient(chatRoomId, MessageType.MESSAGE, payload);
 
         Loop loop = chatRoom.getLoop();
         LoopDetailResponse loopDetailResponse = (loop != null) ? loopMapper.toDetailResponse(loop) : null;
