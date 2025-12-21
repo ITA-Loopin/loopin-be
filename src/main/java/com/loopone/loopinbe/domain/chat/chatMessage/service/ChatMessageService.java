@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.chat.chatMessage.service;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
@@ -19,4 +20,7 @@ public interface ChatMessageService {
 
     // 채팅방의 모든 메시지 삭제
     void deleteAllChatMessages(Long chatRoomId);
+
+    // 채팅방 메시지 전송
+    void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser);
 }
