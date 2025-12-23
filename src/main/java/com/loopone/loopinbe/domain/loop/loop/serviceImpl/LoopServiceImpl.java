@@ -48,27 +48,19 @@ public class LoopServiceImpl implements LoopService {
         LoopRule loopRule;
         switch (requestDTO.scheduleType()) {
             case NONE -> {
-                Long loopId = createSingleLoop(requestDTO, currentUser);
-                publishAiChatRoom(requestDTO, currentUser);
-                return loopId;
+                return createSingleLoop(requestDTO, currentUser);
             }
             case WEEKLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                Long loopId = createWeeklyLoops(requestDTO, currentUser, loopRule);
-                publishAiChatRoom(requestDTO, currentUser);
-                return loopId;
+                return createWeeklyLoops(requestDTO, currentUser, loopRule);
             }
             case MONTHLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                Long loopId = createMonthlyLoops(requestDTO, currentUser, loopRule);
-                publishAiChatRoom(requestDTO, currentUser);
-                return loopId;
+                return createMonthlyLoops(requestDTO, currentUser, loopRule);
             }
             case YEARLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                Long loopId = createYearlyLoops(requestDTO, currentUser, loopRule);
-                publishAiChatRoom(requestDTO, currentUser);
-                return loopId;
+                return createYearlyLoops(requestDTO, currentUser, loopRule);
             }
             default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
@@ -396,18 +388,6 @@ public class LoopServiceImpl implements LoopService {
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }
-    }
-
-    // 채팅방 생성(AI루프 생성한 경우에만)
-    private void publishAiChatRoom(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
-        if (!requestDTO.isAiCreated()) {
-            return;
-        }
-        ChatRoomPayload payload = new ChatRoomPayload(
-                UUID.randomUUID().toString(),
-                currentUser.id()
-        );
-        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 
     // ========== 검증 메서드 ==========
