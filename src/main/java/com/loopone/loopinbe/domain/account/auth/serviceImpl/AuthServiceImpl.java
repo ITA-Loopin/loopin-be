@@ -115,16 +115,4 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtTokenProvider.generateToken(email, "ACCESS", accessTokenExpiration);
         return new LoginResponse(newAccessToken, storedRefreshToken);
     }
-
-    // ----------------- 헬퍼 메서드 -----------------
-
-    // 채팅방 생성 이벤트
-    @Override
-    public void publishChatRoomCreateEvent(Long memberId) {
-        ChatRoomPayload payload = new ChatRoomPayload(
-                UUID.randomUUID().toString(),
-                memberId
-        );
-        chatRoomEventPublisher.publishChatRoomRequest(payload);
-    }
 }
