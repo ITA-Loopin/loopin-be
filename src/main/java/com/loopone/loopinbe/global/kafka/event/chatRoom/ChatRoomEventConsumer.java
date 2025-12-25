@@ -1,14 +1,11 @@
 package com.loopone.loopinbe.global.kafka.event.chatRoom;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
-import com.loopone.loopinbe.global.exception.ReturnCode;
-import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

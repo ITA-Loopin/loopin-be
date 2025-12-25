@@ -2,7 +2,7 @@ package com.loopone.loopinbe.global.initData.service;
 
 import java.util.List;
 
-public class NotProdPrintTestAccount {
+public class NotProdPrintService {
 
     // 가데이터 정보 출력
     public static void printTestAccounts(
