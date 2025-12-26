@@ -24,6 +24,14 @@ repositories {
 	mavenCentral()
 }
 
+val springAiVersion = "1.0.3"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:$springAiVersion")
+    }
+}
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-security")
@@ -89,6 +97,9 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+
+    // SpringAI
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 }
 
 tasks.withType<Test> {
