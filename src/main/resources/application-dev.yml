@@ -21,6 +21,13 @@ spring:
       database: meta_db
   kafka:
     bootstrap-servers: localhost:9092
+  ai:
+    openai:
+      api-key: ${GPT_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
 #  flyway:
 #    enabled: true   # 처음 실행할 때는 false, 이후에 true로 변경(flyway 인덱스 생성)
 #    baseline-on-migrate: true   # 그냥 놔둬도됨
@@ -33,10 +40,6 @@ app:
 
 fcm:
   service-account-file: classpath:fcm-service-account.json
-
-openai:
-  api:
-    key: ${GPT_API_KEY}
 
 logging:
   level:

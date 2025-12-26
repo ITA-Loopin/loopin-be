@@ -5,38 +5,38 @@ import static com.loopone.loopinbe.global.constants.Constant.UPDATE_LOOP_PROMPT;
 import static com.loopone.loopinbe.global.constants.RedisKey.OPEN_AI_RESULT_KEY;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LoopAIServiceImpl implements LoopAIService {
     private final RedisTemplate<String, Object> redisTemplate;
-    private final WebClient openAiWebClient;
     private final ObjectMapper objectMapper;
+    private final ChatClient chatClient;
+
+    public LoopAIServiceImpl(RedisTemplate<String, Object> redisTemplate,
+                             ObjectMapper objectMapper,
+                             ChatClient.Builder chatClientBuilder) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+        this.chatClient = chatClientBuilder.build();
+    }
 
     @Override
     public CompletableFuture<RecommendationsLoop> chat(AiPayload request) {
@@ -49,32 +49,26 @@ public class LoopAIServiceImpl implements LoopAIService {
             prompt = createPrompt(request.userContent());
         }
 
-        return openAiWebClient
-                .post()
-                .uri("/chat/completions")
-                .bodyValue(Map.of(
-                        "model", "gpt-4o-mini",
-                        "messages", List.of(Map.of("role", "user", "content", prompt))))
-                .retrieve()
-                .onStatus(status -> status.value() == 401,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_UNAUTHORIZED,
-                                "OpenAI Unauthorized Error"))
-                .onStatus(status -> status.value() == 429,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_RATE_LIMIT,
-                                "OpenAI Rate Limit Error"))
-                .onStatus(HttpStatusCode::is5xxServerError,
-                        clientResponse -> handleError(clientResponse, ReturnCode.OPEN_AI_INTERNAL_ERROR,
-                                "OpenAI Internal Error"))
-                .bodyToMono(JsonNode.class)
-                .map(node -> node.get("choices").get(0).get("message").get("content").asText())
-                .map(this::parseToRecommendationsLoop)
-                .doOnNext(parsed -> {
-                    redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), parsed,
-                            Duration.ofMinutes(10));
-                    log.info("OpenAI 결과 Redis에 캐시 완료 : {}", request.requestId());
-                })
-                .doOnError(err -> log.error("OpenAI 호출 중 오류 발생: {}", err.getMessage()))
-                .toFuture();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String result = chatClient.prompt()
+                        .user(prompt)
+                        .call()
+                        .content();
+
+                RecommendationsLoop parsed = parseToRecommendationsLoop(result);
+
+                redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), parsed,
+                        Duration.ofMinutes(10));
+                log.info("OpenAI 결과 Redis에 캐시 완료 : {}", request.requestId());
+
+                return parsed;
+
+            } catch (Exception e) {
+                log.error("OpenAI 호출 중 오류 발생: {}", e.getMessage());
+                throw new ServiceException(ReturnCode.OPEN_AI_INTERNAL_ERROR, "OpenAI 호출 실패");
+            }
+        });
     }
 
     private RecommendationsLoop parseToRecommendationsLoop(String result) {
@@ -100,14 +94,6 @@ public class LoopAIServiceImpl implements LoopAIService {
         return UPDATE_LOOP_PROMPT.formatted(loopDetailResponse.id(), loopDetailResponse.title(),
                 loopDetailResponse.content(), loopDetailResponse.loopDate(), loopDetailResponse.progress(),
                 checklistText, formatLoopRule(loopDetailResponse.loopRule()), message);
-    }
-
-    private Mono<? extends Throwable> handleError(ClientResponse response, ReturnCode returnCode, String logPrefix) {
-        return response.bodyToMono(String.class)
-                .flatMap(errorBody -> {
-                    log.error("{} : {}", logPrefix, errorBody);
-                    return Mono.error(new ServiceException(returnCode, errorBody));
-                });
     }
 
     private String formatLoopRule(LoopDetailResponse.LoopRuleDTO rule) {
