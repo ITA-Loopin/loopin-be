@@ -55,4 +55,7 @@ public interface MemberService {
 
     // 팔로워 목록에서 해당 유저 삭제하기
     void removeFollowed(Long memberId, CurrentUserDto currentUser);
+
+    // 채팅방 생성 이벤트
+    void publishChatRoomCreateEvent(Long memberId);
 }
