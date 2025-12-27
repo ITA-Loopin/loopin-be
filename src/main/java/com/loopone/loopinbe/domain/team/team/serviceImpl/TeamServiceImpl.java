@@ -8,6 +8,7 @@ import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
+import com.loopone.loopinbe.domain.team.team.enums.TeamState;
 import com.loopone.loopinbe.domain.team.team.mapper.TeamMapper;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,14 +53,17 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
+    public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser, TeamState teamState) {
         Member member = getMemberOrThrow(currentUser.id());
 
         //내가 속한 팀 멤버 정보 조회
         List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
 
+        LocalDate today = LocalDate.now();
+
         //DTO 변환
         return myTeamMembers.stream()
+                .filter(tm -> isMatchingState(tm.getTeam(), teamState, today))
                 .map(teamMapper::toMyTeamResponse)
                 .collect(Collectors.toList());
     }
@@ -119,6 +124,18 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
 
         teamMemberRepository.saveAll(teamMembers);
+    }
+
+    //팀 루프의 상태 확인
+    private boolean isMatchingState(Team team, TeamState state, LocalDate today) {
+        return switch (state) {
+            case IN_PROGRESS ->
+                    !today.isBefore(team.getStartDate()) && !today.isAfter(team.getEndDate());
+            case BEFORE_START ->
+                    today.isBefore(team.getStartDate());
+            case ENDED ->
+                    today.isAfter(team.getEndDate());
+        };
     }
 
     // ========== 조회 메서드 ==========

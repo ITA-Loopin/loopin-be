@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
+import com.loopone.loopinbe.domain.team.team.enums.TeamState;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,11 +36,12 @@ public class TeamController {
     }
 
     @GetMapping("/teams/my")
-    @Operation(summary = "나의 팀 루프 조회", description = "현재 내가 참여 중인 팀 루프 목록과 진행률을 조회합니다.")
+    @Operation(summary = "나의 팀 루프 조회", description = "내가 참여 중인 팀 루프 목록과 진행률을 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
-            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
-    ) {
-        List<MyTeamResponse> response = teamService.getMyTeams(currentUser);
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser,
+            @RequestParam(required = false, defaultValue = "IN_PROGRESS") TeamState teamState
+            ) {
+        List<MyTeamResponse> response = teamService.getMyTeams(currentUser, teamState);
         return ApiResponse.success(response);
     }
 
