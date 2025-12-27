@@ -33,24 +33,10 @@ public class Team extends BaseEntity {
     @Column(nullable = false)
     private TeamCategory category; //팀 카테고리
 
-    private LocalDate startDate; //시작일
-    private LocalDate endDate; //종료일
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_id")
     private Member leader; //팀 리더
 
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true) //팀 삭제 시, 소속 정보 삭제
     private List<TeamMember> teamMembers = new ArrayList<>(); //팀원 목록
-
-    @Builder
-    public Team(String name, String goal, TeamCategory category,
-                LocalDate startDate, LocalDate endDate, Member leader) {
-        this.name = name;
-        this.goal = goal;
-        this.category = category;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.leader = leader;
-    }
 }

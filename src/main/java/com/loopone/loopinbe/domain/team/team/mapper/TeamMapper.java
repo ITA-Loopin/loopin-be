@@ -16,8 +16,6 @@ public interface TeamMapper {
     @Mapping(source = "team.category", target = "category")
     @Mapping(source = "team.name", target = "name")
     @Mapping(source = "team.goal", target = "goal")
-    @Mapping(source = "team.startDate", target = "startDate")
-    @Mapping(source = "team.endDate", target = "endDate")
     // TODO: 진행률 계산 로직 추가 필요
     @Mapping(target = "totalProgress", constant = "0")
     MyTeamResponse toMyTeamResponse(TeamMember teamMember);

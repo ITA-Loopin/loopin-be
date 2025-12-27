@@ -22,12 +22,6 @@ public record MyTeamResponse(
         @Schema(description = "팀 목표")
         String goal,
 
-        @Schema(description = "시작일")
-        LocalDate startDate,
-
-        @Schema(description = "종료일")
-        LocalDate endDate,
-
         @Schema(description = "팀 전체 평균 진행률 (0~100)")
         int totalProgress
 ) {}

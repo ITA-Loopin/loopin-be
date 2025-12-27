@@ -8,7 +8,6 @@ import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
-import com.loopone.loopinbe.domain.team.team.enums.TeamState;
 import com.loopone.loopinbe.domain.team.team.mapper.TeamMapper;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
@@ -53,7 +52,7 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser, TeamState teamState) {
+    public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
 
         //내가 속한 팀 멤버 정보 조회
@@ -63,7 +62,6 @@ public class TeamServiceImpl implements TeamService {
 
         //DTO 변환
         return myTeamMembers.stream()
-                .filter(tm -> isMatchingState(tm.getTeam(), teamState, today))
                 .map(teamMapper::toMyTeamResponse)
                 .collect(Collectors.toList());
     }
@@ -90,8 +88,6 @@ public class TeamServiceImpl implements TeamService {
                 .name(request.name())
                 .goal(request.goal())
                 .category(request.category())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
                 .leader(leader)
                 .build();
         return teamRepository.save(team);
@@ -124,18 +120,6 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
 
         teamMemberRepository.saveAll(teamMembers);
-    }
-
-    //팀 루프의 상태 확인
-    private boolean isMatchingState(Team team, TeamState state, LocalDate today) {
-        return switch (state) {
-            case IN_PROGRESS ->
-                    !today.isBefore(team.getStartDate()) && !today.isAfter(team.getEndDate());
-            case BEFORE_START ->
-                    today.isBefore(team.getStartDate());
-            case ENDED ->
-                    today.isAfter(team.getEndDate());
-        };
     }
 
     // ========== 조회 메서드 ==========

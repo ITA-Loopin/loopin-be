@@ -21,12 +21,6 @@ public record RecruitingTeamResponse(
         @Schema(description = "팀 목표")
         String goal,
 
-        @Schema(description = "시작일")
-        LocalDate startDate,
-
-        @Schema(description = "종료일")
-        LocalDate endDate,
-
         @Schema(description = "현재 참여 인원 수")
         int currentMemberCount
 ) {}

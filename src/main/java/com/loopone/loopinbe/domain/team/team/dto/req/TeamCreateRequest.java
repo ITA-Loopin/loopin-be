@@ -22,14 +22,6 @@ public record TeamCreateRequest(
         @NotBlank(message = "루프 목표는 필수입니다.")
         String goal,
 
-        @Schema(description = "시작일 (YYYY-MM-DD)")
-        @NotNull(message = "시작일은 필수입니다.")
-        LocalDate startDate,
-
-        @Schema(description = "종료일 (YYYY-MM-DD)")
-        @NotNull(message = "종료일은 필수입니다.")
-        LocalDate endDate,
-
         @Schema(description = "초대할 팀원 닉네임 리스트")
         List<String> invitedNicknames
 ) {}
