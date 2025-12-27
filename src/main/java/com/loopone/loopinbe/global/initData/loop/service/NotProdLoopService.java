@@ -1,21 +1,359 @@
 package com.loopone.loopinbe.global.initData.loop.service;
 
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
+import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
+import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
+import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
+import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
+import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
+import com.loopone.loopinbe.global.initData.service.NotProdPrintService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotProdLoopService {
+    private final LoopService loopService;
+    private final LoopRepository loopRepository;
+    private final MemberRepository memberRepository;
+    private final MemberConverter memberConverter;
+    private static final String USER1_EMAIL = "user1@example.com";
+    private static final String LOOP_CHRISTMAS = "크리스마스";
+    private static final String LOOP_RUNNING = "동계 런닝 훈련";
+    private static final String LOOP_TOEIC = "토익 공부하기";
+    private static final String LOOP_CODING = "코딩 테스트 준비";
 
-    // 유저 1이 루프 생성
+    // [유저 1이 주간 루프 생성]
+    // 0) 단일 루프(2025-12-25) - 크리스마스
+    // 1) 반복 루프(주 2회: 월/수, 12/22~12/24) - 동계 런닝 훈련
+    // 2) 반복 루프(주 2회: 월/수, 12/22~12/24) - 토익 공부하기
     @Transactional
-    public void createLoops(){
+    public void createWeekLoops() {
+        CurrentUserDto user1 = user1CurrentUser();
 
+        // 0) 단일 루프: 크리스마스
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        LOOP_CHRISTMAS,
+                        "친구들이랑 놀기",
+                        RepeatType.NONE,
+                        LocalDate.of(2025, 12, 25),
+                        null,
+                        null,
+                        null,
+                        List.of("명동 신세계 백화점 방문")
+                ),
+                user1
+        );
+        // 1) 반복 루프: 동계 런닝 훈련 (월/수) - 12/22~12/24
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        LOOP_RUNNING,
+                        "3km 10분 달성 목표",
+                        RepeatType.WEEKLY,
+                        null,
+                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        LocalDate.of(2025, 12, 22),
+                        LocalDate.of(2025, 12, 24),
+                        List.of("아침에 3km 런닝", "런닝 후 샐러드 건강식 먹기")
+                ),
+                user1
+        );
+        // 2) 반복 루프: 토익 공부하기 (월/수) - 12/22~12/24
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        LOOP_TOEIC,
+                        "950점 목표",
+                        RepeatType.WEEKLY,
+                        null,
+                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        LocalDate.of(2025, 12, 22),
+                        LocalDate.of(2025, 12, 24),
+                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기")
+                ),
+                user1
+        );
+        log.info("[NotProd] createWeekLoops done for user1={}", USER1_EMAIL);
+    }
+
+
+    // [유저 1이 주간 체크리스트 완료 처리(1)-1]
+    // 0) 단일 루프 완료(2025-12-25)
+    // 1) 동계 런닝 훈련(12/22~12/24): MONDAY(1번만 완료), WEDNESDAY(전체 완료)
+    // 2) 토익 공부하기(12/22~12/24): MONDAY/WEDNESDAY(1,2,3번만 완료)
+    @Transactional
+    public void completeScenario_1_1() {
+        Long user1Id = user1Id();
+
+        // 0) 크리스마스 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+
+        // 1) 동계 런닝 훈련 (12/22~12/24)
+        LocalDate start = LocalDate.of(2025, 12, 22);
+        LocalDate end = LocalDate.of(2025, 12, 24);
+
+        // MONDAY: 1번만 완료
+        for (LocalDate d : datesOf(DayOfWeek.MONDAY, start, end)) {
+            completeChecklistIndices(user1Id, LOOP_RUNNING, d, Set.of(1));
+        }
+        // WEDNESDAY: 전체 완료
+        for (LocalDate d : datesOf(DayOfWeek.WEDNESDAY, start, end)) {
+            completeAllChecklists(user1Id, LOOP_RUNNING, d);
+        }
+        // 2) 토익 공부하기 (12/22~12/24) - 월/수 모두 1,2,3번만 완료 (4번 미완료)
+        Set<Integer> toeicPartial = Set.of(1, 2, 3);
+        for (LocalDate d : datesOf(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), start, end)) {
+            completeChecklistIndices(user1Id, LOOP_TOEIC, d, toeicPartial);
+        }
+        log.info("[NotProd] completeScenario_1_1 done");
+    }
+
+
+    // [유저 1이 주간 체크리스트 완료 처리(1)-2]
+    // 0) 단일 루프 완료(2025-12-25)
+    // 1) 동계 런닝 훈련(12/22~12/24): MONDAY(1번만 완료), WEDNESDAY(모두 미완료)
+    // 2) 토익 공부하기(12/22~12/24): MONDAY/WEDNESDAY(1번만 완료)
+    // 3) 코딩 테스트 준비(12/24~12/31, 목/금): 해당 생성된 모든 날짜 전체 완료
+    @Transactional
+    public void completeScenario_1_2() {
+        Long user1Id = user1Id();
+
+        // 0) 크리스마스 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+
+        // 1) 동계 런닝 훈련 (12/22~12/24)
+        LocalDate start = LocalDate.of(2025, 12, 22);
+        LocalDate end = LocalDate.of(2025, 12, 24);
+
+        // MONDAY: 1번만 완료
+        for (LocalDate d : datesOf(DayOfWeek.MONDAY, start, end)) {
+            completeChecklistIndices(user1Id, LOOP_RUNNING, d, Set.of(1));
+        }
+        // WEDNESDAY: 모두 미완료 (빈 Set)
+        for (LocalDate d : datesOf(DayOfWeek.WEDNESDAY, start, end)) {
+            completeChecklistIndices(user1Id, LOOP_RUNNING, d, Set.of());
+        }
+        // 2) 토익 공부하기 (12/22~12/24) - 월/수 모두 1번만 완료
+        for (LocalDate d : datesOf(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), start, end)) {
+            completeChecklistIndices(user1Id, LOOP_TOEIC, d, Set.of(1));
+        }
+        log.info("[NotProd] completeScenario_1_2 done");
+    }
+
+    // [유저 1이 월간 루프 생성]
+    // 0) 단일 루프(2025-12-25)
+    // 1) 반복 루프(주 2회: 월/수, 12/1~12/31) - 동계 런닝 훈련
+    // 2) 반복 루프(주 2회: 월/수, 12/1~12/31) - 토익 공부하기
+    // 3) 반복 루프(주 1회: 화, 12/23~12/31) - 코딩 테스트 준비
+    @Transactional
+    public void createMonthLoops() {
+        CurrentUserDto user1 = user1CurrentUser();
+        // 0) 단일 루프: 크리스마스
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        "크리스마스",
+                        "친구들이랑 놀기",
+                        RepeatType.NONE,
+                        LocalDate.of(2025, 12, 25),
+                        null,
+                        null,
+                        null,
+                        List.of("명동 신세계 백화점 방문")
+                ),
+                user1
+        );
+        // 1) 반복 루프: 동계 런닝 훈련 (월/수)
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        "동계 런닝 훈련",
+                        "3km 10분 달성 목표",
+                        RepeatType.WEEKLY,
+                        null,
+                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        LocalDate.of(2025, 12, 1),
+                        LocalDate.of(2025, 12, 31),
+                        List.of("런닝 전 스트레칭", "아침에 3km 런닝", "런닝 후 1km 조깅", "마무리 스트레칭", "런닝 후 샐러드 건강식 먹기")
+                ),
+                user1
+        );
+        // 2) 반복 루프: 토익 공부하기 (월/수)
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        "토익 공부하기",
+                        "950점 목표",
+                        RepeatType.WEEKLY,
+                        null,
+                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        LocalDate.of(2025, 12, 1),
+                        LocalDate.of(2025, 12, 31),
+                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기", "오답 단어 1회독")
+                ),
+                user1
+        );
+        // 3) 반복 루프: 코딩 테스트 준비 (화)
+        loopService.createLoop(
+                new LoopCreateRequest(
+                        "코딩 테스트 준비",
+                        "1일 1회 기출 풀기",
+                        RepeatType.WEEKLY,
+                        null,
+                        Set.of(DayOfWeek.TUESDAY),
+                        LocalDate.of(2025, 12, 23),
+                        LocalDate.of(2025, 12, 31),
+                        List.of("카카오 기출 1회 풀기")
+                ),
+                user1
+        );
+        log.info("[NotProd] createMonthLoops done for user1={}", USER1_EMAIL);
+    }
+
+    // [유저 1이 체크리스트 완료 처리(2)-1(잘한 루프 선정 검증)]
+    // 0) 단일 루프 완료(2025-12-25 체크리스트 완료)
+    // 1) 동계 런닝 훈련: 5주(12/1~12/31)
+    //    - MONDAY: (1-4번 체크리스트 완료)
+    //    - WEDNESDAY: (1-4번 체크리스트 완료)
+    // 2) 토익 공부하기: 4주(12/1~12/31)
+    //    - MONDAY/WEDNESDAY: (모든 체크리스트 완료)
+    //    - 마지막 all complete 대상 루프는 12/24(WEDNESDAY)
+    @Transactional
+    public void completeScenario_2_1() {
+        Long user1Id = user1Id();
+        // 0) 크리스마스 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+
+        // 1) 동계 런닝 훈련 (12/1~12/31) - 매주 월/수 1~4번 체크리스트 완료
+        LocalDate start = LocalDate.of(2025, 12, 1);
+        LocalDate end = LocalDate.of(2025, 12, 31);
+        Set<Integer> firstToFourth = Set.of(1, 2, 3, 4); // 1-based index
+        for (LocalDate d : datesOf(DayOfWeek.MONDAY, start, end)) {
+            completeChecklistIndices(user1Id, LOOP_RUNNING, d, firstToFourth);
+        }
+        for (LocalDate d : datesOf(DayOfWeek.WEDNESDAY, start, end)) {
+            completeChecklistIndices(user1Id, LOOP_RUNNING, d, firstToFourth);
+        }
+        // 2) 토익 공부하기 (12/1~12/24) - 월/수 모두 all complete
+        LocalDate toeicEnd = LocalDate.of(2025, 12, 24);
+        for (LocalDate d : datesOf(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), start, toeicEnd)) {
+            completeAllChecklists(user1Id, LOOP_TOEIC, d);
+        }
+        // 3) 코딩 테스트 준비 (12/23~12/31) - 화요일 모두 all complete
+        LocalDate codingStart = LocalDate.of(2025, 12, 23);
+        LocalDate codingEnd = LocalDate.of(2025, 12, 31);
+        for (LocalDate d : datesOf(DayOfWeek.TUESDAY, codingStart, codingEnd)) {
+            completeAllChecklists(user1Id, LOOP_CODING, d);
+        }
+        log.info("[NotProd] completeScenario_2_1 done");
+    }
+
+    // [유저 1이 체크리스트 완료 처리(2)-2(버거운 루프 선정 검증)]
+    // 0) 단일 루프 완료(체크리스트 완료)
+    // 1) 동계 런닝 훈련: 1주(12/1~12/3)
+    //    - MONDAY/WEDNESDAY: (모든 체크리스트 완료)
+    //    - 마지막 all complete 대상 루프는 12/3(WEDNESDAY)
+    // 2) 토익 공부하기: 5주(12/1~12/31)
+    //    - MONDAY/WEDNESDAY: (1번 완료, 2/3/4/5번 미완료)
+    @Transactional
+    public void completeScenario_2_2() {
+        Long user1Id = user1Id();
+        // 0) 크리스마스 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+        LocalDate start = LocalDate.of(2025, 12, 1);
+
+        // 1) 동계 런닝 훈련: 12/1~12/8, 월/수 모두 all complete (마지막은 12/8 월)
+        LocalDate runningEnd = LocalDate.of(2025, 12, 3);
+        for (LocalDate d : datesOf(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), start, runningEnd)) {
+            completeAllChecklists(user1Id, LOOP_RUNNING, d);
+        }
+        // 2) 토익 공부하기: 12/1~12/31 월/수 모두 1번만 완료
+        LocalDate toeicEnd = LocalDate.of(2025, 12, 31);
+        for (LocalDate d : datesOf(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), start, toeicEnd)) {
+            completeChecklistIndices(user1Id, LOOP_TOEIC, d, Set.of(1)); // 1번만 완료
+        }
+        // 3) 코딩 테스트 준비 (12/23~12/31) - 화요일 모두 all complete
+        LocalDate codingStart = LocalDate.of(2025, 12, 23);
+        LocalDate codingEnd = LocalDate.of(2025, 12, 31);
+        for (LocalDate d : datesOf(DayOfWeek.TUESDAY, codingStart, codingEnd)) {
+            completeAllChecklists(user1Id, LOOP_CODING, d);
+        }
+        log.info("[NotProd] completeScenario_2_2 done");
     }
 
     // ----------------- 헬퍼 메서드 -----------------
 
+    private CurrentUserDto user1CurrentUser() {
+        Member user1 = memberRepository.findByEmail(USER1_EMAIL)
+                .orElseThrow(() -> new IllegalStateException("user1 not found: " + USER1_EMAIL));
+        return memberConverter.toCurrentUserDto(user1);
+    }
+
+    private Long user1Id() {
+        return user1CurrentUser().id();
+    }
+
+    private List<LocalDate> datesOf(DayOfWeek day, LocalDate start, LocalDate end) {
+        return datesOf(Set.of(day), start, end);
+    }
+
+    private List<LocalDate> datesOf(Set<DayOfWeek> days, LocalDate start, LocalDate end) {
+        List<LocalDate> result = new ArrayList<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (days.contains(d.getDayOfWeek())) {
+                result.add(d);
+            }
+        }
+        return result;
+    }
+
+    private void completeAllChecklists(Long memberId, String title, LocalDate date) {
+        Loop loop = mustFindLoop(memberId, title, date);
+        applyChecklistCompletion(loop, toIndexSet(loop.getLoopChecklists().size())); // all
+    }
+
+    private void completeChecklistIndices(Long memberId, String title, LocalDate date, Set<Integer> completedIndices1Based) {
+        Loop loop = mustFindLoop(memberId, title, date);
+        applyChecklistCompletion(loop, completedIndices1Based);
+    }
+
+    private void applyChecklistCompletion(Loop loop, Set<Integer> completedIndices1Based) {
+        List<LoopChecklist> sorted = loop.getLoopChecklists().stream()
+                .sorted(Comparator.comparing(LoopChecklist::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < sorted.size(); i++) {
+            int idx1 = i + 1; // 1-based
+            LoopChecklist cl = sorted.get(i);
+            boolean done = completedIndices1Based.contains(idx1);
+            cl.setCompleted(done);
+        }
+        boolean allDone = sorted.stream().allMatch(c -> Boolean.TRUE.equals(c.getCompleted()));
+        loop.setCompleted(allDone);
+
+        // dirty-checking으로 flush됨 (필요하면 명시 save)
+        loopRepository.save(loop);
+    }
+
+    private Set<Integer> toIndexSet(int n) {
+        Set<Integer> s = new HashSet<>();
+        for (int i = 1; i <= n; i++) s.add(i);
+        return s;
+    }
+
+    private Loop mustFindLoop(Long memberId, String title, LocalDate date) {
+        return loopRepository.findFirstByMember_IdAndTitleAndLoopDate(memberId, title, date)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Loop not found. memberId=" + memberId + ", title=" + title + ", date=" + date
+                ));
+    }
 }

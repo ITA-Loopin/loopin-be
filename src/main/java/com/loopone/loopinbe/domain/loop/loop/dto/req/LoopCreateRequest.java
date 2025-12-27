@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @Schema(description = "루프 생성을 위한 요청 DTO")
 public record LoopCreateRequest (
@@ -26,7 +27,7 @@ public record LoopCreateRequest (
         LocalDate specificDate,
 
         @Schema(description = "scheduleType이 WEEKLY일 때 사용할 요일 목록")
-        List<DayOfWeek> daysOfWeek,
+        Set<DayOfWeek> daysOfWeek,
 
         @Schema(description = "반복 시작일 (WEEKLY, MONTHLY, YEARLY일 때 사용, 기본값은 당일로 설정)")
         LocalDate startDate,
@@ -35,14 +36,5 @@ public record LoopCreateRequest (
         LocalDate endDate,
 
         @Schema(description = "각 루프에 포함될 체크리스트 내용 목록")
-        List<String> checklists,
-
-        @Schema(description = "루프의 AI 생성 여부")
-        Boolean isAiCreated
-){
-    public LoopCreateRequest {
-        if (isAiCreated == null) {
-            isAiCreated = false;
-        }
-    }
-}
+        List<String> checklists
+){}

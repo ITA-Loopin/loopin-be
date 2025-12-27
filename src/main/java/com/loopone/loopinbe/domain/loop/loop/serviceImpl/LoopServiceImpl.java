@@ -299,7 +299,7 @@ public class LoopServiceImpl implements LoopService {
         LoopRule loopRule = LoopRule.builder()
                 .member(memberConverter.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
-                .daysOfWeek((Set<DayOfWeek>) requestDTO.daysOfWeek()) // WEEKLY가 아니면 null이 저장됨
+                .daysOfWeek(requestDTO.daysOfWeek()) // WEEKLY가 아니면 null이 저장됨
                 .startDate(start)
                 .endDate(end)
                 .build();

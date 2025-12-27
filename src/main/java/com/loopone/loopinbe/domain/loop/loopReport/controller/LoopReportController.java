@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Tag(name = "LoopReport", description = "루프 리포트 API")
 public class LoopReportController {
-    LoopReportService loopReportService;
+    private final LoopReportService loopReportService;
 
     // 루프 리포트 조회
     @GetMapping

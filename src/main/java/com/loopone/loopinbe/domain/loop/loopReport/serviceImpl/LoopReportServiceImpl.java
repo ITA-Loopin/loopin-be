@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class LoopReportServiceImpl implements LoopReportService {
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final int MIN_MONTH_RULE_DAYS = 3;
     private final LoopRepository loopRepository;
     private final LoopMapper loopMapper;
 
@@ -117,9 +121,12 @@ public class LoopReportServiceImpl implements LoopReportService {
         // monthCard: 루프 있으면 날짜별 평균 달성률로 채움
         Map<LocalDate, Long> monthCard = buildCard(monthLoops);
 
+        // month에서 "잘한/버거운 반복루프" 후보만 필터링
+        List<Loop> eligibleMonthLoops = filterRulesByMinScheduledDays(monthLoops, MIN_MONTH_RULE_DAYS);
+
         // 잘한/버거운 루프 선정
-        ProgressLoopDto good = pickGoodProgressLoopDto(monthLoops);
-        ProgressLoopDto bad = pickBadProgressLoopDto(monthLoops);
+        ProgressLoopDto good = pickGoodProgressLoopDto(eligibleMonthLoops);
+        ProgressLoopDto bad = pickBadProgressLoopDto(eligibleMonthLoops);
 
         DetailReportState detailReportState = resolveDetailReportState(good, bad);
         DetailReportStateMessage msg = getMonthDetailReportStateMessage(detailReportState);
@@ -144,6 +151,25 @@ public class LoopReportServiceImpl implements LoopReportService {
         };
     }
 
+    // 반복루프(ruleId)별로 "해당 기간에 존재하는 loopDate(중복 제거)" 개수가 minDays 미만이면 제외
+    // - 예) 12/23, 12/30 두 번만 있는 WEEKLY[TUE]면 distinct loopDate = 2 -> 제외
+    private List<Loop> filterRulesByMinScheduledDays(List<Loop> loops, int minDays) {
+        if (loops == null || loops.isEmpty()) return List.of();
+        Map<Long, List<Loop>> byRule = loops.stream()
+                .filter(Objects::nonNull)
+                .filter(l -> l.getLoopRule() != null && l.getLoopRule().getId() != null)
+                .collect(Collectors.groupingBy(l -> l.getLoopRule().getId()));
+        return byRule.values().stream()
+                .filter(ruleLoops -> ruleLoops.stream()
+                        .map(Loop::getLoopDate)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .count() >= minDays
+                )
+                .flatMap(List::stream)
+                .toList();
+    }
+
     // ----------------- 헬퍼 메서드 -----------------
 
     // week/month Card 생성 로직
@@ -164,33 +190,39 @@ public class LoopReportServiceImpl implements LoopReportService {
 
     // 잘한 루프 선정 로직
     private ProgressLoopDto pickGoodProgressLoopDto(List<Loop> loops) {
-        Map<Long, List<Loop>> byRule = loops.stream()
-                .collect(Collectors.groupingBy(l -> l.getLoopRule().getId()));
+        if (loops == null || loops.isEmpty()) return null;
 
+        Map<Long, List<Loop>> byRule = loops.stream()
+                .filter(Objects::nonNull)
+                .filter(l -> l.getLoopRule() != null && l.getLoopRule().getId() != null)
+                .collect(Collectors.groupingBy(l -> l.getLoopRule().getId()));
         List<GoodRuleAgg> candidates = new ArrayList<>();
+
         for (Map.Entry<Long, List<Loop>> entry : byRule.entrySet()) {
             List<Loop> ruleLoops = entry.getValue();
+            if (ruleLoops == null || ruleLoops.isEmpty()) continue;
 
-            long maxAchieve = ruleLoops.stream()
-                    .mapToLong(this::calcLoopAchievePercent)
-                    .max()
-                    .orElse(Long.MIN_VALUE);
+            // 반복루프 평균 달성률
+            long avgAchieve = Math.round(
+                    ruleLoops.stream().mapToLong(this::calcLoopAchievePercent).average().orElse(0.0)
+            );
 
-            if (maxAchieve < 70L) continue;
+            // 조건: 평균 70% 이상인 반복루프만 후보
+            if (avgAchieve < 70L) continue;
 
-            // 동률 1순위로 사용할 값: 100% 일수
-            long fullAchieveDays = ruleLoops.stream()
+            // 2순위: 100% 개수(=완벽 달성 일수)
+            long fullDays = ruleLoops.stream()
                     .mapToLong(this::calcLoopAchievePercent)
                     .filter(p -> p == 100L)
                     .count();
 
-            // 가장 최근 실행일
+            // tie-breaker용: 최근 실행일, 생성일(오래된 것 우선)
             LocalDate lastExecutionDate = ruleLoops.stream()
                     .map(Loop::getLoopDate)
+                    .filter(Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(LocalDate.MIN);
 
-            // ruleLoops 중 가장 오래된(loop.createdAt이 가장 작은) 값
             Instant createdAt = ruleLoops.stream()
                     .map(this::extractCreatedAtForLoopNullableSafe)
                     .min(Comparator.naturalOrder())
@@ -198,8 +230,8 @@ public class LoopReportServiceImpl implements LoopReportService {
 
             candidates.add(new GoodRuleAgg(
                     entry.getKey(),
-                    maxAchieve,
-                    fullAchieveDays,
+                    avgAchieve,
+                    fullDays,
                     lastExecutionDate,
                     createdAt
             ));
@@ -208,62 +240,74 @@ public class LoopReportServiceImpl implements LoopReportService {
 
         GoodRuleAgg best = candidates.stream()
                 .sorted(
-                        Comparator.comparingLong(GoodRuleAgg::maxAchieve).reversed()
-                                .thenComparingLong(GoodRuleAgg::fullAchieveDays).reversed()
-                                .thenComparing(GoodRuleAgg::lastExecutionDate, Comparator.reverseOrder())
-                                .thenComparing(GoodRuleAgg::createdAt) // 오래된(loop.createdAt 작은) 순 우선
+                        Comparator.comparingLong(GoodRuleAgg::avgAchieve).reversed() // 1) 평균 달성률 높은 순
+                                .thenComparing(Comparator.comparingLong(GoodRuleAgg::fullAchieveDays).reversed()) // 2) 100% 일수 많은 순
+                                .thenComparing(GoodRuleAgg::lastExecutionDate, Comparator.reverseOrder()) // 3) 최근 실행일
+                                .thenComparing(GoodRuleAgg::createdAt) // 4) 오래된 생성일 우선
                 )
                 .findFirst()
                 .orElseThrow();
         List<Loop> chosenRuleLoops = byRule.get(best.ruleId());
+        if (chosenRuleLoops == null || chosenRuleLoops.isEmpty()) return null;
 
+        // 대표 loop 선택: 가능하면 "가장 최근 100% loop" -> 없으면 "가장 최근 loop"
         Loop chosenLoop = chosenRuleLoops.stream()
-                .filter(l -> calcLoopAchievePercent(l) == best.maxAchieve())
-                .sorted(
-                        Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
-                                .thenComparing(this::extractCreatedAtForLoopNullableSafe)
-                )
+                .filter(l -> calcLoopAchievePercent(l) == 100L)
+                .filter(l -> l.getLoopDate() != null)
+                .sorted(Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
+                        .thenComparing(this::extractCreatedAtForLoopNullableSafe))
                 .findFirst()
-                .orElse(null);
+                .orElseGet(() -> chosenRuleLoops.stream()
+                        .filter(l -> l.getLoopDate() != null)
+                        .sorted(Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
+                                .thenComparing(this::extractCreatedAtForLoopNullableSafe))
+                        .findFirst()
+                        .orElse(null));
         if (chosenLoop == null) return null;
 
         return new ProgressLoopDto(
                 chosenLoop.getTitle(),
                 loopMapper.loopRuleToLoopRuleDTO(chosenLoop.getLoopRule()),
-                best.maxAchieve(),
+                best.avgAchieve(), // 반복루프 평균 달성률
                 null
         );
     }
 
     // 버거운 루프 선정 로직
     private ProgressLoopDto pickBadProgressLoopDto(List<Loop> loops) {
-        Map<Long, List<Loop>> byRule = loops.stream()
-                .collect(Collectors.groupingBy(l -> l.getLoopRule().getId()));
+        if (loops == null || loops.isEmpty()) return null;
 
+        Map<Long, List<Loop>> byRule = loops.stream()
+                .filter(Objects::nonNull)
+                .filter(l -> l.getLoopRule() != null && l.getLoopRule().getId() != null)
+                .collect(Collectors.groupingBy(l -> l.getLoopRule().getId()));
         List<BadRuleAgg> candidates = new ArrayList<>();
+
         for (Map.Entry<Long, List<Loop>> entry : byRule.entrySet()) {
             List<Loop> ruleLoops = entry.getValue();
+            if (ruleLoops == null || ruleLoops.isEmpty()) continue;
 
-            long minAchieve = ruleLoops.stream()
-                    .mapToLong(this::calcLoopAchievePercent)
-                    .min()
-                    .orElse(Long.MAX_VALUE);
+            // 반복루프 평균 달성률
+            long avgAchieve = Math.round(
+                    ruleLoops.stream().mapToLong(this::calcLoopAchievePercent).average().orElse(0.0)
+            );
 
-            if (minAchieve >= 50L) continue;
+            // 조건: 평균 50% 미만인 반복루프만 후보(버거운 기준)
+            if (avgAchieve >= 50L) continue;
 
-            // 동률 1순위로 사용할 값: 0% 일수
+            // 2순위: 0% 개수(=완전 미달성 일수)
             long zeroDays = ruleLoops.stream()
                     .mapToLong(this::calcLoopAchievePercent)
                     .filter(p -> p == 0L)
                     .count();
 
-            // 가장 나중 실행일
+            // tie-breaker용: 평균 더 낮은 순, 최근 실행일, 생성일
             LocalDate lastExecutionDate = ruleLoops.stream()
                     .map(Loop::getLoopDate)
+                    .filter(Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(LocalDate.MIN);
 
-            // ruleLoops 중 가장 오래된(loop.createdAt이 가장 작은) 값
             Instant createdAt = ruleLoops.stream()
                     .map(this::extractCreatedAtForLoopNullableSafe)
                     .min(Comparator.naturalOrder())
@@ -271,7 +315,7 @@ public class LoopReportServiceImpl implements LoopReportService {
 
             candidates.add(new BadRuleAgg(
                     entry.getKey(),
-                    minAchieve,
+                    avgAchieve,
                     zeroDays,
                     lastExecutionDate,
                     createdAt
@@ -281,29 +325,36 @@ public class LoopReportServiceImpl implements LoopReportService {
 
         BadRuleAgg worst = candidates.stream()
                 .sorted(
-                        Comparator.comparingLong(BadRuleAgg::minAchieve)
-                                .thenComparingLong(BadRuleAgg::zeroDays).reversed()
-                                .thenComparing(BadRuleAgg::lastExecutionDate)
-                                .thenComparing(BadRuleAgg::createdAt) // 오래된(loop.createdAt 작은) 순 우선
+                        Comparator.comparingLong(BadRuleAgg::avgAchieve) // 1) 평균 달성률 낮은 순
+                                .thenComparing(Comparator.comparingLong(BadRuleAgg::zeroDays).reversed()) // 2) 0% 일수 많은 순
+                                .thenComparing(BadRuleAgg::lastExecutionDate) // 3) 오래된 실행일 우선
+                                .thenComparing(BadRuleAgg::createdAt) // 4) 오래된 생성일 우선
                 )
                 .findFirst()
                 .orElseThrow();
-        List<Loop> chosenRuleLoops = byRule.get(worst.ruleId());
 
+        List<Loop> chosenRuleLoops = byRule.get(worst.ruleId());
+        if (chosenRuleLoops == null || chosenRuleLoops.isEmpty()) return null;
+
+        // 대표 loop 선택: 가능하면 "가장 최근 0% loop" -> 없으면 "가장 최근 loop"
         Loop chosenLoop = chosenRuleLoops.stream()
-                .filter(l -> calcLoopAchievePercent(l) == worst.minAchieve())
-                .sorted(
-                        Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
-                                .thenComparing(this::extractCreatedAtForLoopNullableSafe)
-                )
+                .filter(l -> calcLoopAchievePercent(l) == 0L)
+                .filter(l -> l.getLoopDate() != null)
+                .sorted(Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
+                        .thenComparing(this::extractCreatedAtForLoopNullableSafe))
                 .findFirst()
-                .orElse(null);
+                .orElseGet(() -> chosenRuleLoops.stream()
+                        .filter(l -> l.getLoopDate() != null)
+                        .sorted(Comparator.comparing(Loop::getLoopDate, Comparator.reverseOrder())
+                                .thenComparing(this::extractCreatedAtForLoopNullableSafe))
+                        .findFirst()
+                        .orElse(null));
         if (chosenLoop == null) return null;
 
         return new ProgressLoopDto(
                 chosenLoop.getTitle(),
                 loopMapper.loopRuleToLoopRuleDTO(chosenLoop.getLoopRule()),
-                worst.minAchieve(),
+                worst.avgAchieve(), // 반복루프 평균 달성률
                 null
         );
     }
@@ -366,14 +417,19 @@ public class LoopReportServiceImpl implements LoopReportService {
 
     // 루프 생성일 추출
     private Instant extractCreatedAtForLoopNullableSafe(Loop loop) {
-            return Instant.from(loop.getCreatedAt());
+        try {
+            LocalDateTime createdAt = loop.getCreatedAt(); // createdAt이 LocalDateTime이라면
+            return createdAt == null ? Instant.EPOCH : createdAt.atZone(KST).toInstant();
+        } catch (Exception e) {
+            return Instant.EPOCH;
+        }
     }
 
     // ----------------- 집계용 내부 record -----------------
 
     private record GoodRuleAgg(
             Long ruleId,
-            long maxAchieve,
+            long avgAchieve,
             long fullAchieveDays,
             LocalDate lastExecutionDate,
             Instant createdAt
@@ -381,7 +437,7 @@ public class LoopReportServiceImpl implements LoopReportService {
 
     private record BadRuleAgg(
             Long ruleId,
-            long minAchieve,
+            long avgAchieve,
             long zeroDays,
             LocalDate lastExecutionDate,
             Instant createdAt

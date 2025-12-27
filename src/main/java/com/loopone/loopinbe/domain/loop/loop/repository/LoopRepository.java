@@ -63,4 +63,7 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
     );
+
+    // loopReport 시나리오 검증 테스트
+    Optional<Loop> findFirstByMember_IdAndTitleAndLoopDate(Long memberId, String title, LocalDate loopDate);
 }
