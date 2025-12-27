@@ -94,6 +94,8 @@ public enum ReturnCode {
 
     // ChatMessage
     CHATMESSAGE_NOT_FOUND(404, "CHATMESSAGE_001", "채팅 메시지를 찾을 수 없습니다."),
+    CHATMESSAGE_INVALID_TYPE(400, "CHATMESSAGE_002", "메세지 타입은 CREATE_LOOP 또는 UPDATE_LOOP이여야 합니다"),
+    CHATMESSAGE_EMPTY_CONTENT(400, "CHATMESSAGE_003", "메세지 내용은 필수입니다"),
 
     // Post
     POST_NOT_FOUND(404, "POST_001", "게시글을 찾을 수 없습니다."),

@@ -97,10 +97,13 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     // AI 채팅방 생성
     @Override
     @Transactional
-    public ChatRoomResponse createAiChatRoom(ChatRoomRequest chatRoomRequest, Member member) {
+    public ChatRoomResponse createAiChatRoom(String title, Long userId) {
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
+
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
-                .title(null)
+                .title(title)
                 .member(member)
                 .build();
         // 본인을 맨 앞에 추가

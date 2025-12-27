@@ -1,16 +1,16 @@
 package com.loopone.loopinbe.global.kafka.event.ai;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageSavedResult;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.ai.dto.res.RecommendationsLoop;
 import com.loopone.loopinbe.domain.loop.ai.service.LoopAIService;
-import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
-import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
+import com.loopone.loopinbe.domain.sse.service.SseEmitterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -27,9 +27,10 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Component
 @RequiredArgsConstructor
 public class AiEventConsumer {
+
     private final ObjectMapper objectMapper;
     private final LoopAIService loopAIService;
-    private final ChatWebSocketHandler chatWebSocketHandler;
+    private final SseEmitterService sseEmitterService;
     private final ChatMessageService chatMessageService;
 
     @KafkaListener(topics = OPEN_AI_CREATE_TOPIC, groupId = OPEN_AI_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
@@ -42,78 +43,67 @@ public class AiEventConsumer {
         handleAiEvent(rec, AI_UPDATE_MESSAGE);
     }
 
-    // 공통 흐름 처리
-    private void handleAiEvent(
-            ConsumerRecord<String, String> rec, String message) {
+    private void handleAiEvent(ConsumerRecord<String, String> rec, String defaultMessage) {
         try {
             AiPayload req = objectMapper.readValue(rec.value(), AiPayload.class);
 
-            loopAIService.chat(req).thenAccept(loopRecommend -> {
+            loopAIService.chat(req)
+                    .thenAccept(recommendations -> processAiResponse(req, recommendations, defaultMessage))
+                    .exceptionally(ex -> {
+                        log.error("AI 응답 처리 중 오류 발생: {}", ex.getMessage(), ex);
+                        return null;
+                    });
 
-                // 1) AI 결과 기반 Inbound 메시지 생성
-                ChatMessagePayload inbound = botInboundMessage(req, loopRecommend, message);
-
-                // 2) 저장 (멱등 처리 포함)
-                ChatMessageSavedResult saved = chatMessageService.processInbound(inbound);
-
-                // 3) 브로드캐스트
-                sendWebSocket(saved);
-
-            }).exceptionally(ex -> {
-                log.error("AI 이벤트 처리 중 비동기 오류: {}", ex.getMessage());
-                return null;
-            });
-
+        } catch (JsonProcessingException e) {
+            log.error("AI 이벤트 메시지 파싱 실패: {}", rec.value(), e);
         } catch (Exception e) {
             log.error("AI 이벤트 처리 실패", e);
-            throw new RuntimeException(e);
         }
     }
 
-    private ChatMessagePayload botInboundMessage(AiPayload req, RecommendationsLoop recommendationsLoop,
-                                                 String message) {
+    private void processAiResponse(AiPayload req, RecommendationsLoop recommendations, String message) {
+        // 1) AI 결과 기반 Inbound 메시지 생성
+        ChatMessagePayload inbound = createBotPayload(req, recommendations, message);
+
+        // 2) SSE 전송 (클라이언트에게 먼저 보여줌)
+        sendSseEvent(inbound);
+
+        // 3) DB 저장
+        chatMessageService.processInbound(inbound);
+    }
+
+    private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message) {
         return new ChatMessagePayload(
-                deterministicMessageKey(req),
+                generateDeterministicKey(req),
                 req.chatRoomId(),
-                null,
+                null, // Bot has no memberId
                 message,
                 recommendationsLoop.recommendations(),
                 ChatMessage.AuthorType.BOT,
-                LocalDateTime.now());
+                LocalDateTime.now()
+        );
     }
 
-    // 멱등 키 생성
-    private String deterministicMessageKey(AiPayload req) {
-        // 예시 1) 요청ID 기반 or 사용자 메시지ID 기반: "ai-reply:"+req.userMessageId()
-        return "ai:" + req.requestId();
-    }
-
-    // WebSocket 전송만 수행
-    private void sendWebSocket(ChatMessageSavedResult saved) {
+    private void sendSseEvent(ChatMessagePayload inbound) {
         try {
-            ChatMessageDto resp = ChatMessageDto.builder()
-                    .id(saved.messageId())
-                    .chatRoomId(saved.chatRoomId())
-                    .memberId(saved.memberId())
-                    .content(saved.content())
-                    .recommendations(saved.recommendations())
-                    .authorType(saved.authorType())
-                    .createdAt(saved.createdAt())
+            ChatMessageDto response = ChatMessageDto.builder()
+                    .tempId(inbound.messageKey())
+                    .chatRoomId(inbound.chatRoomId())
+                    .memberId(inbound.memberId())
+                    .content(inbound.content())
+                    .recommendations(inbound.recommendations())
+                    .authorType(inbound.authorType())
+                    .createdAt(inbound.createdAt()) // Payload의 시간과 동기화
                     .build();
 
-            ChatWebSocketPayload out = ChatWebSocketPayload.builder()
-                    .messageType(ChatWebSocketPayload.MessageType.MESSAGE)
-                    .chatRoomId(saved.chatRoomId())
-                    .chatMessageDto(resp)
-                    .lastMessageCreatedAt(resp.getCreatedAt())
-                    .build();
-
-            chatWebSocketHandler.broadcastToRoom(
-                    saved.chatRoomId(),
-                    objectMapper.writeValueAsString(out));
-
+            sseEmitterService.sendToClient(inbound.chatRoomId(), MessageType.MESSAGE, response);
         } catch (Exception e) {
-            log.error("WebSocket 브로드캐스트 실패: {}", e.getMessage());
+            // SSE 전송 실패가 로직 전체 실패로 이어지지 않도록 로그만 기록
+            log.warn("SSE 이벤트 전송 실패 (ChatRoomId: {}): {}", inbound.chatRoomId(), e.getMessage());
         }
+    }
+
+    private String generateDeterministicKey(AiPayload req) {
+        return "ai:" + req.requestId();
     }
 }

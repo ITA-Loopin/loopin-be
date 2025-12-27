@@ -17,7 +17,4 @@ public interface AuthService {
 
     // accessToken 재발급
     LoginResponse refreshToken(String refreshToken, CurrentUserDto currentUser);
-
-    // 채팅방 생성 이벤트
-    void publishChatRoomCreateEvent(Long memberId);
 }

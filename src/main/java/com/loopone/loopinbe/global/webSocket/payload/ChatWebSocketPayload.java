@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.global.webSocket.payload;
 
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,15 +19,6 @@ public class ChatWebSocketPayload {
     @Enumerated(EnumType.STRING)
     @Column(length = 12)
     private MessageType messageType;
-
-    public enum MessageType {
-        MESSAGE,
-        CREATE_LOOP,
-        UPDATE_LOOP,
-        READ,
-        READALL,
-        PING
-    }
 
     private Long memberId;
 
