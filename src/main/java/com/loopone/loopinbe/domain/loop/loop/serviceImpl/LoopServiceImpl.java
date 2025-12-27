@@ -19,16 +19,16 @@ import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
-import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -39,7 +39,6 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
-    private final ChatRoomEventPublisher chatRoomEventPublisher;
 
     // 루프 생성
     @Override
@@ -349,7 +348,7 @@ public class LoopServiceImpl implements LoopService {
 
         // 입력값으로 loopRule 업데이트
         loopRule.setScheduleType(requestDTO.scheduleType());
-        loopRule.setDaysOfWeek(requestDTO.daysOfWeek());
+        loopRule.setDaysOfWeek((Set<DayOfWeek>) requestDTO.daysOfWeek());
         loopRule.setStartDate(requestDTO.startDate());
         loopRule.setEndDate(requestDTO.endDate());
 

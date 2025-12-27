@@ -3,7 +3,6 @@ package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
 import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import com.loopone.loopinbe.domain.account.oauth.ticket.dto.OAuthTicketPayload;
 import com.loopone.loopinbe.domain.account.oauth.ticket.service.OAuthTicketService;
@@ -26,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.CloseStatus;
 
 import java.time.Duration;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -38,7 +36,6 @@ public class AuthServiceImpl implements AuthService {
     private final MemberService memberService;
     private final AccessTokenDenyListService accessTokenDenyListService;
     private final WsSessionRegistry wsSessionRegistry;
-    private final ChatRoomEventPublisher chatRoomEventPublisher;
     private final OAuthTicketService oAuthTicketService;
 
     @Value("${custom.accessToken.expiration}")

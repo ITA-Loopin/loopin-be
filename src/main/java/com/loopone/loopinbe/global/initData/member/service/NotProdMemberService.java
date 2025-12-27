@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.global.initData.service;
+package com.loopone.loopinbe.global.initData.member.service;
 
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
@@ -8,6 +8,7 @@ import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -19,6 +20,7 @@ public class NotProdMemberService {
     private final ChatRoomEventPublisher chatRoomEventPublisher;
 
     // 유저 1 ~ 5 생성
+    @Transactional
     public void createMembers(List<String> memberEmails) {
         List<String> nicknames = List.of("seoul", "incheon", "gangneung", "busan", "jeju");
         for (int i = 0; i < nicknames.size(); i++){

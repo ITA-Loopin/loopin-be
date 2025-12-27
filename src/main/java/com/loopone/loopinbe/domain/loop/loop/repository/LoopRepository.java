@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -47,4 +48,22 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
         WHERE l.loopRule = :loopRule AND l.loopDate < :date
     """)
     List<Loop> findAllByLoopRuleAndLoopDateBefore(@Param("loopRule") LoopRule loopRule, @Param("date") LocalDate date);
+
+    // loopReport에서 조회
+    @EntityGraph(attributePaths = {"loopChecklists", "loopRule", "loopRule.daysOfWeek"})
+    @Query("""
+    select distinct l
+    from Loop l
+    where l.member.id = :memberId
+      and l.loopRule is not null
+      and l.loopDate between :start and :end
+    """)
+    List<Loop> findRepeatLoopsByMemberAndDateBetween(
+            @Param("memberId") Long memberId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    // loopReport 시나리오 검증 테스트
+    Optional<Loop> findFirstByMember_IdAndTitleAndLoopDate(Long memberId, String title, LocalDate loopDate);
 }
