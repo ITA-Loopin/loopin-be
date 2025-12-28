@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.fcm.dto.res.FcmMessageResponse;
 import com.loopone.loopinbe.domain.fcm.service.FcmService;
 import com.loopone.loopinbe.domain.fcm.service.FcmTokenService;
 import com.loopone.loopinbe.domain.notification.converter.NotificationConverter;
+import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
 import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
@@ -16,6 +17,7 @@ import com.loopone.loopinbe.domain.notification.service.NotificationService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.kafka.event.fcm.FcmEventPublisher;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,16 +37,16 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationConverter notificationConverter;
     private final ObjectMapper objectMapper;
     private final FcmTokenService fcmTokenService;
-    private final FcmService fcmService;
+    private final FcmEventPublisher fcmEventPublisher;
 
     // Kafka 수신 메시지 저장 & FCM 전송
     @Override
     @Transactional
     public void createAndNotifyFromMessage(String message, String title) {
-        // 1) JSON → 엔티티
-        final Notification notification;
+        Notification notification;
         try {
-            notification = objectMapper.readValue(message, Notification.class);
+            NotificationPayload payload = objectMapper.readValue(message, NotificationPayload.class);
+            notification = notificationConverter.toNotification(payload, title);
         } catch (Exception e) {
             // 역직렬화 실패는 재시도해도 의미 없음 → 비재시도 예외로 래핑해도 좋음
             log.error("Failed to deserialize notification message: {}", message, e);
@@ -63,19 +65,17 @@ public class NotificationServiceImpl implements NotificationService {
                         log.warn("FCM token not found for receiverId: {}", notification.getReceiverId());
                         return;
                     }
-                    NotificationResponse notificationResponse =
-                            notificationConverter.toNotificationResponse(notification);
-
+                    NotificationResponse notificationResponse = notificationConverter.toNotificationResponse(notification);
                     String bodyJson = objectMapper.writeValueAsString(notificationResponse);
-
+                    String eventId = "notif:" + notification.getId();
                     FcmMessageResponse fcmMessageResponse = FcmMessageResponse.builder()
+                            .eventId(eventId)
                             .targetToken(fcmToken)
                             .title(title)
-                            .body(bodyJson) // JSON 문자열
+                            .body(bodyJson)
                             .build();
-                    fcmService.sendMessageTo(fcmMessageResponse);
+                    fcmEventPublisher.publishFcm(fcmMessageResponse);
                 } catch (Exception ex) {
-                    // 커밋 이후의 실패는 재시도 정책,여기서는 로깅만
                     log.error("Failed to send FCM after commit. notificationId={}", notification.getId(), ex);
                 }
             }

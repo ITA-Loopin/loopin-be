@@ -16,6 +16,7 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepo
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
+import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -30,11 +31,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Objects;
+
+import static com.loopone.loopinbe.global.constants.KafkaKey.FOLLOW_NOTIFICATION_TOPIC;
 
 @Slf4j
 @Service
@@ -199,18 +204,22 @@ public class MemberServiceImpl implements MemberService {
                 .followRec(followRec)
                 .build();
         memberFollowReqRepository.save(memberFollowReq);
-        // 팔로우 요청 이벤트 생성
-        Notification notification = Notification.builder()
-                .senderId(followReq.getId())
-                .senderNickname(followReq.getNickname())
-                .senderProfileUrl(followReq.getProfileImageUrl())
-                .receiverId(followRec.getId())
-                .objectId(memberFollowReq.getId())
-                .content("님이 팔로우를 요청하였습니다.")
-                .targetObject(Notification.TargetObject.Follow)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationEventPublisher.publishFollowRequest(notification);
+        NotificationPayload payload = new NotificationPayload(
+                followReq.getId(),
+                followReq.getNickname(),
+                followReq.getProfileImageUrl(),
+                followRec.getId(),
+                memberFollowReq.getId(),
+                "님이 팔로우를 요청하였습니다.",
+                Notification.TargetObject.Follow
+        );
+        // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationEventPublisher.publishNotification(payload, FOLLOW_NOTIFICATION_TOPIC);
+            }
+        });
     }
 
     // 팔로우 요청 취소하기
@@ -240,18 +249,22 @@ public class MemberServiceImpl implements MemberService {
                 .followed(receiver)
                 .build();
         memberFollowRepository.save(memberFollow);
-        // 팔로우 수락 이벤트 생성
-        Notification notification = Notification.builder()
-                .senderId(currentUser.id())
-                .senderNickname(currentUser.nickname())
-                .senderProfileUrl(currentUser.profileImageUrl())
-                .receiverId(memberId)
-                .objectId(memberFollow.getId())
-                .content("님이 팔로우 요청을 수락하였습니다.")
-                .targetObject(Notification.TargetObject.Follow)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationEventPublisher.publishFollowRequest(notification);
+        NotificationPayload payload = new NotificationPayload(
+                currentUser.id(),              // 수락한 사람(=receiver)이 sender
+                currentUser.nickname(),
+                currentUser.profileImageUrl(),
+                memberId,                      // requester에게 알림
+                memberFollow.getId(),
+                "님이 팔로우 요청을 수락하였습니다.",
+                Notification.TargetObject.Follow
+        );
+        // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationEventPublisher.publishNotification(payload, FOLLOW_NOTIFICATION_TOPIC);
+            }
+        });
     }
 
     // 팔로우 요청 거절하기
