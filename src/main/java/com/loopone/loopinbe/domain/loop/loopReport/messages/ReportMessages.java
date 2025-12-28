@@ -27,4 +27,3 @@ public final class ReportMessages {
         루프를 추가하러 가볼까요?
         """.stripTrailing();
 }
-

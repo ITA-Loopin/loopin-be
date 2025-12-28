@@ -25,6 +25,7 @@ public class KafkaConsumerConfig {
         var handler = new DefaultErrorHandler(dlpr, backoff);
         // 업무상 재시도 무의미한 예외는 DLT로 빠르게 이동
         handler.addNotRetryableExceptions(ServiceException.class);
+        handler.addNotRetryableExceptions(IllegalArgumentException.class);
         return handler;
     }
 
@@ -35,7 +36,7 @@ public class KafkaConsumerConfig {
     ) {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler); // ★ 여기!
+        factory.setCommonErrorHandler(errorHandler);
         // 필요시 ack 모드, 동시성, 배치 소비 등 추가 설정
         return factory;
     }

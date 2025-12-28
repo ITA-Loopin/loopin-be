@@ -42,6 +42,7 @@ public class LoopReportServiceImpl implements LoopReportService {
     public LoopReportResponse getLoopReport(CurrentUserDto currentUser) {
         Long memberId = currentUser.id();
         LocalDate today = LocalDate.now();
+        String userName = currentUser.nickname();
 
         // ---- 최근 10일(오늘 제외): [today-10, today-1]
         LocalDate tenStart = today.minusDays(10);
@@ -49,7 +50,7 @@ public class LoopReportServiceImpl implements LoopReportService {
         List<Loop> tenDayLoops = loopRepository.findRepeatLoopsByMemberAndDateBetween(memberId, tenStart, tenEnd);
         Long tenDayAvgPercent = calcAverageAchievePercentOrNull(tenDayLoops);
         ReportState loopReportState = getReportState(tenDayAvgPercent);
-        String reportStateMessage = getReportStateMessage(loopReportState);
+        String reportStateMessage = getReportStateMessage(loopReportState, userName);
 
         // ---- 최근 7일(오늘 제외): [today-7, today-1]
         LocalDate sevenStart = today.minusDays(7);
@@ -391,13 +392,20 @@ public class LoopReportServiceImpl implements LoopReportService {
     }
 
     // 루프리포트 상태에 따른 메시지 매핑
-    private String getReportStateMessage(ReportState state) {
-        return switch (state) {
+    private String getReportStateMessage(ReportState state, String userName) {
+        String base = switch (state) {
             case GOOD -> ReportMessages.GOOD;
             case OK -> ReportMessages.OK;
             case HARD -> ReportMessages.HARD;
             case NONE -> ReportMessages.NONE;
         };
+        return applyUserName(base, userName);
+    }
+
+    private String applyUserName(String message, String userName) {
+        if (message == null) return null;
+        if (userName == null || userName.isBlank()) return message; // 이름 없으면 원본 유지
+        return message.replace("루핑이", userName); // "루핑이"만 사용자명으로 치환
     }
 
     // DetailReportState 매핑 로직
