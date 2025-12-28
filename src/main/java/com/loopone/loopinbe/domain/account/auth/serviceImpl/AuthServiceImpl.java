@@ -3,7 +3,6 @@ package com.loopone.loopinbe.domain.account.auth.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.req.LoginRequest;
 import com.loopone.loopinbe.domain.account.auth.dto.res.LoginResponse;
-import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import com.loopone.loopinbe.domain.account.oauth.ticket.dto.OAuthTicketPayload;
 import com.loopone.loopinbe.domain.account.oauth.ticket.service.OAuthTicketService;
 import com.loopone.loopinbe.global.security.JwtTokenProvider;

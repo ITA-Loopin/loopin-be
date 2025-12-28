@@ -9,31 +9,28 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+import static com.loopone.loopinbe.global.constants.KafkaKey.*;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class NotificationEventConsumer {
-
     private final NotificationService notificationService;
-
-    private final Map<String, NotificationMeta> notificationMetaMap = Map.of(
-            "follow-topic",  new NotificationMeta("팔로우 알림")
+    private static final Map<String, String> TOPIC_TITLE_MAP = Map.of(
+            FOLLOW_NOTIFICATION_TOPIC, "팔로우 알림"
     );
 
-    @KafkaListener(topics = {"follow-topic"}, groupId = "1")
-    public void consume(ConsumerRecord<String, String> record) {
-        String topic = record.topic();
-        String message = record.value();
-        NotificationMeta meta = notificationMetaMap.get(topic);
-
-        if (meta == null) {
-            // 알 수 없는 토픽이면 처리 불가 → 예외를 던져서 DLT로 유도하는 것도 방법
-            log.error("Unknown topic received: {}", topic);
-            throw new IllegalArgumentException("Unknown topic: " + topic);
+    @KafkaListener(
+            topics = { FOLLOW_NOTIFICATION_TOPIC },
+            groupId = NOTIFICATION_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER
+    )
+    public void consumeNotification(ConsumerRecord<String, String> rec) {
+        final String topic = rec.topic();
+        final String title = TOPIC_TITLE_MAP.get(topic);
+        if (title == null) { // 알 수 없는 토픽이면 "실패"로 처리해서 ErrorHandler가 재시도/ DL(T)로 보내게 유도
+            throw new IllegalArgumentException("Unknown notification topic: " + topic);
         }
-
-        // 비즈니스는 서비스로 위임
-        notificationService.createAndNotifyFromMessage(message, meta.title());
+        // 메시지 저장 + 커밋 후 FCM 발송은 서비스에서 처리
+        notificationService.createAndNotifyFromMessage(rec.value(), title);
     }
-    private record NotificationMeta(String title) {}
 }

@@ -20,7 +20,6 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 public class ChatRoomEventConsumer {
     private final ObjectMapper objectMapper;
     private final ChatRoomService chatRoomService;
-    private final MemberRepository memberRepository;
 
     @KafkaListener(topics = CREATE_AI_CHATROOM_TOPIC, groupId = AI_CHATROOM_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
     public void consumeCreateChatRoom(ConsumerRecord<String, String> rec) {

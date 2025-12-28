@@ -27,7 +27,6 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Component
 @RequiredArgsConstructor
 public class AiEventConsumer {
-
     private final ObjectMapper objectMapper;
     private final LoopAIService loopAIService;
     private final SseEmitterService sseEmitterService;
