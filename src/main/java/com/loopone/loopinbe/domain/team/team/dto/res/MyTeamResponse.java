@@ -1,11 +1,8 @@
 package com.loopone.loopinbe.domain.team.team.dto.res;
 
-import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.enums.TeamCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
-
-import java.time.LocalDate;
 
 @Builder
 @Schema(description = "내 팀 조회를 위한 응답 DTO")

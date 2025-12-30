@@ -4,8 +4,6 @@ import com.loopone.loopinbe.domain.team.team.enums.TeamCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
-import java.time.LocalDate;
-
 @Builder
 @Schema(description = "모집 중인 팀 루프 목록 응답 DTO")
 public record RecruitingTeamResponse(
