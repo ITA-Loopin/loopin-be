@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
+
 @Entity
 @Setter
 @Getter
@@ -27,5 +29,5 @@ public class ChatRoomMember extends BaseEntity {
     @JoinColumn(name = "chat_room_id", nullable = false)
     private ChatRoom chatRoom;
 
-    private Long lastReadMessageId;
+    private Instant lastReadAt;
 }

@@ -6,9 +6,9 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 
 // AI 요청 페이로드 (필요 최소)
 public record AiPayload(
-        String requestId,
+        String clientMessageId,
         Long chatRoomId,
-        Long userMessageId,
+        String userMessageId,
         Long userId,
         String userContent,
         LoopDetailResponse loopDetailResponse,

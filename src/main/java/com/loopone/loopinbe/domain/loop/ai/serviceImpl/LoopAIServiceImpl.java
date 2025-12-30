@@ -40,7 +40,7 @@ public class LoopAIServiceImpl implements LoopAIService {
 
     @Override
     public CompletableFuture<RecommendationsLoop> chat(AiPayload request) {
-        log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
+        log.info("OpenAI 요청 처리 시작: userMessageId={}", request.userMessageId());
         String prompt;
 
         if (request.loopDetailResponse() != null) {
@@ -69,9 +69,9 @@ public class LoopAIServiceImpl implements LoopAIService {
                 .map(node -> node.get("choices").get(0).get("message").get("content").asText())
                 .map(this::parseToRecommendationsLoop)
                 .doOnNext(parsed -> {
-                    redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.requestId(), parsed,
+                    redisTemplate.opsForValue().set(OPEN_AI_RESULT_KEY + request.userMessageId(), parsed,
                             Duration.ofMinutes(10));
-                    log.info("OpenAI 결과 Redis에 캐시 완료 : {}", request.requestId());
+                    log.info("OpenAI 결과 Redis에 캐시 완료 : {}", request.userMessageId());
                 })
                 .doOnError(err -> log.error("OpenAI 호출 중 오류 발생: {}", err.getMessage()))
                 .toFuture();

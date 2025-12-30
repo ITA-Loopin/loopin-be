@@ -2,7 +2,7 @@ package com.loopone.loopinbe.domain.chat.chatMessage.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
@@ -25,8 +25,8 @@ public class ChatMessageController {
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Operation(summary = "채팅방 과거 메시지 조회", description = "AI채팅방의 과거 메시지를 조회합니다.(기본설정: page=0, size=20)")
     @GetMapping("/{chatRoomId}")
-    public ApiResponse<List<ChatMessageDto>> findByChatRoomId(@ModelAttribute ChatMessagePage request,
-                                                              @PathVariable("chatRoomId") Long chatRoomId, @CurrentUser CurrentUserDto currentUser) {
+    public ApiResponse<List<ChatMessageResponse>> findByChatRoomId(@ModelAttribute ChatMessagePage request,
+                                                                   @PathVariable("chatRoomId") Long chatRoomId, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
         return ApiResponse.success(chatMessageService.findByChatRoomId(chatRoomId, pageable, currentUser));
     }
@@ -34,8 +34,8 @@ public class ChatMessageController {
     // 채팅방 메시지 검색(내용) [참여자 권한]
     @Operation(summary = "채팅방 메시지 검색(내용)", description = "AI채팅방에서 채팅방 메시지를 검색합니다.")
     @GetMapping("/{chatRoomId}/search")
-    public ApiResponse<List<ChatMessageDto>> searchChatMessage(@ModelAttribute ChatMessagePage request, @PathVariable("chatRoomId") Long chatRoomId,
-                                                               @RequestParam("keyword") String keyword, @CurrentUser CurrentUserDto currentUser) {
+    public ApiResponse<List<ChatMessageResponse>> searchChatMessage(@ModelAttribute ChatMessagePage request, @PathVariable("chatRoomId") Long chatRoomId,
+                                                                    @RequestParam("keyword") String keyword, @CurrentUser CurrentUserDto currentUser) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
         return ApiResponse.success(chatMessageService.searchByKeyword(chatRoomId, keyword, pageable, currentUser));
     }

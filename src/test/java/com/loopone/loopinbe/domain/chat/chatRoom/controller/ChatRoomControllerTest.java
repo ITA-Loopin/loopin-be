@@ -1,9 +1,9 @@
-package com.loopone.loopinbe.domain.account.chat.chatroom.controller;
+package com.loopone.loopinbe.domain.chat.chatroom.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentResolver;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatRoom.controller.ApiV1ChatRoomController;
+import com.loopone.loopinbe.domain.chat.chatRoom.controller.ChatRoomController;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.config.SecurityConfig;
@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(
-        controllers = ApiV1ChatRoomController.class,
+        controllers = ChatRoomController.class,
         excludeFilters = {
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
                         JwtAuthenticationFilter.class,     // ← 보안 필터 컴포넌트 제외
@@ -51,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 )
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
-class ApiV1ChatRoomControllerTest {
+class ChatRoomControllerTest {
     @MockitoBean
     CurrentUserArgumentResolver currentUserArgumentResolver;
     @Autowired
@@ -61,7 +61,7 @@ class ApiV1ChatRoomControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ApiV1ChatRoomController(chatRoomService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ChatRoomController(chatRoomService))
                 .setCustomArgumentResolvers(currentUserArgumentResolver)
                 .build();
 
