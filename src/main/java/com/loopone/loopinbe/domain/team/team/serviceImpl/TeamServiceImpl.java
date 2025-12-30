@@ -93,7 +93,7 @@ public class TeamServiceImpl implements TeamService {
         LocalDate today = LocalDate.now();
 
         //오늘 팀 전체 루프 조회
-        List<TeamLoop> todayLoops = teamLoopRepository.findByTeamAndLoopdate(team, today);
+        List<TeamLoop> todayLoops = teamLoopRepository.findByTeamAndLoopDate(team, today);
 
         //팀 루프 통계 계산
         int totalLoopCount = todayLoops.size();

@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface TeamLoopRepository extends JpaRepository<TeamLoop, Long> {
 
-    List<TeamLoop> findByTeamAndLoopdate(Team team, LocalDate loopDate);
+    List<TeamLoop> findByTeamAndLoopDate(Team team, LocalDate loopDate);
 
     @Query("""
         SELECT tl
