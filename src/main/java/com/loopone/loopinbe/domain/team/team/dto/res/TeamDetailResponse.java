@@ -3,7 +3,8 @@ package com.loopone.loopinbe.domain.team.team.dto.res;
 import com.loopone.loopinbe.domain.team.team.enums.TeamCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
-import org.gradle.internal.impldep.org.joda.time.LocalDate;
+
+import java.time.LocalDate;
 
 @Builder
 @Schema(description = "팀 상세 정보 응답 DTO")

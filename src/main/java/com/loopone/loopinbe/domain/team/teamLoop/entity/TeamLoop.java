@@ -55,5 +55,5 @@ public class TeamLoop extends BaseEntity {
 
     @OneToMany(mappedBy = "teamLoop", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<TeamLoopChecklist> teamLoopmemberChecks = new ArrayList<>();
+    private List<TeamLoopChecklist> teamLoopChecks = new ArrayList<>();
 }
