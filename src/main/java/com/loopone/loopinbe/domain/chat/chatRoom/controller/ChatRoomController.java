@@ -2,7 +2,6 @@ package com.loopone.loopinbe.domain.chat.chatRoom.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.CreateChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/rest-api/v1/chat-room")
 @Tag(name = "ChatRoom", description = "채팅방 API")
-public class ApiV1ChatRoomController {
+public class ChatRoomController {
     private final ChatRoomService chatRoomService;
 
     @GetMapping
