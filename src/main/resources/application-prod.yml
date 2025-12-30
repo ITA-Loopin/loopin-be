@@ -19,6 +19,7 @@ spring:
     mongodb:
       uri: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@loopin-mongodb:27017/meta_db?authSource=admin
       database: meta_db
+      auto-index-creation: true
   kafka:
     bootstrap-servers: loopin-redpanda:9092
 

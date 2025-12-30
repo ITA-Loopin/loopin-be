@@ -1,11 +1,7 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.repository;
 
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,20 +12,6 @@ import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
-    // 사용자가 참여 중인 채팅방 목록을 최신 메시지 순으로 조회
-    @EntityGraph(attributePaths = {"chatRoomMembers.member"})
-    @Query("""
-        SELECT cr
-        FROM ChatRoom cr
-        JOIN cr.chatRoomMembers crm
-        WHERE crm.member = :member
-        ORDER BY COALESCE(
-            (SELECT MAX(cm.createdAt) FROM ChatMessage cm WHERE cm.chatRoom = cr),
-            cr.createdAt
-        ) DESC
-    """)
-    Page<ChatRoom> findChatRoomsByMemberOrderByLatestMessage(Pageable pageable, @Param("member") Member member);
-
     // 현재 사용자가 otherMember와 이미 1대1 채팅방이 존재하는지 확인
     @Query("SELECT EXISTS (" +
             "    SELECT 1 FROM ChatRoom c " +
@@ -71,7 +53,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     // 해당 채팅방의 참여자id 리스트 가져오기
     @Query("SELECT crm.member.id FROM ChatRoomMember crm WHERE crm.chatRoom.id = :chatRoomId")
-    List<Long> findParticipantMemberIds(Long chatRoomId);
+    List<Long> findParticipantMemberIds(@Param("chatRoomId") Long chatRoomId);
 
     // 참여자 권한 검증용 쿼리
     @Query("""
@@ -80,4 +62,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
         WHERE m.chatRoom.id = :chatRoomId AND m.member.id = :memberId
     """)
     boolean existsMember(@Param("chatRoomId") Long chatRoomId, @Param("memberId") Long memberId);
+
+    // AI 채팅방 여부 검증
+    @Query("select cr.isBotRoom from ChatRoom cr where cr.id = :chatRoomId")
+    Boolean findIsBotRoom(@Param("chatRoomId") Long chatRoomId);
 }
