@@ -1,0 +1,31 @@
+package com.loopone.loopinbe.domain.team.teamLoop.entity;
+
+import com.loopone.loopinbe.global.jpa.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@SuperBuilder
+public class TeamLoopMemberCheck extends BaseEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // 누구의 진행 기록인지
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_progress_id")
+    private TeamLoopMemberProgress memberProgress;
+
+    // 어떤 체크리스트 항목에 대한 체크인지
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checklist_id")
+    private TeamLoopChecklist checklist;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isChecked = false;
+}
