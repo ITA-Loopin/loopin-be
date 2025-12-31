@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.ChatRoomPayload;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class NotProdMemberService {
     private final MemberService memberService;
-    private final ChatRoomEventPublisher chatRoomEventPublisher;
+    private final ChatRoomService chatRoomService;
 
     // 유저 1 ~ 5 생성
     @Transactional
@@ -29,19 +30,8 @@ public class NotProdMemberService {
                     .email("user" + (i + 1) + "@example.com")
                     .build();
             Member member = memberService.regularSignUp(memberCreateRequest);
-            publishChatRoomCreateEvent(member.getId());
+            chatRoomService.createAiChatRoom(null, member.getId());
             memberEmails.add(member.getEmail());
         }
-    }
-
-    // ----------------- 헬퍼 메서드 -----------------
-
-    // 채팅방 생성 이벤트
-    public void publishChatRoomCreateEvent(Long memberId) {
-        ChatRoomPayload payload = new ChatRoomPayload(
-                UUID.randomUUID().toString(),
-                memberId
-        );
-        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 }
