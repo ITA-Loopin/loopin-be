@@ -3,10 +3,12 @@ package com.loopone.loopinbe.domain.chat.chatRoom.repository;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -66,4 +68,26 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     // AI 채팅방 여부 검증
     @Query("select cr.isBotRoom from ChatRoom cr where cr.id = :chatRoomId")
     Boolean findIsBotRoom(@Param("chatRoomId") Long chatRoomId);
+
+    // lastMessageAt을 더 최신인 경우에만 갱신 (역순 도착 방지)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update ChatRoom c
+           set c.lastMessageAt = :messageAt
+         where c.id = :chatRoomId
+           and (c.lastMessageAt is null or c.lastMessageAt < :messageAt)
+    """)
+    int updateLastMessageAtIfNewer(@Param("chatRoomId") Long chatRoomId, @Param("messageAt") Instant messageAt);
+
+    // ChatRoomConverter에서 필요 (N+1 방지)
+    @Query("""
+    select crm
+    from ChatRoomMember crm
+    join fetch crm.chatRoom cr
+    join fetch cr.member owner
+    left join fetch cr.loop
+    where crm.member.id = :memberId
+    order by cr.lastMessageAt desc
+""")
+    List<ChatRoomMember> findMyChatRooms(@Param("memberId") Long memberId);
 }

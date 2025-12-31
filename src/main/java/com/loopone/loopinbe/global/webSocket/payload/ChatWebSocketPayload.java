@@ -7,8 +7,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -16,22 +18,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatWebSocketPayload {
-    @Enumerated(EnumType.STRING)
-    @Column(length = 12)
     private MessageType messageType;
-
-    private Long memberId;
-
+    // 어떤 채팅방에 브로드캐스트할지 식별용 (MESSAGE(파일) / READ_UP_TO 공통)
     private Long chatRoomId;
 
     // MESSAGE일 때만 존재
+    private UUID clientMessageId;     // UUID (멱등키, UNIQUE)
     private ChatMessageResponse chatMessageResponse;
-    private String content;
-    private LocalDateTime lastMessageCreatedAt;
 
-    // READ일 때만 존재
-    private Long messageId;
-
-    // READALL일 때만 존재
-    private List<Long> readMessageIdList;
+    // READ_UP_TO일 때만 존재
+    private Long memberId;
+    private Instant lastReadAt;
 }
