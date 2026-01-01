@@ -22,6 +22,19 @@ spring:
       auto-index-creation: true
   kafka:
     bootstrap-servers: loopin-redpanda:9092
+  ai:
+    openai:
+      api-key: ${GPT_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+    gemini:
+      api-key: ${GEMINI_API_KEY}
+      base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+      chat:
+        options:
+          model: gemini-2.5-flash
 
 app:
   cookie:
@@ -44,6 +57,28 @@ logging:
 
 springdoc:
   server-url: https://api.loopin.co.kr
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      open-ai:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+      gemini:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
 
 server:
   forward-headers-strategy: framework
