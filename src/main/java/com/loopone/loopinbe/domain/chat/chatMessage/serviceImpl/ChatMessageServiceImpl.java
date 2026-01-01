@@ -25,17 +25,22 @@ import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.kafka.event.ai.AiEventPublisher;
+import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
+import com.loopone.loopinbe.global.s3.S3Service;
+import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.CREATE_LOOP;
-import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.UPDATE_LOOP;
+import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
 
@@ -49,6 +54,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final AiEventPublisher aiEventPublisher;
     private final LoopMapper loopMapper;
     private final SseEmitterService sseEmitterService;
+    private final S3Service s3Service;
+    private final ChatMessageEventPublisher chatMessageEventPublisher;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -60,9 +67,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             checkPageSize(pageable.getPageSize());
             // 참여자 검증
             boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-            if (!memberExists) {
-                throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
-            }
+            if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
             Pageable sortedPageable = PageRequest.of(
                     pageable.getPageNumber(),
                     pageable.getPageSize(),
@@ -92,9 +97,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         checkPageSize(pageable.getPageSize());
         // 참여자 검증
         boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-        if (!memberExists) {
-            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
-        }
+        if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
@@ -120,24 +123,25 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         // 3) Mongo Upsert (멱등)
         ChatMessage saved = chatMessageMongoRepository.upsertInbound(
                 in.id(),
-                in.clientMessageId(),
+                in.clientMessageId().toString(),
                 in.chatRoomId(),
                 in.memberId(),
                 in.content(),
-                in.imageUrls(),
+                in.attachmentUrls(),
                 in.recommendations(),
                 in.authorType(),
                 in.createdAt(),
                 in.modifiedAt()
         );
         log.info("Mongo 단일 저장 완료: id={}", in.id());
+        chatRoomRepository.updateLastMessageAtIfNewer(saved.getChatRoomId(), saved.getCreatedAt());
         return new ChatMessagePayload(
                 saved.getId(),
                 saved.getClientMessageId(),
                 saved.getChatRoomId(),
                 in.memberId(),
                 saved.getContent(),
-                saved.getImageUrls(),
+                saved.getAttachmentUrls(),
                 saved.getRecommendations(),
                 saved.getAuthorType(),
                 isBotRoom,
@@ -159,9 +163,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     public void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser) {
         // 참여자 검증
         boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-        if (!memberExists) {
-            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
-        }
+        if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
 
         if (request.messageType() != CREATE_LOOP && request.messageType() != UPDATE_LOOP) {
             throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
@@ -170,11 +172,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
-        ChatMessagePayload payload = toChatMessagePayload(request.clientMessageId().toString(), chatRoomId, currentUser.id(), request.content());
-
+        ChatMessagePayload payload = toChatMessagePayload(request.clientMessageId(), chatRoomId, currentUser.id(), request.content(), null);
         ChatMessagePayload saved = processInbound(payload);
 
-        sseEmitterService.sendToClient(chatRoomId, MessageType.MESSAGE, saved);
+        // ChatMessagePayload -> ChatMessageResponse
+        Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
+        ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+
+        sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
 
         Loop loop = chatRoom.getLoop();
         LoopDetailResponse loopDetailResponse = (loop != null) ? loopMapper.toDetailResponse(loop) : null;
@@ -184,6 +189,43 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         } else {
             publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
         }
+    }
+
+    // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
+    @Override
+    @Transactional
+    public void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
+        // 참여자 검증 (통일)
+        boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
+        if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        // 파일 검증
+        if (attachments == null || attachments.isEmpty() || attachments.size() > 5) {
+            throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
+        }
+        // S3 업로드
+        List<String> attachmentUrls = new ArrayList<>();
+        for (MultipartFile file : attachments) {
+            if (file == null || file.isEmpty()) continue;
+            try {
+                String imageUrl = s3Service.uploadImageFile(file, "chat-images");
+                attachmentUrls.add(imageUrl);
+            } catch (IOException e) {
+                log.error("S3 upload failed. chatRoomId={}, userId={}, fileName={}",
+                        chatRoomId, currentUser.id(), file.getOriginalFilename(), e);
+                throw new ServiceException(ReturnCode.INTERNAL_ERROR);
+            }
+        }
+        if (attachmentUrls.isEmpty()) throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
+        // Payload 생성
+        ChatMessagePayload payload = toChatMessagePayload(clientMessageId, chatRoomId, currentUser.id(), null, attachmentUrls);
+        ChatMessagePayload saved = processInbound(payload);
+
+        // ChatMessagePayload -> ChatMessageResponse
+        Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
+        ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+
+        // 파일 메시지 생성 이벤트 발행
+        publishFileMessage(chatRoomId, saved.clientMessageId(), response);
     }
 
     // ----------------- 헬퍼 메서드 -----------------
@@ -196,7 +238,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private ChatMessagePayload toChatMessagePayload(String clientMessageId, Long chatRoomId, Long userId, String content) {
+    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<String> attachmentUrls) {
         String id = "u:" + clientMessageId;
         return new ChatMessagePayload(
                 id,
@@ -204,7 +246,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 chatRoomId,
                 userId,
                 content,
-                null,
+                attachmentUrls,
                 null,
                 ChatMessage.AuthorType.USER,
                 true,
@@ -222,5 +264,15 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 loopDetailResponse,
                 java.time.Instant.now());
         aiEventPublisher.publishAiRequest(req, topic);
+    }
+
+    private void publishFileMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
+        ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                .messageType(MessageType.MESSAGE)
+                .chatRoomId(chatRoomId)
+                .clientMessageId(clientMessageId)
+                .chatMessageResponse(response)
+                .build();
+        chatMessageEventPublisher.publishWsEvent(out);
     }
 }

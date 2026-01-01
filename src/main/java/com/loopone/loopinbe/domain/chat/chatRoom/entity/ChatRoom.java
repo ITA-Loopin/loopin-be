@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,8 @@ public class ChatRoom extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean isBotRoom = true;
+
+    private Instant lastMessageAt;
 
     public void selectLoop(Loop loop) {
         this.loop = loop;

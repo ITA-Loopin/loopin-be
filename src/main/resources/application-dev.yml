@@ -22,6 +22,19 @@ spring:
       auto-index-creation: true
   kafka:
     bootstrap-servers: localhost:9092
+  ai:
+    openai:
+      api-key: ${GPT_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+    gemini:
+      api-key: "AIzaSyAxGsj0S8m9bDy1fxYxE9POD-8N5dwVoz8"
+      base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+      chat:
+        options:
+          model: gemini-2.5-flash
 #  flyway:
 #    enabled: true   # 처음 실행할 때는 false, 이후에 true로 변경(flyway 인덱스 생성)
 #    baseline-on-migrate: true   # 그냥 놔둬도됨
@@ -48,3 +61,25 @@ logging:
 
 springdoc:
   server-url: http://localhost:8080
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      open-ai:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+      gemini:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2

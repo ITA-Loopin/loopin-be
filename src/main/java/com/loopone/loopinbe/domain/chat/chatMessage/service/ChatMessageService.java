@@ -6,6 +6,10 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface ChatMessageService {
     // 채팅방 과거 메시지 조회 [참여자 권한]
@@ -22,4 +26,7 @@ public interface ChatMessageService {
 
     // AI 채팅방 메시지 전송
     void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser);
+
+    // 채팅방에서 파일 메시지 전송 [참여자 권한]
+    void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser);
 }

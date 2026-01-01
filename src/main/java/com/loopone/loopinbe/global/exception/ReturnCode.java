@@ -117,6 +117,11 @@ public enum ReturnCode {
     OPEN_AI_JSON_PROCESSING_ERROR(500, "LOOP_009", "OpenAI JSON 직렬화에 실패했습니다."),
     UNKNOWN_SCHEDULE_TYPE(404, "LOOP_010", "올바르지 않은 스케쥴 타입입니다."),
 
+    // Team
+    TEAM_NOT_FOUND(404, "TEAM_001", "팀을 찾을 수 없습니다."),
+    INVALID_REQUEST_TEAM(400, "TEAM_002", "팀 요청문이 올바르지 않습니다"),
+    USER_NOT_IN_TEAM(404, "TEAM_003", "팀원이 아닌 유저가 있습니다"),
+
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
     REQUEST_NOT_FOUND(404, "FOLLOW_002", "팔로우 요청을 찾을 수 없습니다."),

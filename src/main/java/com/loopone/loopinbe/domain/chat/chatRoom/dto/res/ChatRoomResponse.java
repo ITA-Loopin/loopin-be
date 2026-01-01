@@ -1,12 +1,11 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.dto.res;
 
-import com.loopone.loopinbe.domain.account.member.dto.res.SimpleMemberResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -14,8 +13,9 @@ import java.util.List;
 @NoArgsConstructor
 public class ChatRoomResponse {
     private Long id;
-    private Long memberId;
+    private Long ownerId;
     private String title;
     private boolean loopSelect;
-    private List<SimpleMemberResponse> chatRoomMembers;
+    private Instant lastMessageAt;
+    private Instant lastReadAt;
 }

@@ -12,6 +12,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Document(collection = "chat_messages")
 @Getter
@@ -28,7 +29,7 @@ import java.util.List;
         @CompoundIndex(name = "room_content_text_idx", def = "{'chatRoomId': 1, 'content': 'text'}")
 })
 public class ChatMessage extends BaseDocument {
-    private String clientMessageId;
+    private UUID clientMessageId;
 
     private Long chatRoomId;
 
@@ -36,7 +37,7 @@ public class ChatMessage extends BaseDocument {
 
     private String content;
 
-    private List<String> imageUrls;
+    private List<String> attachmentUrls;
 
     private List<LoopCreateRequest> recommendations;
 

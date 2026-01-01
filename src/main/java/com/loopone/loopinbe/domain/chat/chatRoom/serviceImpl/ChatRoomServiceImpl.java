@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -91,7 +92,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
-        return chatRoomConverter.toChatRoomResponse(chatRoom, chatRoomMembers);
+        return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
     }
 
     // AI 채팅방 생성
@@ -100,7 +101,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public ChatRoomResponse createAiChatRoom(String title, Long userId) {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .title(title)
@@ -118,7 +118,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // member에 recentChatRoomId 세팅 후 저장
         member.setRecentChatRoomId(chatRoom.getId());
         memberRepository.save(member);
-        return chatRoomConverter.toChatRoomResponse(chatRoom, chatRoomMembers);
+        return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
     }
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
@@ -159,7 +159,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     public ChatRoomListResponse getChatRooms(Long memberId) {
-        List<ChatRoom> chatRoomList = chatRoomRepository.findByMemberId(memberId);
+        List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
         return chatRoomConverter.toChatRoomListResponse(chatRoomList);
     }
 

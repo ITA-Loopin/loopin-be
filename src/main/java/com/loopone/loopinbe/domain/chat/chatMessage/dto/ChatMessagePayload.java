@@ -5,14 +5,15 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 public record ChatMessagePayload(
         String id,   // UUID
-        String clientMessageId, // UUID (멱등키, UNIQUE)
+        UUID clientMessageId, // UUID (멱등키, UNIQUE)
         Long chatRoomId,
         Long memberId,
         String content,
-        List<String> imageUrls,
+        List<String> attachmentUrls,
         List<LoopCreateRequest> recommendations,
         ChatMessage.AuthorType authorType,
         boolean isBotRoom,
