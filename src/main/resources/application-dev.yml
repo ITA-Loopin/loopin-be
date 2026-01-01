@@ -46,11 +46,7 @@ app:
     domain: ""
 
 fcm:
-  service-account-file: classpath:fcm-service-account.json
-
-openai:
-  api:
-    key: ${GPT_API_KEY}
+  firebase-adminsdk: file:./firebase-adminsdk.json
 
 logging:
   level:

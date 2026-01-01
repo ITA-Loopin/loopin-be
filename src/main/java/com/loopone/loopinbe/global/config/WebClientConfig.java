@@ -15,7 +15,7 @@ import java.time.Duration;
 public class WebClientConfig {
     @Bean
     public WebClient openAiWebClient(
-            @Value("${openai.api.key}") String apiKey
+            @Value("${spring.ai.openai.api-key}") String apiKey
     ) {
         return WebClient.builder()
                 .baseUrl("https://api.openai.com/v1")
