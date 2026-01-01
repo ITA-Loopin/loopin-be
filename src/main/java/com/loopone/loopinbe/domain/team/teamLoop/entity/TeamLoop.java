@@ -55,5 +55,35 @@ public class TeamLoop extends BaseEntity {
 
     @OneToMany(mappedBy = "teamLoop", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<TeamLoopChecklist> teamLoopChecks = new ArrayList<>();
+    private List<TeamLoopChecklist> teamLoopChecklists = new ArrayList<>();
+
+    // 팀 전체 평균 진행률 계산
+    public double calculateTeamProgress() {
+        if (this.memberProgress.isEmpty()) return 0.0;
+        int totalChecklistCount = this.teamLoopChecklists.size();
+        if (totalChecklistCount == 0) return 0.0;
+
+        return this.memberProgress.stream()
+                .mapToDouble(p -> p.calculateProgress(totalChecklistCount)) // Progress 엔티티 메서드 호출
+                .average()
+                .orElse(0.0);
+    }
+
+    // 특정 멤버의 개인 진행률 계산
+    public double calculatePersonalProgress(Long memberId) {
+        int totalChecklistCount = this.teamLoopChecklists.size();
+        if (totalChecklistCount == 0) return 0.0;
+
+        return this.memberProgress.stream()
+                .filter(p -> p.getMember().getId().equals(memberId))
+                .findFirst()
+                .map(p -> p.calculateProgress(totalChecklistCount))
+                .orElse(0.0);
+    }
+
+    // 참여자인지 확인
+    public boolean isParticipating(Long memberId) {
+        return this.memberProgress.stream()
+                .anyMatch(p -> p.getMember().getId().equals(memberId));
+    }
 }

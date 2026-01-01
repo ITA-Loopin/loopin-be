@@ -33,12 +33,12 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         return teamLoops.stream()
                 .map(loop -> {
                     //참여 여부
-                    boolean isParticipating = isParticipating(loop, myId);
+                    boolean isParticipating = loop.isParticipating(myId);
                     //해당 루프의 내 진행률
                     double myProgress = isParticipating ?
-                            calculatePersonalProgress(loop, myId) : 0.0;
+                            loop.calculatePersonalProgress(myId) : 0.0;
                     //해당 루프의 팀 진행률
-                    double teamProgress = calculateTeamLoopAverage(loop);
+                    double teamProgress = loop.calculateTeamProgress();
 
                     return TeamLoopListResponse.builder()
                             .id(loop.getId())

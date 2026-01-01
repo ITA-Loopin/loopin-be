@@ -99,18 +99,18 @@ public class TeamServiceImpl implements TeamService {
         int totalLoopCount = todayLoops.size();
         double teamTotalProgress = todayLoops.isEmpty() ? 0.0 :
                 todayLoops.stream()
-                        .mapToDouble(this::calculateTeamLoopAverage)
+                        .mapToDouble(TeamLoop::calculateTeamProgress)
                         .average().orElse(0.0);
 
         //내 루프 통계 계산
         Long myId = currentUser.id();
         List<TeamLoop> myTeamLoops = todayLoops.stream()
-                .filter(loop -> isParticipating(loop, myId))
+                .filter(loop -> loop.isParticipating(myId))
                 .toList();
         int myTeamLoopCount = myTeamLoops.size();
         double myTotalProgress = myTeamLoops.isEmpty() ? 0.0 :
                 myTeamLoops.stream()
-                        .mapToDouble(loop -> calculatePersonalProgress(loop, myId))
+                        .mapToDouble(loop -> loop.calculatePersonalProgress(myId))
                         .average().orElse(0.0);
 
         return TeamDetailResponse.builder()
@@ -166,44 +166,6 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
 
         teamMemberRepository.saveAll(teamMembers);
-    }
-
-    // 해당 루프의 팀 전체 평균 진행률
-    private double calculateTeamLoopAverage(TeamLoop loop) {
-        List<TeamLoopMemberProgress> allProgresses = loop.getMemberProgress();
-        if (allProgresses.isEmpty()) return 0.0;
-        int totalChecklistCount = loop.getTeamLoopChecks().size();
-        if (totalChecklistCount == 0) return 0.0;
-
-        return allProgresses.stream()
-                .mapToDouble(p -> calculateProgressFromChecks(p, totalChecklistCount))
-                .average().orElse(0.0);
-    }
-
-    // 해당 루프의 나의 진행률
-    private double calculatePersonalProgress(TeamLoop loop, Long memberId) {
-        int totalChecklistCount = loop.getTeamLoopChecks().size();
-        if (totalChecklistCount == 0) return 0.0;
-
-        return loop.getMemberProgress().stream()
-                .filter(p -> p.getMember().getId().equals(memberId))
-                .findFirst()
-                .map(p -> calculateProgressFromChecks(p, totalChecklistCount))
-                .orElse(0.0);
-    }
-
-    //체크리스트 수로 루프의 진행률 계산
-    private double calculateProgressFromChecks(TeamLoopMemberProgress progress, int totalCount) {
-        long checkedCount = progress.getChecks().stream()
-                .filter(TeamLoopMemberCheck::isChecked)
-                .count();
-        return (double) checkedCount / totalCount * 100.0;
-    }
-
-    // 참여 여부 확인
-    private boolean isParticipating(TeamLoop loop, Long memberId) {
-        return loop.getMemberProgress().stream()
-                .anyMatch(p -> p.getMember().getId().equals(memberId));
     }
 
     // ========== 조회 메서드 ==========
