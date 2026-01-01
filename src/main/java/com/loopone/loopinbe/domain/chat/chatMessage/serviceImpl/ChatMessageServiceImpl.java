@@ -12,11 +12,8 @@ import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageMongoRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
-import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
-import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
@@ -36,9 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
@@ -194,7 +189,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
     @Override
     @Transactional
-    public void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
+    public void sendAttachment(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
         // 참여자 검증 (통일)
         boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
         if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
@@ -204,14 +199,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
         // S3 업로드
         List<String> attachmentUrls = new ArrayList<>();
-        for (MultipartFile file : attachments) {
-            if (file == null || file.isEmpty()) continue;
+        for (MultipartFile attachment : attachments) {
+            if (attachment == null || attachment.isEmpty()) continue;
             try {
-                String imageUrl = s3Service.uploadImageFile(file, "chat-images");
+                String imageUrl = s3Service.uploadImageFile(attachment, "chat-images");
                 attachmentUrls.add(imageUrl);
             } catch (IOException e) {
                 log.error("S3 upload failed. chatRoomId={}, userId={}, fileName={}",
-                        chatRoomId, currentUser.id(), file.getOriginalFilename(), e);
+                        chatRoomId, currentUser.id(), attachment.getOriginalFilename(), e);
                 throw new ServiceException(ReturnCode.INTERNAL_ERROR);
             }
         }
@@ -225,7 +220,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
 
         // 파일 메시지 생성 이벤트 발행
-        publishFileMessage(chatRoomId, saved.clientMessageId(), response);
+        publishAttachmentMessage(chatRoomId, saved.clientMessageId(), response);
     }
 
     // ----------------- 헬퍼 메서드 -----------------
@@ -266,7 +261,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         aiEventPublisher.publishAiRequest(req, topic);
     }
 
-    private void publishFileMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
+    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
         ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                 .messageType(MessageType.MESSAGE)
                 .chatRoomId(chatRoomId)

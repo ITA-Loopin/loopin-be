@@ -220,3 +220,41 @@ resource "aws_instance" "ec2_1" {
 ${local.ec2_user_data_base}
 EOF
 }
+
+# S3 버킷 생성
+resource "aws_s3_bucket" "loopin_bucket" {
+  bucket = "loopin-s3-bucket-v1"
+
+  tags = {
+    Name = "${var.prefix}-bucket"
+  }
+}
+
+# 퍼블릭 액세스 차단 해제
+resource "aws_s3_bucket_public_access_block" "public_access" {
+  bucket = aws_s3_bucket.loopin_bucket.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
+# 버킷 정책 적용
+resource "aws_s3_bucket_policy" "bucket_policy" {
+  bucket = aws_s3_bucket.loopin_bucket.id
+
+  depends_on = [aws_s3_bucket_public_access_block.public_access]
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = "*",
+        Action    = "s3:GetObject",
+        Resource  = "${aws_s3_bucket.loopin_bucket.arn}/*"
+      }
+    ]
+  })
+}
