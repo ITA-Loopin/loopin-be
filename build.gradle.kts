@@ -89,6 +89,16 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testAnnotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+
+    // SpringAI
+    implementation("org.springframework.ai:spring-ai-starter-model-openai:1.0.2")
+
+    // Retry
+    implementation("org.springframework.retry:spring-retry")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
+    // Resilience4j
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 }
 
 tasks.withType<Test> {

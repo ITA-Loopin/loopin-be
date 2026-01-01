@@ -8,11 +8,13 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.retry.annotation.EnableRetry;
 
 @EnableScheduling
 @SpringBootApplication
 @EnableConfigurationProperties(OAuthWebProperties.class)
 @ConfigurationPropertiesScan(basePackages = "com.loopone.loopinbe")
+@EnableRetry
 public class LoopinBeApplication {
 
 	public static void main(String[] args) {
