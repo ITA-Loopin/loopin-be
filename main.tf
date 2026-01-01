@@ -100,17 +100,34 @@ resource "aws_route_table_association" "association_3" {
 resource "aws_security_group" "sg_1" {
   name = "${var.prefix}-sg-1"
 
+  # NPM 접속
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "all"
+    description = "NPM admin"
+    from_port   = 81
+    to_port     = 81
+    protocol    = "tcp"
+    cidr_blocks = var.admin_allowed_cidrs
+  }
+
+  # HTTP/HTTPS 오픈
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "all"
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -223,7 +240,7 @@ EOF
 
 # S3 버킷 생성
 resource "aws_s3_bucket" "loopin_bucket" {
-  bucket = "loopin-s3-bucket-v1"
+  bucket = "loopin-bucket-v1"
 
   tags = {
     Name = "${var.prefix}-bucket"
