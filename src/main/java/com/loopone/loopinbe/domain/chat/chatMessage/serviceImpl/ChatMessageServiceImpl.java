@@ -225,7 +225,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
 
         // 파일 메시지 생성 이벤트 발행
-        publishFileMessage(chatRoomId, saved.clientMessageId(), response);
+        publishAttachmentMessage(chatRoomId, saved.clientMessageId(), response);
     }
 
     // ----------------- 헬퍼 메서드 -----------------
@@ -266,7 +266,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         aiEventPublisher.publishAiRequest(req, topic);
     }
 
-    private void publishFileMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
+    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
         ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                 .messageType(MessageType.MESSAGE)
                 .chatRoomId(chatRoomId)
