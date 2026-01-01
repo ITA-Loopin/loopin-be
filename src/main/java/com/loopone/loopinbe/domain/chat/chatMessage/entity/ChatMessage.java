@@ -37,7 +37,7 @@ public class ChatMessage extends BaseDocument {
 
     private String content;
 
-    private List<String> imageUrls;
+    private List<String> attachmentUrls;
 
     private List<LoopCreateRequest> recommendations;
 

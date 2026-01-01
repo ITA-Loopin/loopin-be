@@ -28,5 +28,5 @@ public interface ChatMessageService {
     void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser);
 
     // 채팅방에서 파일 메시지 전송 [참여자 권한]
-    void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> files, CurrentUserDto currentUser);
+    void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser);
 }

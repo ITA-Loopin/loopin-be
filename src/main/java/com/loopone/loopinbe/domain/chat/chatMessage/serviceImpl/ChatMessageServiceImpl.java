@@ -127,7 +127,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 in.chatRoomId(),
                 in.memberId(),
                 in.content(),
-                in.imageUrls(),
+                in.attachmentUrls(),
                 in.recommendations(),
                 in.authorType(),
                 in.createdAt(),
@@ -141,7 +141,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 saved.getChatRoomId(),
                 in.memberId(),
                 saved.getContent(),
-                saved.getImageUrls(),
+                saved.getAttachmentUrls(),
                 saved.getRecommendations(),
                 saved.getAuthorType(),
                 isBotRoom,
@@ -194,30 +194,30 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
     @Override
     @Transactional
-    public void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> files, CurrentUserDto currentUser) {
+    public void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
         // 참여자 검증 (통일)
         boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
         if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         // 파일 검증
-        if (files == null || files.isEmpty() || files.size() > 5) {
+        if (attachments == null || attachments.isEmpty() || attachments.size() > 5) {
             throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
         }
         // S3 업로드
-        List<String> imageUrls = new ArrayList<>();
-        for (MultipartFile file : files) {
+        List<String> attachmentUrls = new ArrayList<>();
+        for (MultipartFile file : attachments) {
             if (file == null || file.isEmpty()) continue;
             try {
                 String imageUrl = s3Service.uploadImageFile(file, "chat-images");
-                imageUrls.add(imageUrl);
+                attachmentUrls.add(imageUrl);
             } catch (IOException e) {
                 log.error("S3 upload failed. chatRoomId={}, userId={}, fileName={}",
                         chatRoomId, currentUser.id(), file.getOriginalFilename(), e);
                 throw new ServiceException(ReturnCode.INTERNAL_ERROR);
             }
         }
-        if (imageUrls.isEmpty()) throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
+        if (attachmentUrls.isEmpty()) throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
         // Payload 생성
-        ChatMessagePayload payload = toChatMessagePayload(clientMessageId, chatRoomId, currentUser.id(), null, imageUrls);
+        ChatMessagePayload payload = toChatMessagePayload(clientMessageId, chatRoomId, currentUser.id(), null, attachmentUrls);
         ChatMessagePayload saved = processInbound(payload);
 
         // ChatMessagePayload -> ChatMessageResponse
@@ -238,7 +238,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<String> imageUrls) {
+    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<String> attachmentUrls) {
         String id = "u:" + clientMessageId;
         return new ChatMessagePayload(
                 id,
@@ -246,7 +246,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 chatRoomId,
                 userId,
                 content,
-                imageUrls,
+                attachmentUrls,
                 null,
                 ChatMessage.AuthorType.USER,
                 true,

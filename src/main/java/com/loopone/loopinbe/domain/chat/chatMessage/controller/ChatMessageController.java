@@ -2,7 +2,7 @@ package com.loopone.loopinbe.domain.chat.chatMessage.controller;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.FileRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.AttachmentRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
@@ -57,14 +57,14 @@ public class ChatMessageController {
         return ApiResponse.success();
     }
 
-    // 채팅방에서 파일 메시지 전송 [참여자 권한]
-    @PostMapping(value ="/files/{chatRoomId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // 채팅방에서 첨부 파일 전송 [참여자 권한]
+    @PostMapping(value ="/attachments/{chatRoomId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "채팅방에 파일 메시지 전송", description = "채팅방에 파일 메시지를 전송합니다.")
     public ApiResponse<Void> sendFile(@PathVariable("chatRoomId") Long chatRoomId,
-                                      @RequestPart("request") @Valid FileRequest fileRequest,
-                                      @RequestPart(value = "files", required = false) List<MultipartFile> files,
+                                      @RequestPart("request") @Valid AttachmentRequest attachmentRequest,
+                                      @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments,
                                       @CurrentUser CurrentUserDto currentUser) {
-        chatMessageService.sendFile(chatRoomId, fileRequest.clientMessageId(), files, currentUser);
+        chatMessageService.sendFile(chatRoomId, attachmentRequest.clientMessageId(), attachments, currentUser);
         return ApiResponse.success();
     }
 }
