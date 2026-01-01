@@ -41,7 +41,7 @@ public abstract class AbstractAiProvider implements AiProvider {
         String prompt = buildPrompt(payload);
         String raw = callModel(prompt);
         RecommendationsLoop parsed = parse(raw);
-        cache(payload.clientMessageId(), parsed);
+        cache(payload.clientMessageId().toString(), parsed);
         return parsed;
     }
 

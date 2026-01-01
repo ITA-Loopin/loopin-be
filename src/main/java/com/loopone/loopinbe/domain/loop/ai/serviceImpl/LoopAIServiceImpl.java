@@ -16,11 +16,18 @@ import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LoopAIServiceImpl implements LoopAIService {
     private final AiRoute aiRoute;
     @Qualifier("openAiExecutor")
     private final Executor executor;
+
+    public LoopAIServiceImpl(
+            AiRoute aiRoute,
+            @Qualifier("openAiExecutor") Executor executor
+    ) {
+        this.aiRoute = aiRoute;
+        this.executor = executor;
+    }
 
     @Override
     public CompletableFuture<RecommendationsLoop> chat(AiPayload request) {
