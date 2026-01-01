@@ -47,10 +47,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     //팀 루프 목록 조회
     @Override
-    public List<TeamLoopListResponse> getTeamLoops(Long teamId, CurrentUserDto currentUser) {
-        LocalDate today = LocalDate.now();
-
-        List<TeamLoop> teamLoops = teamLoopRepository.findAllByTeamIdAndDate(teamId, today);
+    public List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, CurrentUserDto currentUser) {
+        List<TeamLoop> teamLoops = teamLoopRepository.findAllByTeamIdAndDate(teamId, targetDate);
         Long myId = currentUser.id();
 
         return teamLoops.stream()

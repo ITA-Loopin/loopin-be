@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -36,7 +37,7 @@ public class TeamController {
     }
 
     @GetMapping("/teams/my")
-    @Operation(summary = "나의 팀 조회", description = "내가 참여 중인 팀 목록과 진행률을 조회합니다.")
+    @Operation(summary = "나의 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
@@ -45,7 +46,7 @@ public class TeamController {
     }
 
     @GetMapping("/teams/recruiting")
-    @Operation(summary = "모집 중인 팀 조회", description = "참여 가능한 다른 팀 목록을 조회합니다.")
+    @Operation(summary = "모집 중인 팀 리스트 조회", description = "참여 가능한 다른 팀 리스트를 조회합니다.")
     public ApiResponse<List<RecruitingTeamResponse>> getRecruitingTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
@@ -54,12 +55,14 @@ public class TeamController {
     }
 
     @GetMapping("/{teamId}")
-    @Operation(summary = "팀 상세 조회", description = "팀 상세 정보와 오늘 날짜 기준의 진행률을 조회합니다.")
+    @Operation(summary = "팀 상세 조회", description = "팀 상세 정보와 해당 날짜 기준의 진행률을 조회합니다.")
     public ApiResponse<TeamDetailResponse> getTeamDetail(
             @PathVariable Long teamId,
+            @RequestParam(required = false) LocalDate date,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
-        TeamDetailResponse response = teamService.getTeamDetails(teamId, currentUser);
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        TeamDetailResponse response = teamService.getTeamDetails(teamId, targetDate, currentUser);
         return ApiResponse.success(response);
     }
 }

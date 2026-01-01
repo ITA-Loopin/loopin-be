@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,12 +26,14 @@ public class TeamLoopController {
     private final TeamLoopService teamLoopService;
 
     @GetMapping("/{teamId}/loops")
-    @Operation(summary = "팀 루프 목록 조회", description = "오늘 날짜에 해당하는 팀 루프 목록을 조회합니다.")
+    @Operation(summary = "팀 루프 리스트 조회", description = "특정 날짜의 팀 루프 리스트를 조회합니다. (파라메터 없으면 오늘 기준)")
     public ApiResponse<List<TeamLoopListResponse>> getTeamLoops(
             @PathVariable Long teamId,
+            @RequestParam(required = false) LocalDate date,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
-        List<TeamLoopListResponse> response = teamLoopService.getTeamLoops(teamId, currentUser);
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        List<TeamLoopListResponse> response = teamLoopService.getTeamLoops(teamId, targetDate, currentUser);
         return ApiResponse.success(response);
     }
 

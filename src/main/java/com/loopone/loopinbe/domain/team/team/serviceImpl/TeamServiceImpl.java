@@ -88,12 +88,11 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public TeamDetailResponse getTeamDetails(Long teamId, CurrentUserDto currentUser) {
+    public TeamDetailResponse getTeamDetails(Long teamId, LocalDate targetDate, CurrentUserDto currentUser) {
         Team team = getTeamOrThrow(teamId);
-        LocalDate today = LocalDate.now();
 
-        //오늘 팀 전체 루프 조회
-        List<TeamLoop> todayLoops = teamLoopRepository.findByTeamAndLoopDate(team, today);
+        //해당 날짜의 팀 전체 루프 조회
+        List<TeamLoop> todayLoops = teamLoopRepository.findByTeamAndLoopDate(team, targetDate);
 
         //팀 루프 통계 계산
         int totalLoopCount = todayLoops.size();
@@ -115,7 +114,7 @@ public class TeamServiceImpl implements TeamService {
 
         return TeamDetailResponse.builder()
                 .teamId(team.getId())
-                .currentDate(today)
+                .currentDate(targetDate)
                 .name(team.getName())
                 .goal(team.getGoal())
                 .category(team.getCategory())

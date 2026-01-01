@@ -7,11 +7,12 @@ import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface TeamService {
     Long createTeam(TeamCreateRequest request, CurrentUserDto currentUser);
     List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser);
     List<RecruitingTeamResponse> getRecruitingTeams(CurrentUserDto currentUser);
-    TeamDetailResponse getTeamDetails(Long teamId, CurrentUserDto currentUser);
+    TeamDetailResponse getTeamDetails(Long teamId, LocalDate targetDate, CurrentUserDto currentUser);
 }
