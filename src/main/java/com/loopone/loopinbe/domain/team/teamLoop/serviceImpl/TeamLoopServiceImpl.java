@@ -45,7 +45,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
     private final TeamLoopMemberProgressRepository teamLoopMemberProgressRepository;
     private final TeamLoopMemberCheckRepository teamLoopMemberCheckRepository;
 
-    //팀 루프 목록 조회
+    //팀 루프 리스트 조회
     @Override
     public List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, CurrentUserDto currentUser) {
         List<TeamLoop> teamLoops = teamLoopRepository.findAllByTeamIdAndDate(teamId, targetDate);
@@ -261,19 +261,36 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     // 참여자 목록 필터링
     private List<Member> getParticipants(Team team, TeamLoopCreateRequest requestDTO) {
+        //팀원들의 객체 리스트
+        List<Member> TeamMembers = team.getTeamMembers().stream()
+                .map(TeamMember::getMember)
+                .collect(Collectors.toList());
+
         if (requestDTO.type() == TeamLoopType.COMMON) {
-            return team.getTeamMembers().stream()
-                    .map(TeamMember::getMember)
-                    .toList();
+            //공통인 경우 팀원 전체 반환
+            return TeamMembers;
         } else {
+            //개인인 경우 해당하는 팀원만 반환
             List<Long> targetIds = requestDTO.targetMemberIds();
+
             if (targetIds == null || targetIds.isEmpty()) {
-                throw new ServiceException(ReturnCode.BAD_REQUEST);
+                throw new ServiceException(ReturnCode.INVALID_REQUEST_TEAM);
             }
-            return team.getTeamMembers().stream()
-                    .map(TeamMember::getMember)
-                    .filter(m -> targetIds.contains(m.getId()))
+
+            //실제 팀 맴버의 ID
+            List<Long> actualMemberIds = TeamMembers.stream()
+                    .map(Member::getId)
                     .toList();
+
+            //요청 ID 중 팀원이 아닌 ID가 있는지 검사
+            boolean allMatch = actualMemberIds.containsAll(targetIds);
+            if (!allMatch) {
+                throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
+            }
+
+            return TeamMembers.stream()
+                    .filter(m -> targetIds.contains(m.getId()))
+                    .collect(Collectors.toList());
         }
     }
 }
