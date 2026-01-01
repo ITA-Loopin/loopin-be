@@ -60,11 +60,11 @@ public class ChatMessageController {
     // 채팅방에서 첨부 파일 전송 [참여자 권한]
     @PostMapping(value ="/attachments/{chatRoomId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "채팅방에 파일 메시지 전송", description = "채팅방에 파일 메시지를 전송합니다.")
-    public ApiResponse<Void> sendFile(@PathVariable("chatRoomId") Long chatRoomId,
+    public ApiResponse<Void> sendAttachment(@PathVariable("chatRoomId") Long chatRoomId,
                                       @RequestPart("request") @Valid AttachmentRequest attachmentRequest,
                                       @RequestPart(value = "attachments", required = false) List<MultipartFile> attachments,
                                       @CurrentUser CurrentUserDto currentUser) {
-        chatMessageService.sendFile(chatRoomId, attachmentRequest.clientMessageId(), attachments, currentUser);
+        chatMessageService.sendAttachment(chatRoomId, attachmentRequest.clientMessageId(), attachments, currentUser);
         return ApiResponse.success();
     }
 }

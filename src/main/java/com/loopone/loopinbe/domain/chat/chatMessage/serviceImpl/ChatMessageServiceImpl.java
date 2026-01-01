@@ -194,7 +194,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
     @Override
     @Transactional
-    public void sendFile(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
+    public void sendAttachment(Long chatRoomId, UUID clientMessageId, List<MultipartFile> attachments, CurrentUserDto currentUser) {
         // 참여자 검증 (통일)
         boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
         if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
@@ -204,14 +204,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
         // S3 업로드
         List<String> attachmentUrls = new ArrayList<>();
-        for (MultipartFile file : attachments) {
-            if (file == null || file.isEmpty()) continue;
+        for (MultipartFile attachment : attachments) {
+            if (attachment == null || attachment.isEmpty()) continue;
             try {
-                String imageUrl = s3Service.uploadImageFile(file, "chat-images");
+                String imageUrl = s3Service.uploadImageFile(attachment, "chat-images");
                 attachmentUrls.add(imageUrl);
             } catch (IOException e) {
                 log.error("S3 upload failed. chatRoomId={}, userId={}, fileName={}",
-                        chatRoomId, currentUser.id(), file.getOriginalFilename(), e);
+                        chatRoomId, currentUser.id(), attachment.getOriginalFilename(), e);
                 throw new ServiceException(ReturnCode.INTERNAL_ERROR);
             }
         }
