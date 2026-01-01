@@ -1,4 +1,7 @@
 package com.loopone.loopinbe.domain.team.teamLoop.repository;
 
-public interface TeamLoopMemberProgressRepository {
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface TeamLoopMemberProgressRepository extends JpaRepository<TeamLoopMemberProgress, Long> {
 }

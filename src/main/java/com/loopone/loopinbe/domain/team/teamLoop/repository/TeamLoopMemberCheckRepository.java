@@ -1,4 +1,7 @@
 package com.loopone.loopinbe.domain.team.teamLoop.repository;
 
-public interface TeamLoopMemberCheckRepository {
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface TeamLoopMemberCheckRepository extends JpaRepository<TeamLoopMemberCheck, Long> {
 }
