@@ -3,16 +3,20 @@ package com.loopone.loopinbe.domain.chat.chatMessage.dto;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 public record ChatMessagePayload(
-        String messageKey,   // UUID/ULID (멱등키, UNIQUE)
+        String id,   // UUID
+        UUID clientMessageId, // UUID (멱등키, UNIQUE)
         Long chatRoomId,
         Long memberId,
         String content,
+        List<String> imageUrls,
         List<LoopCreateRequest> recommendations,
         ChatMessage.AuthorType authorType,
-        LocalDateTime createdAt
-) {
-}
+        boolean isBotRoom,
+        Instant createdAt,
+        Instant modifiedAt
+) {}

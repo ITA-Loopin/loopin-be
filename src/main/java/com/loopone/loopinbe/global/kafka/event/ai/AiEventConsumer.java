@@ -2,7 +2,9 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -17,7 +19,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 import static com.loopone.loopinbe.global.constants.Constant.AI_CREATE_MESSAGE;
 import static com.loopone.loopinbe.global.constants.Constant.AI_UPDATE_MESSAGE;
@@ -27,11 +31,11 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 @Component
 @RequiredArgsConstructor
 public class AiEventConsumer {
-
     private final ObjectMapper objectMapper;
     private final LoopAIService loopAIService;
     private final SseEmitterService sseEmitterService;
     private final ChatMessageService chatMessageService;
+    private final ChatMessageConverter chatMessageConverter;
 
     @KafkaListener(topics = OPEN_AI_CREATE_TOPIC, groupId = OPEN_AI_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
     public void consumeAiCreateLoop(ConsumerRecord<String, String> rec) {
@@ -75,27 +79,23 @@ public class AiEventConsumer {
     private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message) {
         return new ChatMessagePayload(
                 generateDeterministicKey(req),
+                req.clientMessageId(),
                 req.chatRoomId(),
                 null, // Bot has no memberId
                 message,
+                null,
                 recommendationsLoop.recommendations(),
                 ChatMessage.AuthorType.BOT,
-                LocalDateTime.now()
+                true,
+                Instant.now(),
+                Instant.now()
         );
     }
 
     private void sendSseEvent(ChatMessagePayload inbound) {
         try {
-            ChatMessageDto response = ChatMessageDto.builder()
-                    .tempId(inbound.messageKey())
-                    .chatRoomId(inbound.chatRoomId())
-                    .memberId(inbound.memberId())
-                    .content(inbound.content())
-                    .recommendations(inbound.recommendations())
-                    .authorType(inbound.authorType())
-                    .createdAt(inbound.createdAt()) // Payload의 시간과 동기화
-                    .build();
-
+            Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(inbound));
+            ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(inbound, memberMap);
             sseEmitterService.sendToClient(inbound.chatRoomId(), MessageType.MESSAGE, response);
         } catch (Exception e) {
             // SSE 전송 실패가 로직 전체 실패로 이어지지 않도록 로그만 기록
@@ -104,6 +104,6 @@ public class AiEventConsumer {
     }
 
     private String generateDeterministicKey(AiPayload req) {
-        return "ai:" + req.requestId();
+        return "ai:" + req.clientMessageId();
     }
 }

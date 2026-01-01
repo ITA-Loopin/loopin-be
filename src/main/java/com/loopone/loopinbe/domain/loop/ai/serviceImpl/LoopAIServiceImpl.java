@@ -40,7 +40,7 @@ public class LoopAIServiceImpl implements LoopAIService {
 
     @Override
     public CompletableFuture<RecommendationsLoop> chat(AiPayload request) {
-        log.info("OpenAI 요청 처리 시작: requestId={}", request.requestId());
+        log.info("OpenAI 요청 처리 시작: userMessageId={}", request.userMessageId());
         String prompt;
 
         if (request.loopDetailResponse() != null) {

@@ -1,6 +1,5 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.converter;
 
-import com.loopone.loopinbe.domain.account.member.converter.SimpleMemberMapper;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
@@ -11,27 +10,21 @@ import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = SimpleMemberMapper.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ChatRoomConverter {
     // ---------- ChatRoom -> ChatRoomResponse ----------
-    @Mapping(target = "memberId", source = "chatRoom.member.id")
-    @Mapping(target = "chatRoomMembers", source = "chatRoomMembers")
-    @Mapping(target = "loopSelect", source = "chatRoom")
-    ChatRoomResponse toChatRoomResponse(ChatRoom chatRoom, List<ChatRoomMember> chatRoomMembers);
-
-    @Mapping(target = "memberId", source = "chatRoom.member.id")
-    @Mapping(target = "chatRoomMembers", source = "chatRoom.chatRoomMembers")
-    @Mapping(target = "loopSelect", source = "chatRoom")
-    ChatRoomResponse toChatRoomResponse(ChatRoom chatRoom);
+    @Mapping(target = "id", source = "chatRoom.id")
+    @Mapping(target = "ownerId", source = "chatRoom.member.id")
+    @Mapping(target = "title", source = "chatRoom.title")
+    @Mapping(target = "loopSelect", expression = "java(chatRoomMember.getChatRoom().getLoop() != null)")
+    @Mapping(target = "lastMessageAt", source = "chatRoom.lastMessageAt")
+    @Mapping(target = "lastReadAt", source = "lastReadAt")
+    ChatRoomResponse toChatRoomResponse(ChatRoomMember chatRoomMember);
 
     // ---------- ChatRoomList -> ChatRoomListResponse ----------
-    List<ChatRoomResponse> toChatRoomResponses(List<ChatRoom> chatRooms);
+    List<ChatRoomResponse> toChatRoomResponses(List<ChatRoomMember> chatRoomMembers);
 
-    default ChatRoomListResponse toChatRoomListResponse(List<ChatRoom> chatRooms) {
-        return new ChatRoomListResponse(toChatRoomResponses(chatRooms));
-    }
-
-    default boolean toLoopSelect(ChatRoom chatRoom) {
-        return chatRoom.getLoop() != null;
+    default ChatRoomListResponse toChatRoomListResponse(List<ChatRoomMember> chatRoomMembers) {
+        return new ChatRoomListResponse(toChatRoomResponses(chatRoomMembers));
     }
 }

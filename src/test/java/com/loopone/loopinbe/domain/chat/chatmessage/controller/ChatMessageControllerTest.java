@@ -4,7 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserArgumentR
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatMessage.controller.ChatMessageController;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
@@ -90,12 +90,12 @@ public class ChatMessageControllerTest {
     void findByChatRoomId_success() throws Exception {
 
         // --- GIVEN ---
-        ChatMessageDto dto = fakeChat();
+        ChatMessageResponse dto = fakeChat();
 
         Pageable pageable = PageRequest.of(0, 10);
         var page = new PageImpl<>(List.of(dto), pageable, 1);
 
-        PageResponse<ChatMessageDto> pageResponse = PageResponse.of(page);
+        PageResponse<ChatMessageResponse> pageResponse = PageResponse.of(page);
 
         given(chatMessageService.findByChatRoomId(eq(10L), any(Pageable.class), any()))
                 .willReturn(pageResponse);
@@ -115,12 +115,12 @@ public class ChatMessageControllerTest {
     void searchChatMessage_success() throws Exception {
 
         // --- GIVEN ---
-        ChatMessageDto dto = fakeChat();
+        ChatMessageResponse dto = fakeChat();
 
         Pageable pageable = PageRequest.of(0, 10);
         var page = new PageImpl<>(List.of(dto), pageable, 1);
 
-        PageResponse<ChatMessageDto> pageResponse = PageResponse.of(page);
+        PageResponse<ChatMessageResponse> pageResponse = PageResponse.of(page);
 
         given(chatMessageService.searchByKeyword(eq(10L), eq("hello"), any(Pageable.class), any()))
                 .willReturn(pageResponse);
@@ -136,8 +136,8 @@ public class ChatMessageControllerTest {
                 .andExpect(jsonPath("$.data[0].content").value("hello"));
     }
 
-    private static ChatMessageDto fakeChat() {
-        return ChatMessageDto.builder()
+    private static ChatMessageResponse fakeChat() {
+        return ChatMessageResponse.builder()
                 .id(1L)
                 .content("hello")
                 .authorType(ChatMessage.AuthorType.USER)  // 보통 필요함
