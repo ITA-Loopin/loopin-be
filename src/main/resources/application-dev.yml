@@ -46,7 +46,7 @@ app:
     domain: ""
 
 fcm:
-  service-account-file: classpath:fcm-service-account.json
+  firebase-adminsdk: classpath:firebase-adminsdk.json
 
 openai:
   api:

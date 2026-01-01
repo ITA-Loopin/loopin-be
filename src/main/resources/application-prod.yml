@@ -42,7 +42,7 @@ app:
     domain: ".loopin.co.kr"
 
 fcm:
-  service-account-file: file:/home/ec2-user/deploy/fcm-service-account.json
+  firebase-adminsdk: file:/app/firebase-adminsdk.json
 
 openai:
   api:

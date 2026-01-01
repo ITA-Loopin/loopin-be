@@ -114,7 +114,7 @@ services:
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes:
-      - ./fcm-service-account.json:/app/fcm-service-account.json
+      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json
     depends_on:
       redis:
         condition: service_healthy  # Redis가 정상 작동할 때까지 대기
