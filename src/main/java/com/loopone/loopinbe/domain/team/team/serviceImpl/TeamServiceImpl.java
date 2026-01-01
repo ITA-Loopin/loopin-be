@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
+import com.loopone.loopinbe.domain.team.team.dto.res.TeamMemberResponse;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
 import com.loopone.loopinbe.domain.team.team.mapper.TeamMapper;
@@ -124,6 +125,19 @@ public class TeamServiceImpl implements TeamService {
                 .myLoopCount(myTeamLoopCount)
                 .myTotalProgress(myTotalProgress)
                 .build();
+    }
+
+    @Override
+    public List<TeamMemberResponse> getTeamMembers(Long teamId) {
+        Team team = getTeamOrThrow(teamId);
+
+        return team.getTeamMembers().stream()
+                .map(tm -> TeamMemberResponse.builder()
+                        .memberId(tm.getMember().getId())
+                        .nickname(tm.getMember().getNickname())
+                        .profileImage(tm.getMember().getProfileImageUrl())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     // ========== 비즈니스 로직 메서드 ==========

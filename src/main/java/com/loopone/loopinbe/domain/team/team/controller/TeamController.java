@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
+import com.loopone.loopinbe.domain.team.team.dto.res.TeamMemberResponse;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,6 +64,15 @@ public class TeamController {
     ) {
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
         TeamDetailResponse response = teamService.getTeamDetails(teamId, targetDate, currentUser);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{teamId}/members")
+    @Operation(summary = "팀원 리스트 조회", description = "해당 팀에 소속된 팀원 목록을 조회합니다.")
+    public ApiResponse<List<TeamMemberResponse>> getTeamMembers(
+            @PathVariable Long teamId
+    ) {
+        List<TeamMemberResponse> response = teamService.getTeamMembers(teamId);
         return ApiResponse.success(response);
     }
 }
