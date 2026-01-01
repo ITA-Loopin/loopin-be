@@ -12,3 +12,9 @@ variable "nickname" {
   description = "nickname"
   default     = "v"
 }
+
+variable "admin_allowed_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to access NPM admin (port 81)"
+  default     = []
+}
