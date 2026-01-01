@@ -19,3 +19,9 @@ variable "ssh_public_keys" {
   type        = list(string)
   default     = []
 }
+
+variable "admin_allowed_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to access NPM admin (port 81)"
+  default     = []
+}
