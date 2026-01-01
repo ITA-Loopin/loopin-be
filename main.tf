@@ -100,6 +100,15 @@ resource "aws_route_table_association" "association_3" {
 resource "aws_security_group" "sg_1" {
   name = "${var.prefix}-sg-1"
 
+  # SSH 접속 (회사/집 IP로 제한 권장)
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # NPM 접속
   ingress {
     description = "NPM admin"
@@ -211,6 +220,17 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 sudo sh -c 'echo "/swapfile swap swap defaults 0 0" >> /etc/fstab'
 
+# ---------------- 팀원 SSH 공개키 등록 ----------------
+mkdir -p /home/ec2-user/.ssh
+chmod 700 /home/ec2-user/.ssh
+
+cat > /home/ec2-user/.ssh/authorized_keys <<'KEYS'
+${join("\n", var.ssh_public_keys)}
+KEYS
+
+chown -R ec2-user:ec2-user /home/ec2-user/.ssh
+chmod 600 /home/ec2-user/.ssh/authorized_keys
+
 END_OF_FILE
 }
 
@@ -222,7 +242,6 @@ resource "aws_instance" "ec2_1" {
   subnet_id              = aws_subnet.subnet_1.id
   vpc_security_group_ids = [aws_security_group.sg_1.id]
   associate_public_ip_address = true
-  key_name      = "loopin-key"
 
   iam_instance_profile = aws_iam_instance_profile.instance_profile_1.name
 
