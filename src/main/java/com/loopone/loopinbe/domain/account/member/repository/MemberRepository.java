@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
@@ -38,5 +39,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             "AND m.id <> :currentUserId " +   // 본인 제외
             "GROUP BY m.id, m.nickname, m.profileImageUrl, m.recentChatRoomId")
     Page<MemberResponse> findByKeyword(Pageable pageable, @Param("keyword") String keyword, @Param("currentUserId") Long currentUserId);
+
+    List<Member> findAllByNicknameIn(List<String> invitedNicknames);
 }
 

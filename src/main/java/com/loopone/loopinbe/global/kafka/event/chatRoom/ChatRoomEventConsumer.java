@@ -27,8 +27,7 @@ public class ChatRoomEventConsumer {
             ChatRoomPayload payload =
                     objectMapper.readValue(rec.value(), ChatRoomPayload.class);
             Long memberId = payload.memberId();
-            log.info("Consume ChatRoom create event. memberId={}, requestId={}",
-                    memberId, payload.requestId());
+            log.info("Consume ChatRoom create event. memberId={}, requestId={}", memberId, payload.requestId());
 
             // 기존 createAiChatRoom 로직 재사용
             ChatRoomRequest chatRoomRequest = ChatRoomRequest.builder().build();

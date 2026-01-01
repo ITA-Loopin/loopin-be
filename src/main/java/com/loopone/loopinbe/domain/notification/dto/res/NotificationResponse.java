@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,5 +23,5 @@ public class NotificationResponse {
     private String content;
     private Boolean isRead;
     private Notification.TargetObject targetObject;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

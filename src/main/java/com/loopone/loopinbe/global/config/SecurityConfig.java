@@ -56,7 +56,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/v1/health-check",
-//                                "/ws/**",
+                                "/ws/**",
                                 "/oauth2/**",              // OAuth2 시작 엔드포인트
                                 "/login/oauth2/**"         // OAuth2 콜백 엔드포인트
                         ).permitAll()

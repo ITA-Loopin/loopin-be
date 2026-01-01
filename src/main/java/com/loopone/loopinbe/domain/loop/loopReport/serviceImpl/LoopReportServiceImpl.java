@@ -426,7 +426,7 @@ public class LoopReportServiceImpl implements LoopReportService {
     // 루프 생성일 추출
     private Instant extractCreatedAtForLoopNullableSafe(Loop loop) {
         try {
-            LocalDateTime createdAt = loop.getCreatedAt(); // createdAt이 LocalDateTime이라면
+            Instant createdAt = loop.getCreatedAt(); // createdAt이 LocalDateTime이라면
             return createdAt == null ? Instant.EPOCH : createdAt.atZone(KST).toInstant();
         } catch (Exception e) {
             return Instant.EPOCH;
