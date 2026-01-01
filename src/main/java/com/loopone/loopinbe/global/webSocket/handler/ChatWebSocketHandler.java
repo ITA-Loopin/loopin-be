@@ -1,39 +1,46 @@
 package com.loopone.loopinbe.global.webSocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatInboundMessagePayload;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
-import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
+import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomMemberService;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import static com.loopone.loopinbe.global.constants.KafkaKey.CREATE_LOOP_TOPIC;
-import static com.loopone.loopinbe.global.constants.KafkaKey.UPDATE_LOOP_TOPIC;
-import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.CREATE_LOOP;
-import static com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload.MessageType.UPDATE_LOOP;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
-    private final ChatMessageEventPublisher publisher;
-    private final ChatRoomRepository chatRoomRepository;
-    private final LoopMapper loopMapper;
+    private final ChatRoomMemberService chatRoomMemberService;
+    private final ChatMessageService chatMessageService;
+    private final ChatMessageConverter chatMessageConverter;
     private final ObjectMapper objectMapper;
+    private final ChatMessageEventPublisher chatMessageEventPublisher;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, Long> sessionRoomMap = new ConcurrentHashMap<>(); // 세션 -> 방 매핑
     private final WsSessionRegistry wsSessionRegistry;
@@ -51,95 +58,120 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // 인터셉터가 넣어준 값 우선 사용
         Long chatRoomId = (Long) session.getAttributes().get("chatRoomId");
         if (chatRoomId == null) {
-            // 쿼리에서 보조 파싱 (예: ?chatRoomId=123)
-            String q = session.getUri() != null ? session.getUri().getQuery() : null;
-            if (q != null) {
-                for (String p : q.split("&")) {
-                    int i = p.indexOf('=');
-                    if (i > 0 && "chatRoomId".equals(p.substring(0, i))) {
-                        try {
-                            chatRoomId = Long.parseLong(p.substring(i + 1));
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-                }
-            }
+            chatRoomId = parseChatRoomIdFromQuery(session);
         }
         if (chatRoomId == null) {
             log.warn("WebSocket connected without chatRoomId: {}", session.getId());
             session.close(CloseStatus.BAD_DATA);
             return;
         }
-        chatRoomSessions
-                .computeIfAbsent(chatRoomId, k -> new CopyOnWriteArrayList<>())
-                .add(session);
+        // 방 멤버십 검증 - isBotRoom=false + membership를 동시에 검증
+        boolean ok = chatRoomMemberService.canConnectNonBotRoom(chatRoomId, memberId);
+        if (!ok) {
+            log.warn("WS forbidden(non-bot only or not member): session={} memberId={} room={}", session.getId(), memberId, chatRoomId);
+            sendWsErrorAndClose(session, "FORBIDDEN", "You can connect only to non-bot rooms you joined.");
+            return;
+        }
+        chatRoomSessions.computeIfAbsent(chatRoomId, k -> new CopyOnWriteArrayList<>()).add(session);
         sessionRoomMap.put(session, chatRoomId);
         sessionMemberMap.put(session, memberId);
         wsSessionRegistry.add(memberId, session);
         log.info("WS connected: {} memberId={} chatRoomId={}", session.getId(), memberId, chatRoomId);
     }
 
-    private Long resolveMemberId(WebSocketSession session) {
-        // 레지스트리 매핑에서 즉시 조회
+    private Long parseChatRoomIdFromQuery(WebSocketSession session) {
+        String q = session.getUri() != null ? session.getUri().getQuery() : null;
+        if (q == null) return null;
+        for (String p : q.split("&")) {
+            int i = p.indexOf('=');
+            if (i > 0 && "chatRoomId".equals(p.substring(0, i))) {
+                try {
+                    return Long.parseLong(p.substring(i + 1));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return null;
+    }
+
+    private Long requireChatRoomId(WebSocketSession session) {
+        Long chatRoomId = sessionRoomMap.get(session);
+        if (chatRoomId == null) throw new IllegalStateException("WS session has no chatRoomId mapping");
+        return chatRoomId;
+    }
+
+    private Long requireMemberId(WebSocketSession session) {
         Long memberId = sessionMemberMap.get(session);
-        if (memberId == null)
-            throw new IllegalStateException("Unauthenticated WS session");
+        if (memberId == null) throw new IllegalStateException("WS session has no memberId mapping");
         return memberId;
     }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
-            // 1) JSON 파싱
+            Long chatRoomId = requireChatRoomId(session);
+            Long memberId = requireMemberId(session);
             ChatWebSocketPayload in = objectMapper.readValue(message.getPayload(), ChatWebSocketPayload.class);
-
-            // 2) 필수 검증 (필요 최소)
-            if (in.getMessageType() != CREATE_LOOP && in.getMessageType() != UPDATE_LOOP) {
-                sendWsError(session, "INVALID_TYPE", "messageType must be CREATE_LOOP or UPDATE_LOOP");
-                return;
+            switch (in.getMessageType()) {
+                case MESSAGE -> {
+                    // 1) validation
+                    UUID clientMessageId = in.getClientMessageId();
+                    if (clientMessageId == null) {
+                        sendWsError(session, "BAD_REQUEST", "clientMessageId is required");
+                        return;
+                    }
+                    String content = (in.getChatMessageResponse() != null)
+                            ? in.getChatMessageResponse().getContent()
+                            : null;
+                    if (content == null || content.isBlank()) {
+                        sendWsError(session, "BAD_REQUEST", "content is required");
+                        return;
+                    }
+                    // 2) inbound payload 생성 (idempotent key)
+                    Instant now = Instant.now();
+                    ChatMessagePayload inbound = new ChatMessagePayload(
+                            "u:" + clientMessageId,
+                            clientMessageId,
+                            chatRoomId,
+                            memberId,
+                            content,
+                            null,
+                            null,
+                            ChatMessage.AuthorType.USER,
+                            false,
+                            now,
+                            now
+                    );
+                    // 3) Mongo upsert (멱등 저장)
+                    ChatMessagePayload saved = chatMessageService.processInbound(inbound);
+                    // 4) WS 응답 DTO로 매핑
+                    Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
+                    ChatMessageResponse savedResp = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+                    ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.MESSAGE)
+                            .chatRoomId(chatRoomId)
+                            .chatMessageResponse(savedResp)
+                            .clientMessageId(saved.clientMessageId())
+                            .build();
+                    chatMessageEventPublisher.publishWsEvent(out);
+                }
+                case READ_UP_TO -> {
+                    if (in.getLastReadAt() == null) {
+                        sendWsError(session, "BAD_REQUEST", "lastReadAt is required");
+                        return;
+                    }
+                    Instant updated = chatRoomMemberService.updateLastReadAt(chatRoomId, memberId, in.getLastReadAt());
+                    ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.READ_UP_TO)
+                            .chatRoomId(chatRoomId)
+                            .memberId(memberId)
+                            .lastReadAt(updated)
+                            .build();
+                    chatMessageEventPublisher.publishWsEvent(out);
+                }
+                default -> log.warn("Unknown/Unhandled messageType: {}", in.getMessageType());
             }
-            Long roomId = in.getChatRoomId();
-            if (roomId == null) {
-                sendWsError(session, "INVALID_ROOM", "chatRoomId is required");
-                return;
-            }
-            String content = (in.getChatMessageDto() != null) ? in.getChatMessageDto().getContent() : null;
-            if (content == null || content.isBlank()) {
-                sendWsError(session, "EMPTY_CONTENT", "content must not be blank");
-                return;
-            }
-
-            // 3) 인증(세션) 확인
-            Long memberId = resolveMemberId(session); // 없으면 IllegalStateException
-
-            ChatInboundMessagePayload payload = new ChatInboundMessagePayload(
-                    java.util.UUID.randomUUID().toString(),
-                    roomId,
-                    memberId,
-                    content,
-                    null,
-                    ChatMessage.AuthorType.USER,
-                    java.time.LocalDateTime.now());
-
-            if (in.getMessageType() == CREATE_LOOP) {
-                // 4) 퍼블리시 (멱등키 포함)
-                publisher.publishInbound(payload, CREATE_LOOP_TOPIC);
-            } else if (in.getMessageType() == UPDATE_LOOP) {
-                // 4) 퍼블리시 (멱등키 포함)
-                publisher.publishInbound(payload, UPDATE_LOOP_TOPIC);
-            }
-        } catch (com.fasterxml.jackson.core.JsonProcessingException jpe) {
-            // 잘못된 JSON
-            log.warn("WS BAD_JSON: {}", jpe.getOriginalMessage());
-            sendWsError(session, "BAD_JSON", "Malformed JSON");
-        } catch (IllegalStateException unauth) {
-            // 미인증 세션
-            log.warn("WS UNAUTHENTICATED: {}", unauth.getMessage());
-            sendWsErrorAndClose(session, "UNAUTHENTICATED", "Login required");
         } catch (Exception e) {
-            // 그 외 모든 예외
-            log.error("WS INTERNAL_ERROR", e);
-            sendWsError(session, "INTERNAL_ERROR", "Unexpected server error");
+            log.warn("Failed to handle message from session {}: {}", session.getId(), e.getMessage());
         }
     }
 
@@ -178,6 +210,29 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
         if (sessions.isEmpty())
             chatRoomSessions.remove(chatRoomId);
+    }
+
+    // 60초마다 Ping 프레임 전송 (조용한 방 keepalive 목적)
+    @Scheduled(fixedDelayString = "60000")
+    public void sendProtocolPing() {
+        ByteBuffer payload = ByteBuffer.wrap(new byte[] {1});
+        PingMessage ping = new PingMessage(payload);
+
+        for (var entry : chatRoomSessions.entrySet()) {
+            var sessions = entry.getValue();
+            for (WebSocketSession s : sessions) {
+                if (!s.isOpen()) {
+                    sessions.remove(s);
+                    continue;
+                }
+                try {
+                    s.sendMessage(ping);
+                } catch (Exception e) { // 보내기 실패 = 사실상 죽은 세션일 확률 높음
+                    sessions.remove(s);
+                    try { s.close(); } catch (Exception ignore) {}
+                }
+            }
+        }
     }
 
     @Override

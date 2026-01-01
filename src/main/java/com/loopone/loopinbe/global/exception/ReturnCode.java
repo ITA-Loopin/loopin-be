@@ -92,8 +92,9 @@ public enum ReturnCode {
     // ChatRoomMember
     CHATROOM_MEMBER_NOT_FOUND(404, "CHATROOM_MEMBER_001", "채팅방 멤버를 찾을 수 없습니다."),
 
-    // ChatMessage
+    // ChatMessage clientMessageId
     CHATMESSAGE_NOT_FOUND(404, "CHATMESSAGE_001", "채팅 메시지를 찾을 수 없습니다."),
+    CHATMESSAGE_INVALID_TYPE(400, "CHATMESSAGE_002", "메세지 타입은 CREATE_LOOP 또는 UPDATE_LOOP이여야 합니다"),
 
     // Post
     POST_NOT_FOUND(404, "POST_001", "게시글을 찾을 수 없습니다."),
@@ -115,6 +116,11 @@ public enum ReturnCode {
     OPEN_AI_RATE_LIMIT(429, "LOOP_008", "OpenAI 요청 수를 초과하였습니다."),
     OPEN_AI_JSON_PROCESSING_ERROR(500, "LOOP_009", "OpenAI JSON 직렬화에 실패했습니다."),
     UNKNOWN_SCHEDULE_TYPE(404, "LOOP_010", "올바르지 않은 스케쥴 타입입니다."),
+
+    // Team
+    TEAM_NOT_FOUND(404, "TEAM_001", "팀을 찾을 수 없습니다."),
+    INVALID_REQUEST_TEAM(400, "TEAM_002", "팀 요청문이 올바르지 않습니다"),
+    USER_NOT_IN_TEAM(404, "TEAM_003", "팀원이 아닌 유저가 있습니다"),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),

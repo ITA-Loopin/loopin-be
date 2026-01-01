@@ -1,13 +1,16 @@
 package com.loopone.loopinbe.global.webSocket.payload;
 
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessageDto;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -15,31 +18,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatWebSocketPayload {
-    @Enumerated(EnumType.STRING)
-    @Column(length = 12)
     private MessageType messageType;
-
-    public enum MessageType {
-        MESSAGE,
-        CREATE_LOOP,
-        UPDATE_LOOP,
-        READ,
-        READALL,
-        PING
-    }
-
-    private Long memberId;
-
+    // 어떤 채팅방에 브로드캐스트할지 식별용 (MESSAGE(파일) / READ_UP_TO 공통)
     private Long chatRoomId;
 
     // MESSAGE일 때만 존재
-    private ChatMessageDto chatMessageDto;
-    private String content;
-    private LocalDateTime lastMessageCreatedAt;
+    private UUID clientMessageId;     // UUID (멱등키, UNIQUE)
+    private ChatMessageResponse chatMessageResponse;
 
-    // READ일 때만 존재
-    private Long messageId;
-
-    // READALL일 때만 존재
-    private List<Long> readMessageIdList;
+    // READ_UP_TO일 때만 존재
+    private Long memberId;
+    private Instant lastReadAt;
 }

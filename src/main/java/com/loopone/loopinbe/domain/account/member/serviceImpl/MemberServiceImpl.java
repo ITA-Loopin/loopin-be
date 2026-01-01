@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.account.member.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.auth.service.AuthService;
+import com.loopone.loopinbe.domain.account.auth.dto.AuthPayload;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
@@ -15,15 +15,13 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReposit
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepository;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
+import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
-import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomCreatePayload;
-import com.loopone.loopinbe.global.kafka.event.chatRoom.ChatRoomEventPublisher;
+import com.loopone.loopinbe.global.kafka.event.auth.AuthEventPublisher;
 import com.loopone.loopinbe.global.kafka.event.notification.NotificationEventPublisher;
 import com.loopone.loopinbe.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
@@ -33,28 +31,28 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
+
+import static com.loopone.loopinbe.global.constants.KafkaKey.FOLLOW_NOTIFICATION_TOPIC;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberServiceImpl implements MemberService {
     private final MemberRepository memberRepository;
-    private final PasswordEncoder passwordEncoder;
     private final MemberFollowReqRepository memberFollowReqRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final S3Service s3Service;
     private final MemberConverter memberConverter;
     private final ChatRoomService chatRoomService;
     private final NotificationEventPublisher notificationEventPublisher;
-    private final ChatRoomEventPublisher chatRoomEventPublisher;
+    private final AuthEventPublisher authEventPublisher;
 
     // 회원가입
     @Override
@@ -155,14 +153,21 @@ public class MemberServiceImpl implements MemberService {
     // 회원탈퇴
     @Override
     @Transactional
-    public void deleteMember(CurrentUserDto currentUser) {
+    public void deleteMember(CurrentUserDto currentUser, String accessToken) {
         // DB에서 회원 조회
         Member memberEntity = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 연관된 데이터 삭제
         chatRoomService.leaveAllChatRooms(currentUser.id());
-
+        // 회원삭제
         memberRepository.delete(memberEntity);
+        // 로그아웃
+        AuthPayload payload = new AuthPayload(
+                java.util.UUID.randomUUID().toString(),
+                currentUser.id(),
+                accessToken
+        );
+        authEventPublisher.publishLogoutAfterCommit(payload);
     }
 
     // 회원 검색하기
@@ -199,18 +204,22 @@ public class MemberServiceImpl implements MemberService {
                 .followRec(followRec)
                 .build();
         memberFollowReqRepository.save(memberFollowReq);
-        // 팔로우 요청 이벤트 생성
-        Notification notification = Notification.builder()
-                .senderId(followReq.getId())
-                .senderNickname(followReq.getNickname())
-                .senderProfileUrl(followReq.getProfileImageUrl())
-                .receiverId(followRec.getId())
-                .objectId(memberFollowReq.getId())
-                .content("님이 팔로우를 요청하였습니다.")
-                .targetObject(Notification.TargetObject.Follow)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationEventPublisher.publishFollowRequest(notification);
+        NotificationPayload payload = new NotificationPayload(
+                followReq.getId(),
+                followReq.getNickname(),
+                followReq.getProfileImageUrl(),
+                followRec.getId(),
+                memberFollowReq.getId(),
+                "님이 팔로우를 요청하였습니다.",
+                Notification.TargetObject.Follow
+        );
+        // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationEventPublisher.publishNotification(payload, FOLLOW_NOTIFICATION_TOPIC);
+            }
+        });
     }
 
     // 팔로우 요청 취소하기
@@ -240,18 +249,22 @@ public class MemberServiceImpl implements MemberService {
                 .followed(receiver)
                 .build();
         memberFollowRepository.save(memberFollow);
-        // 팔로우 수락 이벤트 생성
-        Notification notification = Notification.builder()
-                .senderId(currentUser.id())
-                .senderNickname(currentUser.nickname())
-                .senderProfileUrl(currentUser.profileImageUrl())
-                .receiverId(memberId)
-                .objectId(memberFollow.getId())
-                .content("님이 팔로우 요청을 수락하였습니다.")
-                .targetObject(Notification.TargetObject.Follow)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationEventPublisher.publishFollowRequest(notification);
+        NotificationPayload payload = new NotificationPayload(
+                currentUser.id(),              // 수락한 사람(=receiver)이 sender
+                currentUser.nickname(),
+                currentUser.profileImageUrl(),
+                memberId,                      // requester에게 알림
+                memberFollow.getId(),
+                "님이 팔로우 요청을 수락하였습니다.",
+                Notification.TargetObject.Follow
+        );
+        // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationEventPublisher.publishNotification(payload, FOLLOW_NOTIFICATION_TOPIC);
+            }
+        });
     }
 
     // 팔로우 요청 거절하기
@@ -288,16 +301,6 @@ public class MemberServiceImpl implements MemberService {
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
                 .orElseThrow(() -> new ServiceException(ReturnCode.FOLLOWER_NOT_FOUND));
         memberFollowRepository.delete(memberFollow);
-    }
-
-    // 채팅방 생성 이벤트
-    @Override
-    public void publishChatRoomCreateEvent(Long memberId) {
-        ChatRoomCreatePayload payload = new ChatRoomCreatePayload(
-                UUID.randomUUID().toString(),
-                memberId
-        );
-        chatRoomEventPublisher.publishChatRoomRequest(payload);
     }
 
     // ----------------- 헬퍼 메서드 -----------------

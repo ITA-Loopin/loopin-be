@@ -333,7 +333,7 @@ class MemberServiceTest {
 
         given(memberRepository.findById(3L)).willReturn(Optional.of(member));
 
-        memberService.deleteMember(me);
+        memberService.deleteMember(me, "accessToken");
         verify(chatRoomService).leaveAllChatRooms(3L);
         verify(memberRepository).delete(member);
     }
@@ -344,7 +344,7 @@ class MemberServiceTest {
         var me = cu(3L, "x@x", "x", null);
         given(memberRepository.findById(3L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberService.deleteMember(me))
+        assertThatThrownBy(() -> memberService.deleteMember(me, "accessToken"))
                 .isInstanceOf(ServiceException.class)
                 .extracting("returnCode").isEqualTo(ReturnCode.USER_NOT_FOUND);
     }

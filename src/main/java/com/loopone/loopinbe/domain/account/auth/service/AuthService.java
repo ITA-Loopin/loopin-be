@@ -7,13 +7,13 @@ import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 
 public interface AuthService {
     // 회원가입 후 로그인 처리
-    LoginResponse signUpAndLogin(MemberCreateRequest memberCreateRequest);
+    LoginResponse signUpAndLogin(String nickname, String ticket);
 
     // 로그인
     LoginResponse login(LoginRequest loginRequest);
 
     // 로그아웃
-    void logout(CurrentUserDto currentUser, String accessToken);
+    void logout(Long currentUserId, String accessToken);
 
     // accessToken 재발급
     LoginResponse refreshToken(String refreshToken, CurrentUserDto currentUser);

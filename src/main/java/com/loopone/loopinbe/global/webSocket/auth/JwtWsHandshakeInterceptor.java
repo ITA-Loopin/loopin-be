@@ -8,8 +8,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -25,12 +23,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
-    private final JwtTokenProvider jwtTokenProvider; // 기존 사용
+    private final JwtTokenProvider jwtTokenProvider;
     private final MemberRepository memberRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final AccessTokenDenyListService accessTokenDenyListService;
-    @Value("${app.ws.allow-query-token}")
-    private boolean allowQueryToken;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest req, ServerHttpResponse res,
@@ -39,10 +35,10 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
             HttpServletRequest servletReq = (req instanceof ServletServerHttpRequest s)
                     ? s.getServletRequest() : null;
 
-            // 1) 토큰 추출: Cookie → (옵션) Query → Authorization: Bearer
-            String accessToken = resolveAccessToken(req, servletReq);
+            // 1) 토큰 추출: Cookie only
+            String accessToken = resolveAccessTokenFromCookieOnly(servletReq);
             if (!hasText(accessToken) || !jwtTokenProvider.validateAccessToken(accessToken)) {
-                log.warn("[WS] invalid/missing token (cookie/query/header 모두 실패)");
+                log.warn("[WS] invalid/missing token (cookie only)");
                 setStatus(res, HttpStatus.UNAUTHORIZED);
                 return false;
             }
@@ -63,7 +59,6 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
                 setStatus(res, HttpStatus.UNAUTHORIZED);
                 return false;
             }
-
             Long memberId = memberRepository.findIdByEmail(email).orElse(null);
             if (memberId == null) {
                 log.warn("[WS] member not found by email={}", email);
@@ -95,7 +90,7 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
 
     @Override
     public void afterHandshake(ServerHttpRequest req, ServerHttpResponse res,
-                               WebSocketHandler wsHandler, Exception ex) { }
+                               WebSocketHandler wsHandler, Exception ex) {}
 
     // ----------------- 헬퍼 메서드 -----------------
 
@@ -106,53 +101,14 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
         }
     }
 
-    private String resolveAccessToken(ServerHttpRequest req, HttpServletRequest servletReq) {
-        // 1) Cookie
-        String token = extractFromCookie(servletReq, "access_token");
-        if (hasText(token)) return token;
-
-        // 2) (옵션) Query: access_token / token / t
-        if (allowQueryToken && req != null) {
-            URI uri = req.getURI();
-            token = firstNonNull(
-                    resolveQueryParam(uri, "access_token")
-            );
-            if (hasText(token)) {
-                // 쿼리 토큰은 서버/액세스 로그에 남을 수 있으니 로깅 금지!
-                return token;
-            }
-        }
-
-        // 3) Authorization: Bearer <token>
-        String bearer = extractBearer(servletReq);
-        if (hasText(bearer)) return bearer;
-
-        return null;
+    private String resolveAccessTokenFromCookieOnly(HttpServletRequest servletReq) {
+        return extractFromCookie(servletReq, "access_token");
     }
 
     private static String extractFromCookie(HttpServletRequest req, String name) {
         if (req == null || req.getCookies() == null) return null;
-        for (Cookie c : req.getCookies()) if (name.equals(c.getName())) return c.getValue();
-        return null;
-    }
-
-    private static String extractBearer(HttpServletRequest req) {
-        if (req == null) return null;
-        String auth = req.getHeader(HttpHeaders.AUTHORIZATION);
-        if (hasText(auth) && auth.startsWith("Bearer ")) {
-            return auth.substring(7);
-        }
-        return null;
-    }
-
-    private static String resolveQueryParam(URI uri, String key) {
-        String q = (uri != null ? uri.getQuery() : null);
-        if (q == null) return null;
-        for (String p : q.split("&")) {
-            int i = p.indexOf('=');
-            if (i > 0 && key.equals(p.substring(0, i))) {
-                return urlDecodeSafe(p.substring(i + 1));
-            }
+        for (Cookie c : req.getCookies()) {
+            if (name.equals(c.getName())) return c.getValue();
         }
         return null;
     }
@@ -164,8 +120,15 @@ public class JwtWsHandshakeInterceptor implements HandshakeInterceptor {
         catch (NumberFormatException ignored) { return null; }
     }
 
-    private static String firstNonNull(String... vs) {
-        for (String v : vs) if (hasText(v)) return v;
+    private static String resolveQueryParam(URI uri, String key) {
+        String q = (uri != null ? uri.getQuery() : null);
+        if (q == null) return null;
+        for (String p : q.split("&")) {
+            int i = p.indexOf('=');
+            if (i > 0 && key.equals(p.substring(0, i))) {
+                return urlDecodeSafe(p.substring(i + 1));
+            }
+        }
         return null;
     }
 

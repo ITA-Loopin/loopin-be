@@ -182,7 +182,7 @@ class AuthServiceTest {
         given(wsSessionRegistry.count(1L)).willReturn(2);
 
         // when
-        authService.logout(currentUser, accessToken);
+        authService.logout(currentUser.id(), accessToken);
 
         // then
         verify(refreshTokenService).deleteRefreshToken("1");
@@ -205,7 +205,7 @@ class AuthServiceTest {
         given(jwtTokenProvider.validateAccessToken(anyString())).willReturn(false);
 
         // when
-        authService.logout(currentUser, "invalid-token");
+        authService.logout(currentUser.id(), "invalid-token");
 
         // then
         verify(refreshTokenService).deleteRefreshToken("1");

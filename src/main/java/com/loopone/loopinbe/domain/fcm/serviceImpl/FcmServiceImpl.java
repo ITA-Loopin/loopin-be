@@ -22,7 +22,6 @@ public class FcmServiceImpl implements FcmService {
                     .putData("title", message.getTitle())
                     .putData("body", message.getBody())
                     .build();
-
             String response = FirebaseMessaging.getInstance().send(firebaseMessage);
             log.info("FCM Admin SDK response: {}", response);
         } catch (FirebaseMessagingException e) {

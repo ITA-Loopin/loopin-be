@@ -19,8 +19,8 @@ public class FcmController {
     private final FcmTokenService fcmTokenService;
 
     // FCM Token 저장
-    @Operation(summary = "FCM Token 저장", description = "FCM Token을 저장합니다.")
     @PostMapping
+    @Operation(summary = "FCM Token 저장", description = "FCM Token을 저장합니다.")
     public ApiResponse<Void> saveFcmToken(@RequestBody @Valid FcmTokenRequest fcmTokenRequest, @CurrentUser CurrentUserDto currentUser) {
         fcmTokenService.saveFcmToken(currentUser.id(), fcmTokenRequest.fcmToken());
         return ApiResponse.success();

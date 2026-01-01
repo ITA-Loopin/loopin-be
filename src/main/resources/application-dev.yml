@@ -19,33 +19,28 @@ spring:
     mongodb:
       uri: mongodb://admin:admin@localhost:27017/meta_db?authSource=admin
       database: meta_db
+      auto-index-creation: true
   kafka:
     bootstrap-servers: localhost:9092
+  ai:
+    openai:
+      api-key: ${GPT_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+    gemini:
+      api-key: ${GEMINI_API_KEY}
+      base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+      chat:
+        options:
+          model: gemini-2.5-flash
 #  flyway:
 #    enabled: true   # 처음 실행할 때는 false, 이후에 true로 변경(flyway 인덱스 생성)
 #    baseline-on-migrate: true   # 그냥 놔둬도됨
 #    baseline-version: 0   # V0 스킵, V1부터 마이그레이션
 
 app:
-  oauth:
-    providers:
-      google:
-        clientId: ${GOOGLE_CLIENT_ID}
-        clientSecret: ${GOOGLE_CLIENT_SECRET}
-        redirectUri: "http://localhost:8080/rest-api/v1/oauth/google"
-        tokenUri: "https://oauth2.googleapis.com/token"
-        userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
-      naver:
-        clientId: ${NAVER_CLIENT_ID}
-        clientSecret: ${NAVER_CLIENT_SECRET}
-        redirectUri: "http://localhost:8080/rest-api/v1/oauth/naver"
-        tokenUri: "https://nid.naver.com/oauth2.0/token"
-        userInfoUri: "https://openapi.naver.com/v1/nid/me"
-      kakao:
-        clientId: ${KAKAO_CLIENT_ID}
-        redirectUri: "http://localhost:8080/rest-api/v1/oauth/kakao"
-        tokenUri: "https://kauth.kakao.com/oauth/token"
-        userInfoUri: "https://kapi.kakao.com/v2/user/me"
   cookie:
     secure: false
     domain: ""
@@ -66,3 +61,25 @@ logging:
 
 springdoc:
   server-url: http://localhost:8080
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      open-ai:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+      gemini:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2

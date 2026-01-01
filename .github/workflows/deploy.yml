@@ -27,6 +27,8 @@ jobs:
       MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
       GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
       OAUTH_STATE_SECRET: ${{secrets.OAUTH_STATE_SECRET}}
+      GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{secrets.FIREBASE_SERVICE_ACCOUNT_JSON}}
 
     steps:
       - name: Checkout
@@ -47,11 +49,11 @@ jobs:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          envs: DB_URL, DB_USERNAME, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET
+          envs: DB_URL, DB_USERNAME, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON
           script: |
             set -e  # 오류 발생 시 즉시 중단
             cd ~/deploy
-            echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > fcm-service-account.json
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > fcm-service-account.json
             ./deploy.sh
             echo "Cleaning up old Docker images..."
             docker rmi -f $(docker images junhui9789/loopin-app -q) || true
