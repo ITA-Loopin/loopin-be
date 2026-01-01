@@ -24,6 +24,6 @@ public class TeamLoopChecklist extends BaseEntity {
     @JoinColumn(name = "team_loop_id")
     private TeamLoop teamLoop;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(nullable = false, length = 200)
+    private String content;
 }

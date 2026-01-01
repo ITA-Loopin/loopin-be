@@ -32,4 +32,15 @@ public class TeamLoopMemberProgress extends BaseEntity {
     @OneToMany(mappedBy = "memberProgress", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TeamLoopMemberCheck> checks = new ArrayList<>(); //해당 멤버의 체크리스트 상태 저장
+
+    //내 진행률 계산
+    public double calculateProgress(int totalChecklistCount) {
+        if (totalChecklistCount == 0) return 0.0;
+
+        long checkedCount = this.checks.stream()
+                .filter(TeamLoopMemberCheck::isChecked)
+                .count();
+
+        return (double) checkedCount / totalChecklistCount * 100.0;
+    }
 }
