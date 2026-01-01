@@ -200,4 +200,12 @@ public class TeamServiceImpl implements TeamService {
         return teamRepository.findById(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
     }
+
+    // ========== 검증 메서드 ==========
+    // 팀원 검증
+    private void validateTeamMember(Long teamId, Long memberId) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, memberId)) {
+            throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
+        }
+    }
 }

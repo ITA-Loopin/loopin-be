@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
+import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
@@ -44,6 +45,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
     private final TeamLoopChecklistRepository teamLoopChecklistRepository;
     private final TeamLoopMemberProgressRepository teamLoopMemberProgressRepository;
     private final TeamLoopMemberCheckRepository teamLoopMemberCheckRepository;
+    private final TeamMemberRepository teamMemberRepository;
 
     //팀 루프 리스트 조회
     @Override
@@ -79,6 +81,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
     @Override
     @Transactional
     public Long createTeamLoop(Long teamId, TeamLoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        validateTeamMember(teamId, currentUser.id());
+
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
 
@@ -291,6 +295,14 @@ public class TeamLoopServiceImpl implements TeamLoopService {
             return TeamMembers.stream()
                     .filter(m -> targetIds.contains(m.getId()))
                     .collect(Collectors.toList());
+        }
+    }
+
+    // ========== 검증 메서드 ==========
+    // 팀원 검증
+    private void validateTeamMember(Long teamId, Long memberId) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, memberId)) {
+            throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
         }
     }
 }
