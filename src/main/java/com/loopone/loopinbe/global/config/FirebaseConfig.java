@@ -13,14 +13,14 @@ import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
     @Value("${fcm.firebase-adminsdk}")
-    private Resource serviceAccount;
+    private Resource firebaseAdminSdk;
 
     @PostConstruct
     public void init() {
         try {
             if(FirebaseApp.getApps().isEmpty()) {  // 중복 초기화 방지
                 FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream()))
+                        .setCredentials(GoogleCredentials.fromStream(firebaseAdminSdk.getInputStream()))
                         .build();
                 FirebaseApp.initializeApp(options);
             }

@@ -44,10 +44,6 @@ app:
 fcm:
   firebase-adminsdk: file:/app/firebase-adminsdk.json
 
-openai:
-  api:
-    key: ${GPT_API_KEY}
-
 logging:
   level:
     org.springframework.web: INFO

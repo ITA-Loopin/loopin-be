@@ -41,7 +41,7 @@ out/
 dockerProjects
 src/main/resources/application-secret.yml
 .env
-fcm-service-account.json
+firebase-adminsdk.json
 /src/main/generated/
 
 # Terraform 상태 파일
