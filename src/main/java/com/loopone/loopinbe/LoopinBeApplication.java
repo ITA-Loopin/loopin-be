@@ -39,6 +39,7 @@ public class LoopinBeApplication {
         System.setProperty("NAVER_CLIENT_ID", dotenv.get("NAVER_CLIENT_ID"));
         System.setProperty("NAVER_CLIENT_SECRET", dotenv.get("NAVER_CLIENT_SECRET"));
         System.setProperty("GPT_API_KEY", dotenv.get("GPT_API_KEY"));
+        System.setProperty("GEMINI_API_KEY", dotenv.get("GEMINI_API_KEY"));
         System.setProperty("MAIL_APP_PASSWORD", dotenv.get("MAIL_APP_PASSWORD"));
         System.setProperty("OAUTH_STATE_SECRET", dotenv.get("OAUTH_STATE_SECRET"));
 

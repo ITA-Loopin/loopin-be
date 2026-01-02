@@ -85,8 +85,6 @@ public class Member extends BaseEntity {
     @Column(length = 100)
     private String providerId;
 
-    private Long recentChatRoomId;
-
     @OneToMany(mappedBy = "follow", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MemberFollow> followList = new ArrayList<>();
 
