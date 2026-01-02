@@ -98,12 +98,11 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     // AI 채팅방 생성
     @Override
     @Transactional
-    public ChatRoomResponse createAiChatRoom(String title, Long userId) {
+    public ChatRoomResponse createAiChatRoom(Long userId) {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
-                .title(title)
                 .member(member)
                 .build();
         // 본인을 맨 앞에 추가
@@ -115,8 +114,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoomMembers.add(enterChatRoomMyself);
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
-        // member에 recentChatRoomId 세팅 후 저장
-        member.setRecentChatRoomId(chatRoom.getId());
         memberRepository.save(member);
         return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
     }
@@ -157,12 +154,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
     }
 
+    // AI 채팅방 리스트 조회
     @Override
     public ChatRoomListResponse getChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
         return chatRoomConverter.toChatRoomListResponse(chatRoomList);
     }
 
+    // AI 채팅방 루프 선택
     @Override
     @Transactional
     public void selectLoop(Long chatRoomId, Long loopId) {

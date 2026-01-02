@@ -82,7 +82,7 @@ class MemberControllerTest {
     @Test
     @DisplayName("GET /rest-api/v1/member → 200 OK & ApiResponse 래퍼")
     void getMyInfo_success() throws Exception {
-        var resp = new MemberResponse(1L, "jun", "https://img", 10L, 5L, 777L);
+        var resp = new MemberResponse(1L, "jun@loop.in", "jun", "https://img");
         given(memberService.getMyInfo(any(CurrentUserDto.class))).willReturn(resp);
 
         mvc.perform(get("/rest-api/v1/member"))
@@ -97,7 +97,7 @@ class MemberControllerTest {
     @DisplayName("GET /rest-api/v1/member/detail → 200 OK")
     void getMyDetailInfo_success() throws Exception {
         var detail = DetailMemberResponse.builder()
-                .id(1L).email("jun@loop.in").nickname("jun").chatRoomId(123L)
+                .id(1L).email("jun@loop.in").nickname("jun")
                 .followMemberCount(10L).followedMemberCount(5L)
                 .followList(List.of()).followedList(List.of()).followReqList(List.of()).followRecList(List.of())
                 .build();
@@ -115,7 +115,7 @@ class MemberControllerTest {
     @Test
     @DisplayName("GET /rest-api/v1/member/{memberId} → 200 OK")
     void getMemberInfo_success() throws Exception {
-        var resp = new MemberResponse(2L, "koo", "https://img2", 100L, 50L, 999L);
+        var resp = new MemberResponse(2L, "koo@loop.in", "koo", "https://img2");
         given(memberService.getMemberInfo(2L)).willReturn(resp);
 
         mvc.perform(get("/rest-api/v1/member/{memberId}", 2L))
@@ -141,7 +141,6 @@ class MemberControllerTest {
                 .followedList(List.of())
                 .followReqList(List.of())
                 .followRecList(List.of())
-                .chatRoomId(999L)
                 .build();
         given(memberService.getDetailMemberInfo(2L)).willReturn(detail);
 
@@ -198,8 +197,8 @@ class MemberControllerTest {
     @Test
     @DisplayName("GET /rest-api/v1/member/search?keyword=kw&page=0&size=2 → 200 OK")
     void searchMemberInfo_success() throws Exception {
-        var m1 = new MemberResponse(3L, "gangneung", null, 0L, 0L, 3L);
-        var m2 = new MemberResponse(4L, "busan",     null, 0L, 0L, 4L);
+        var m1 = new MemberResponse(3L, "user3@example.com", "gangneung", null);
+        var m2 = new MemberResponse(4L, "user4@example.com", "busan",     null);
 
         var pageable = PageRequest.of(0, 15); // 기본값
         Page<MemberResponse> springPage = new PageImpl<>(List.of(m1, m2), pageable, 2);
