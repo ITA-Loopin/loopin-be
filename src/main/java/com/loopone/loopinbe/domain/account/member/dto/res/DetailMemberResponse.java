@@ -1,10 +1,8 @@
 package com.loopone.loopinbe.domain.account.member.dto.res;
 
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -23,5 +21,4 @@ public class DetailMemberResponse {
     private List<SimpleMemberResponse> followedList;
     private List<SimpleMemberResponse> followReqList;
     private List<SimpleMemberResponse> followRecList;
-    private Long chatRoomId;
 }
