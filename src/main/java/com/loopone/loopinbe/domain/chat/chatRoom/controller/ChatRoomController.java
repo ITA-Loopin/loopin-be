@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.chat.chatRoom.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
+import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,10 +41,9 @@ public class ChatRoomController {
     // AI 채팅방 생성
     @PostMapping("/create")
     @Operation(summary = "AI 채팅방 생성", description = "AI 채팅방을 생성합니다.")
-    public ApiResponse<Void> createChatRoom(
+    public ApiResponse<ChatRoomResponse> createChatRoom(
             @CurrentUser  CurrentUserDto currentUserDto
     ) {
-        chatRoomService.createAiChatRoom(currentUserDto.id());
-        return ApiResponse.success();
+        return ApiResponse.success(chatRoomService.createAiChatRoom(currentUserDto.id()));
     }
 }
