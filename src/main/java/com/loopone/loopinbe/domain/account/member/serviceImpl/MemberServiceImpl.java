@@ -175,7 +175,8 @@ public class MemberServiceImpl implements MemberService {
     @Transactional(readOnly = true)
     public PageResponse<MemberResponse> searchMemberInfo(Pageable pageable, String keyword, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
-        Page<MemberResponse> members = memberRepository.findByKeyword(pageable, keyword, currentUser.id());
+        String trimmed = (keyword == null) ? null : keyword.trim();
+        Page<MemberResponse> members = memberRepository.findByKeyword(pageable, trimmed, currentUser.id());
         return PageResponse.of(members);
     }
 
