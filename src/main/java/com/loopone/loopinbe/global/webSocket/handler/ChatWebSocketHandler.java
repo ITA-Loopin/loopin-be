@@ -168,6 +168,25 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             .build();
                     chatMessageEventPublisher.publishWsEvent(out);
                 }
+                case DELETE -> {
+                    if (in.getChatMessageResponse() == null || in.getChatMessageResponse().getId() == null) {
+                        sendWsError(session, "BAD_REQUEST", "messageId is required");
+                        return;
+                    }
+                    String messageId = in.getChatMessageResponse().getId();
+                    try {
+                        chatMessageService.deleteChatMessage(messageId, memberId);
+                        ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                                .messageType(MessageType.DELETE)
+                                .chatRoomId(chatRoomId)
+                                .chatMessageResponse(ChatMessageResponse.builder().id(messageId).build())
+                                .build();
+                        chatMessageEventPublisher.publishWsEvent(out);
+                    } catch (Exception e) {
+                        log.error("Failed to delete message: {}", messageId, e);
+                        sendWsError(session, "DELETE_FAILED", "Failed to delete message");
+                    }
+                }
                 default -> log.warn("Unknown/Unhandled messageType: {}", in.getMessageType());
             }
         } catch (Exception e) {
