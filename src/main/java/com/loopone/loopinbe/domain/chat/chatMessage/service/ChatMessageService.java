@@ -21,6 +21,9 @@ public interface ChatMessageService {
     // Kafka 인바운드 메시지 처리(권한검증 + 멱등 저장 + Mongo 업서트)
     ChatMessagePayload processInbound(ChatMessagePayload in);
 
+    // 채팅 메시지 단일 삭제
+    void deleteChatMessage(String messageId, Long memberId);
+
     // 채팅방의 모든 메시지 삭제
     void deleteAllChatMessages(Long chatRoomId);
 
