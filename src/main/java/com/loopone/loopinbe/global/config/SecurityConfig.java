@@ -99,7 +99,7 @@ public class SecurityConfig {
                 "https://develop.loopin.co.kr"
         ));
         configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"));
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control", "Content-Length", "*"));
         configuration.setAllowCredentials(true); // 쿠키 허용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
