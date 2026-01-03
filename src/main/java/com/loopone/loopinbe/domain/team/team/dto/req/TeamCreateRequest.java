@@ -10,7 +10,7 @@ import java.util.List;
 
 @Schema(description = "팀 생성을 위한 요청 DTO")
 public record TeamCreateRequest(
-        @Schema(description = "루프 타입 (PROJECT, CONTEST, STUDY, ROUTINE, ETC)")
+        @Schema(description = "루프 타입 (PROJECT, CONTEST, STUDY, ROUTINE, CLUB, EXTERNALACTIVITY, ETC)")
         @NotNull(message = "루프 타입은 필수입니다.")
         TeamCategory category,
 
