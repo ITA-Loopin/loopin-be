@@ -7,6 +7,7 @@ import com.loopone.loopinbe.global.oauth.handler.WebOAuth2SuccessHandler;
 import com.loopone.loopinbe.global.oauth.user.CustomOAuth2UserService;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
 import com.loopone.loopinbe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +51,8 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/error", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/rest-api/v1/auth/signup-login",

@@ -63,7 +63,7 @@ custom:
   jwt:
     secretKey: ${JWT_SECRET_KEY}
   accessToken:
-    expiration: 6h    # 6시간
+    expiration: 30m    # 30분
   refreshToken:
     expiration: 30d   # 30일
 
