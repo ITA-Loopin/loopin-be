@@ -64,7 +64,7 @@ public class NotProdLoopService {
                         "3km 10분 달성 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         LocalDate.of(2025, 12, 22),
                         LocalDate.of(2025, 12, 24),
                         List.of("아침에 3km 런닝", "런닝 후 샐러드 건강식 먹기")
@@ -78,7 +78,7 @@ public class NotProdLoopService {
                         "950점 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         LocalDate.of(2025, 12, 22),
                         LocalDate.of(2025, 12, 24),
                         List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기")
@@ -181,7 +181,7 @@ public class NotProdLoopService {
                         "3km 10분 달성 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         LocalDate.of(2025, 12, 1),
                         LocalDate.of(2025, 12, 31),
                         List.of("런닝 전 스트레칭", "아침에 3km 런닝", "런닝 후 1km 조깅", "마무리 스트레칭", "런닝 후 샐러드 건강식 먹기")
@@ -195,7 +195,7 @@ public class NotProdLoopService {
                         "950점 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         LocalDate.of(2025, 12, 1),
                         LocalDate.of(2025, 12, 31),
                         List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기", "오답 단어 1회독")
@@ -209,7 +209,7 @@ public class NotProdLoopService {
                         "1일 1회 기출 풀기",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.TUESDAY),
+                        List.of(DayOfWeek.TUESDAY),
                         LocalDate.of(2025, 12, 23),
                         LocalDate.of(2025, 12, 31),
                         List.of("카카오 기출 1회 풀기")

@@ -348,7 +348,7 @@ public class LoopServiceImpl implements LoopService {
 
         // 입력값으로 loopRule 업데이트
         loopRule.setScheduleType(requestDTO.scheduleType());
-        loopRule.setDaysOfWeek((Set<DayOfWeek>) requestDTO.daysOfWeek());
+        loopRule.setDaysOfWeek(requestDTO.daysOfWeek());
         loopRule.setStartDate(requestDTO.startDate());
         loopRule.setEndDate(requestDTO.endDate());
 
