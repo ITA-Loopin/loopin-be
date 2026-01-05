@@ -15,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
+//각 멤버에 대한 TeamLoopMemberCheck들을 관리하는 엔티티
 public class TeamLoopMemberProgress extends BaseEntity {
 
     @Id

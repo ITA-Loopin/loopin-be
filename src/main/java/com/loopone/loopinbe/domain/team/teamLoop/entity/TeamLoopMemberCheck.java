@@ -11,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
+//각 멤버에 대한 팀 루프 체크리스트의 체크 현황
 public class TeamLoopMemberCheck extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

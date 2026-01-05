@@ -266,36 +266,65 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     // 체크리스트, 참여자 Progress/Check 생성 로직
     private void createSubEntitiesForLoop(TeamLoop teamLoop, Team team, TeamLoopCreateRequest requestDTO) {
-        // 체크리스트 생성
-        List<TeamLoopChecklist> checklists = new ArrayList<>();
-        if (requestDTO.checklists() != null && !requestDTO.checklists().isEmpty()) {
-            checklists = requestDTO.checklists().stream()
-                    .map(content -> TeamLoopChecklist.builder()
-                            .teamLoop(teamLoop)
-                            .content(content)
-                            .build())
-                    .collect(Collectors.toList());
-            teamLoopChecklistRepository.saveAll(checklists);
-        }
-
         // 참여자 결정 (공통/개인)
         List<Member> participants = getParticipants(team, requestDTO);
+        List<TeamLoopMemberProgress> savedProgresses = new ArrayList<>();
 
-        // 참여자별 Progress, Check 생성
+        // 참여자별 데이터 생성
         for (Member member : participants) {
             // Progress 생성
             TeamLoopMemberProgress progress = TeamLoopMemberProgress.builder()
                     .teamLoop(teamLoop)
                     .member(member)
                     .build();
-            teamLoopMemberProgressRepository.save(progress);
+            savedProgresses.add(teamLoopMemberProgressRepository.save(progress));
 
-            // Check 생성
-            if (!checklists.isEmpty()) {
-                List<TeamLoopMemberCheck> checks = checklists.stream()
-                        .map(checklist -> TeamLoopMemberCheck.builder()
-                                .memberProgress(progress) // Progress와 연결
-                                .checklist(checklist)     // Checklist와 연결
+            // 체크리스트 및 체크 현황 생성
+            if (requestDTO.checklists() != null && !requestDTO.checklists().isEmpty()) {
+                if (teamLoop.getType() == TeamLoopType.COMMON) {
+                    // 공통 루프인 경우 -> 체크리스트를 한 번만 만들고 공유
+                    // 공통 루프는 별도로 처리
+                } else {
+                    // 개인 루프인 경우 -> 각 멤버마다 전용 체크리스트 생성
+                    List<TeamLoopChecklist> myChecklists = requestDTO.checklists().stream()
+                            .map(content -> TeamLoopChecklist.builder()
+                                    .teamLoop(teamLoop)
+                                    .content(content)
+                                    .owner(member) // 체크리스트 주인 지정
+                                    .build())
+                            .collect(Collectors.toList());
+                    teamLoopChecklistRepository.saveAll(myChecklists);
+
+                    // 각 멤버에 대한 체크 현황 생성
+                    List<TeamLoopMemberCheck> myChecks = myChecklists.stream()
+                            .map(cl -> TeamLoopMemberCheck.builder()
+                                    .memberProgress(progress)
+                                    .checklist(cl)
+                                    .isChecked(false)
+                                    .build())
+                            .collect(Collectors.toList());
+                    teamLoopMemberCheckRepository.saveAll(myChecks);
+                }
+            }
+        }
+
+        // 공통 루프인 경우 체크리스트 생성
+        if (teamLoop.getType() == TeamLoopType.COMMON && requestDTO.checklists() != null) {
+            List<TeamLoopChecklist> commonChecklists = requestDTO.checklists().stream()
+                    .map(content -> TeamLoopChecklist.builder()
+                            .teamLoop(teamLoop)
+                            .content(content)
+                            .owner(null) // 주인 없음 (공용)
+                            .build())
+                    .collect(Collectors.toList());
+            teamLoopChecklistRepository.saveAll(commonChecklists);
+
+            // 모든 참여자의 체크 현황 생성
+            for (TeamLoopMemberProgress progress : savedProgresses) {
+                List<TeamLoopMemberCheck> checks = commonChecklists.stream()
+                        .map(cl -> TeamLoopMemberCheck.builder()
+                                .memberProgress(progress)
+                                .checklist(cl)
                                 .isChecked(false)
                                 .build())
                         .collect(Collectors.toList());
