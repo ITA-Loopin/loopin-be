@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.global.initData.service;
+package com.loopone.loopinbe.global.initData.notProd.service;
 
 import java.util.List;
 

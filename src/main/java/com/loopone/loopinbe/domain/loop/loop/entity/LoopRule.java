@@ -35,7 +35,7 @@ public class LoopRule extends BaseEntity {
     @ElementCollection(fetch = FetchType.LAZY)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "loop_rule_days_of_week", joinColumns = @JoinColumn(name = "loop_rule_id"))
-    private List<DayOfWeek> daysOfWeek;
+    private Set<DayOfWeek> daysOfWeek;
 
     private LocalDate startDate;
 

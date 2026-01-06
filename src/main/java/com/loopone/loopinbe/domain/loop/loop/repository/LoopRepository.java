@@ -66,4 +66,7 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
 
     // loopReport 시나리오 검증 테스트
     Optional<Loop> findFirstByMember_IdAndTitleAndLoopDate(Long memberId, String title, LocalDate loopDate);
+
+    // 멤버가 만든 모든 루프 조회
+    List<Loop> findAllByMemberId(Long memberId);
 }

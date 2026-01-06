@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.team.team.service;
 
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
@@ -17,4 +18,6 @@ public interface TeamService {
     List<RecruitingTeamResponse> getRecruitingTeams(CurrentUserDto currentUser);
     TeamDetailResponse getTeamDetails(Long teamId, LocalDate targetDate, CurrentUserDto currentUser);
     List<TeamMemberResponse> getTeamMembers(Long teamId);
+    // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
+    void deleteMyTeams(Member member);
 }
