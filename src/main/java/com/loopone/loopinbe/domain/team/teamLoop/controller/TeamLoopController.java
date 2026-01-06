@@ -14,11 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/rest-api/v1")
+@RequestMapping("/rest-api/v1/teams")
 @RequiredArgsConstructor
 @Tag(name = "Team", description = "팀 루프 API")
 public class TeamLoopController {
