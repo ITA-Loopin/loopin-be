@@ -37,4 +37,7 @@ public interface LoopService {
 
     // 루프 그룹 전체 삭제
     void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser);
+
+    // 사용자가 생성한 루프 전체 삭제
+    void deleteMyLoops(Long memberId);
 }

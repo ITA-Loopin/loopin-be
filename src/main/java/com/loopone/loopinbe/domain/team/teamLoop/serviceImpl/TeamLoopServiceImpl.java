@@ -3,7 +3,9 @@ package com.loopone.loopinbe.domain.team.teamLoop.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
+import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
@@ -25,12 +27,16 @@ import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -110,6 +116,39 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         }
     }
 
+    // (A) teamsToDelete: 팀 자체가 삭제될 팀들 -> 팀에 속한 루프/체크/진행률/체크리스트 "전체 삭제"
+    // (B) remainingTeamIds: 팀은 남고 내가 탈퇴하는 팀들 -> 내 체크/내 진행률만 삭제
+    @Override
+    public void deleteMyTeamLoops(Long memberId, List<Long> teamsToDelete, List<Long> remainingTeamIds) {
+        // (A) 팀 삭제 대상: teamId 기준으로 전부 삭제 + 연결된 LoopRule(고아만) 삭제
+        if (teamsToDelete != null && !teamsToDelete.isEmpty()) {
+            // 1) TeamLoop 삭제 전에, 해당 팀들의 loopRuleId를 미리 수집 (FK 때문에 필수)
+            List<Long> loopRuleIds = teamLoopRepository.findDistinctLoopRuleIdsByTeamIds(teamsToDelete);
+
+            // FK 삭제 순서: check -> progress -> checklist -> teamLoop
+            teamLoopMemberCheckRepository.deleteByTeamIds(teamsToDelete);
+            teamLoopMemberProgressRepository.deleteByTeamIds(teamsToDelete);
+            teamLoopChecklistRepository.deleteByTeamIds(teamsToDelete);
+            teamLoopRepository.deleteByTeamIds(teamsToDelete);
+
+            // 2) 이제 TeamLoop가 삭제됐으니, 연결됐던 LoopRule 중 "어디에서도 참조되지 않는 것"만 삭제
+            if (loopRuleIds != null && !loopRuleIds.isEmpty()) {
+                loopRuleRepository.deleteOrphanByIds(loopRuleIds);
+            }
+        }
+        // (B) 팀은 남음: 내 흔적만 삭제
+        if (remainingTeamIds != null && !remainingTeamIds.isEmpty()) {
+            teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
+            teamLoopMemberProgressRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void transferTeamLoopRuleOwner(Long teamId, Long oldLeaderId, Member newLeader) {
+        loopRuleRepository.transferOwnerByTeamId(teamId, oldLeaderId, newLeader);
+    }
+
         // ========== 비즈니스 로직 메서드 ==========
     private Long createSingleTeamLoop(Team team, TeamLoopCreateRequest requestDTO) {
         LocalDate date = (requestDTO.specificDate() == null) ? LocalDate.now() : requestDTO.specificDate();
@@ -187,7 +226,9 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         LoopRule loopRule = LoopRule.builder()
                 .member(creator)
                 .scheduleType(requestDTO.scheduleType())
-                .daysOfWeek(requestDTO.daysOfWeek())
+                .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
+                        ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                        : null)
                 .startDate(start)
                 .endDate(end)
                 .build();
@@ -304,5 +345,12 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, memberId)) {
             throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
         }
+    }
+
+    // ========== 헬퍼 메서드 ==========
+    // List -> Set 변환
+    private Set<DayOfWeek> toDayOfWeekSet(List<DayOfWeek> days) {
+        if (days == null || days.isEmpty()) return null; // WEEKLY 아니면 null 저장하려는 의도 유지
+        return EnumSet.copyOf(days); // 중복 제거 + Enum 최적화 Set
     }
 }
