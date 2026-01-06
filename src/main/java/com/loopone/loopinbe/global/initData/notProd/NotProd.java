@@ -1,6 +1,6 @@
-package com.loopone.loopinbe.global.initData;
+package com.loopone.loopinbe.global.initData.notProd;
 
-import com.loopone.loopinbe.global.initData.service.NotProdService;
+import com.loopone.loopinbe.global.initData.notProd.service.NotProdService;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -16,8 +16,10 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepo
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
+import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
@@ -51,6 +53,8 @@ public class MemberServiceImpl implements MemberService {
     private final S3Service s3Service;
     private final MemberConverter memberConverter;
     private final ChatRoomService chatRoomService;
+    private final TeamService teamService;
+    private final LoopService loopService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final AuthEventPublisher authEventPublisher;
 
@@ -155,12 +159,14 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public void deleteMember(CurrentUserDto currentUser, String accessToken) {
         // DB에서 회원 조회
-        Member memberEntity = memberRepository.findById(currentUser.id())
+        Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 연관된 데이터 삭제
         chatRoomService.leaveAllChatRooms(currentUser.id());
+        teamService.deleteMyTeams(member);
+        loopService.deleteMyLoops(currentUser.id());
         // 회원삭제
-        memberRepository.delete(memberEntity);
+        memberRepository.delete(member);
         // 로그아웃
         AuthPayload payload = new AuthPayload(
                 java.util.UUID.randomUUID().toString(),
