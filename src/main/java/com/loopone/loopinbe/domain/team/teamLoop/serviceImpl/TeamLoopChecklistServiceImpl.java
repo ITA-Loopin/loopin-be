@@ -1,4 +1,167 @@
 package com.loopone.loopinbe.domain.team.teamLoop.serviceImpl;
 
-public class TeamLoopChecklistServiceImpl {
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistUpdateRequest;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
+import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberProgressRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopChecklistService;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class TeamLoopChecklistServiceImpl implements TeamLoopChecklistService {
+
+    private final TeamLoopRepository teamLoopRepository;
+    private final TeamLoopChecklistRepository teamLoopChecklistRepository;
+    private final TeamLoopMemberCheckRepository teamLoopMemberCheckRepository;
+    private final TeamLoopMemberProgressRepository teamLoopMemberProgressRepository;
+    private final MemberRepository memberRepository;
+
+    @Override
+    public TeamLoopChecklistResponse createChecklist(Long loopId, TeamLoopChecklistCreateRequest request, CurrentUserDto currentUser) {
+        TeamLoop teamLoop = getTeamLoopOrThrow(loopId);
+        Member member = getMemberOrThrow(currentUser.id());
+
+        Member checklistOwner;
+        List<TeamLoopMemberProgress> targetProgresses;
+
+        if (teamLoop.getType() == TeamLoopType.COMMON) {
+            validateLeader(teamLoop, member);
+            checklistOwner = null;
+            targetProgresses = teamLoop.getMemberProgress();
+        } else {
+            TeamLoopMemberProgress myProgress = getMyProgressOrThrow(teamLoop, member);
+            checklistOwner = member;
+            targetProgresses = List.of(myProgress);
+        }
+
+        TeamLoopChecklist checklist = teamLoopChecklistRepository.save(TeamLoopChecklist.builder()
+                .teamLoop(teamLoop)
+                .content(request.content())
+                .owner(checklistOwner)
+                .build());
+
+        List<TeamLoopMemberCheck> checks = targetProgresses.stream()
+                .map(progress -> TeamLoopMemberCheck.builder()
+                        .memberProgress(progress)
+                        .checklist(checklist)
+                        .isChecked(false)
+                        .build())
+                .collect(Collectors.toList());
+        teamLoopMemberCheckRepository.saveAll(checks);
+
+        return TeamLoopChecklistResponse.builder()
+                .id(checklist.getId())
+                .content(checklist.getContent())
+                .isChecked(false)
+                .build();
+    }
+
+    @Override
+    public TeamLoopChecklistResponse updateChecklist(Long checklistId, TeamLoopChecklistUpdateRequest request, CurrentUserDto currentUser) {
+        TeamLoopChecklist checklist = getChecklistOrThrow(checklistId);
+        validatePermission(checklist, currentUser.id());
+        checklist.updateContent(request.content());
+
+        return TeamLoopChecklistResponse.builder()
+                .id(checklist.getId())
+                .content(checklist.getContent())
+                .isChecked(false)
+                .build();
+    }
+
+    @Override
+    public void deleteChecklist(Long checklistId, CurrentUserDto currentUser) {
+        TeamLoopChecklist checklist = getChecklistOrThrow(checklistId);
+        validatePermission(checklist, currentUser.id());
+        teamLoopChecklistRepository.delete(checklist);
+    }
+
+    @Override
+    public TeamLoopChecklistResponse toggleCheck(Long checklistId, CurrentUserDto currentUser) {
+        TeamLoopMemberCheck myCheck = getMyCheckOrThrow(currentUser.id(), checklistId);
+        myCheck.toggleChecked();
+
+        return TeamLoopChecklistResponse.builder()
+                .id(checklistId)
+                .content(myCheck.getChecklist().getContent())
+                .isChecked(myCheck.isChecked())
+                .build();
+    }
+
+    // ========== 비즈니스 로직 메서드 ==========
+
+    // ========== 조회 메서드 ==========
+    // 회원 조회
+    private Member getMemberOrThrow(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
+    }
+    // 체크리스트 조회
+    private TeamLoopChecklist getChecklistOrThrow(Long checklistId) {
+        return teamLoopChecklistRepository.findById(checklistId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.NOT_FOUND));
+    }
+    // 루프 조회
+    private TeamLoop getTeamLoopOrThrow(Long loopId) {
+        return teamLoopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.NOT_FOUND));
+    }
+    // TeamLoopMemberProgress 조회
+    private TeamLoopMemberProgress getMyProgressOrThrow(TeamLoop teamLoop, Member member) {
+        return teamLoopMemberProgressRepository.findByTeamLoopAndMember(teamLoop, member)
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+    }
+    // TeamLoopMemberCheck 조회
+    private TeamLoopMemberCheck getMyCheckOrThrow(Long memberId, Long checklistId) {
+        return teamLoopMemberCheckRepository.findByMemberIdAndChecklistId(memberId, checklistId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.NOT_FOUND));
+    }
+
+    // ========== 검증 메서드 ==========
+    // 사용자가 팀장인지 검증
+    private void validateLeader(TeamLoop teamLoop, Member member) {
+        if (!teamLoop.getTeam().getLeader().getId().equals(member.getId())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+    }
+    // 체크리스트 수정/삭제 권한 검증
+    private void validatePermission(TeamLoopChecklist checklist, Long currentUserId) {
+        // 체크리스트가 속한 팀 루프 조회
+        TeamLoop teamLoop = checklist.getTeamLoop();
+
+        // 공통 루프인 경우 팀장인지 검증
+        if (teamLoop.getType() == TeamLoopType.COMMON) {
+            if (!teamLoop.getTeam().getLeader().getId().equals(currentUserId)) {
+                throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+            }
+        }
+        // 개인 루프인 경우 주인인지 검증
+        else {
+            if (checklist.getOwner() == null || !checklist.getOwner().getId().equals(currentUserId)) {
+                throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+            }
+        }
+    }
 }

@@ -11,7 +11,9 @@ import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
@@ -149,7 +151,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         loopRuleRepository.transferOwnerByTeamId(teamId, oldLeaderId, newLeader);
     }
 
-        // ========== 비즈니스 로직 메서드 ==========
+    // ========== 비즈니스 로직 메서드 ==========
     private Long createSingleTeamLoop(Team team, TeamLoopCreateRequest requestDTO) {
         LocalDate date = (requestDTO.specificDate() == null) ? LocalDate.now() : requestDTO.specificDate();
 

@@ -29,4 +29,8 @@ public class TeamLoopMemberCheck extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean isChecked = false;
+
+    public void toggleChecked() {
+        this.isChecked = !this.isChecked;
+    }
 }
