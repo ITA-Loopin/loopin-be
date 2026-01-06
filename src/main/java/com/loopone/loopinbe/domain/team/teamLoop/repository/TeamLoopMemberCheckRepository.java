@@ -32,4 +32,6 @@ public interface TeamLoopMemberCheckRepository extends JpaRepository<TeamLoopMem
             @Param("memberId") Long memberId,
             @Param("checklistId") Long checklistId
     );
+
+    List<TeamLoopMemberCheck> findByMemberProgressIdOrderByIdAsc(Long memberProgressId);
 }

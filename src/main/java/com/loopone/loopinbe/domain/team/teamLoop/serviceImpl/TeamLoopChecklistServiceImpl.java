@@ -110,6 +110,27 @@ public class TeamLoopChecklistServiceImpl implements TeamLoopChecklistService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeamLoopChecklistResponse> getChecklistStatus(Long loopId, Long memberId, CurrentUserDto currentUser) {
+        TeamLoop teamLoop = getTeamLoopOrThrow(loopId);
+
+        // memberId가 null이면 현재 사용자
+        Long targetMemberId = (memberId == null) ? currentUser.id() : memberId;
+        Member targetMember = getMemberOrThrow(targetMemberId);
+
+        TeamLoopMemberProgress progress = getMyProgressOrThrow(teamLoop, targetMember);
+        List<TeamLoopMemberCheck> checks = teamLoopMemberCheckRepository.findByMemberProgressIdOrderByIdAsc(progress.getId());
+
+        return checks.stream()
+                .map(check -> TeamLoopChecklistResponse.builder()
+                        .id(check.getChecklist().getId())
+                        .content(check.getChecklist().getContent())
+                        .isChecked(check.isChecked())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
     // ========== 비즈니스 로직 메서드 ==========
 
     // ========== 조회 메서드 ==========

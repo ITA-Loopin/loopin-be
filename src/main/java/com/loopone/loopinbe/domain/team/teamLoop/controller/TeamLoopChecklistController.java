@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/rest-api/v1/teams/loops")
 @RequiredArgsConstructor
@@ -61,6 +63,17 @@ public class TeamLoopChecklistController {
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
         TeamLoopChecklistResponse response = teamLoopChecklistService.toggleCheck(checklistId, currentUser);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{loopId}/checklists")
+    @Operation(summary = "체크리스트 현황 조회", description = "특정 루프의 체크리스트 목록과 해당 멤버의 수행 여부를 조회합니다. (memberId 생략 시 현재 사용자)")
+    public ApiResponse<List<TeamLoopChecklistResponse>> getChecklistStatus(
+            @PathVariable Long loopId,
+            @RequestParam(required = false) Long memberId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        List<TeamLoopChecklistResponse> response = teamLoopChecklistService.getChecklistStatus(loopId, memberId, currentUser);
         return ApiResponse.success(response);
     }
 }
