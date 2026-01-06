@@ -17,10 +17,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class TeamMember extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
