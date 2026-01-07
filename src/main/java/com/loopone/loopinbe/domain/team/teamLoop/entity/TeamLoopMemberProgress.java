@@ -15,11 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
+//각 멤버에 대한 TeamLoopMemberCheck들을 관리하는 엔티티
 public class TeamLoopMemberProgress extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_loop_id")
