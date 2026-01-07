@@ -112,12 +112,12 @@ public class LoopController {
     }
 
     // 루프 그룹 삭제
-    @DeleteMapping("/loops/group/{loopRuleId}")
+    @DeleteMapping("/loops/group/{loopId}")
     @Operation(summary = "루프 그룹 전체 삭제", description = "해당 그룹의 루프 전체를 삭제합니다. (선택한 날짜와 그 이후의 루프들만 삭제)")
     public ApiResponse<Void> deleteLoopGroup(
-            @Parameter(description = "삭제할 루프 그룹의 ID") @PathVariable Long loopRuleId,
+            @Parameter(description = "선택한 루프의 ID") @PathVariable Long loopId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
-        loopService.deleteLoopGroup(loopRuleId, currentUser);
+        loopService.deleteLoopGroup(loopId, currentUser);
         return ApiResponse.success();
     }
 }
