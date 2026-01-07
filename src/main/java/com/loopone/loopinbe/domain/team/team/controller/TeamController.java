@@ -20,14 +20,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/rest-api/v1")
+@RequestMapping("/rest-api/v1/teams")
 @RequiredArgsConstructor
 @Tag(name = "Team", description = "팀 API")
 public class TeamController {
 
     private final TeamService teamService;
 
-    @PostMapping("/teams")
+    @PostMapping("/")
     @Operation(summary = "팀 생성", description = "새로운 팀을 생성하고 팀원을 초대합니다.")
     public ApiResponse<Long> createTeam(
             @Valid @RequestBody TeamCreateRequest request,
@@ -37,7 +37,7 @@ public class TeamController {
         return ApiResponse.success(teamId);
     }
 
-    @GetMapping("/teams/my")
+    @GetMapping("/my")
     @Operation(summary = "나의 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
@@ -46,7 +46,7 @@ public class TeamController {
         return ApiResponse.success(response);
     }
 
-    @GetMapping("/teams/recruiting")
+    @GetMapping("/recruiting")
     @Operation(summary = "모집 중인 팀 리스트 조회", description = "참여 가능한 다른 팀 리스트를 조회합니다.")
     public ApiResponse<List<RecruitingTeamResponse>> getRecruitingTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
