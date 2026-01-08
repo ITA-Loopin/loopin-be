@@ -145,6 +145,19 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
     }
 
+    @Override
+    @Transactional
+    public void deleteChatMessage(String messageId, Long memberId) {
+        ChatMessage message = chatMessageMongoRepository.findById(messageId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATMESSAGE_NOT_FOUND));
+
+        if (!message.getMemberId().equals(memberId)) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        chatMessageMongoRepository.delete(message);
+    }
+
     // 채팅방의 모든 메시지 삭제
     @Override
     @Transactional

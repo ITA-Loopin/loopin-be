@@ -27,7 +27,7 @@ public record LoopCreateRequest (
         LocalDate specificDate,
 
         @Schema(description = "scheduleType이 WEEKLY일 때 사용할 요일 목록")
-        Set<DayOfWeek> daysOfWeek,
+        List<DayOfWeek> daysOfWeek,
 
         @Schema(description = "반복 시작일 (WEEKLY, MONTHLY, YEARLY일 때 사용, 기본값은 당일로 설정)")
         LocalDate startDate,

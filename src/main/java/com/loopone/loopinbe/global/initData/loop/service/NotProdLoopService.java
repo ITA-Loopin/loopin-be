@@ -10,7 +10,6 @@ import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
-import com.loopone.loopinbe.global.initData.service.NotProdPrintService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,64 +30,66 @@ public class NotProdLoopService {
     private final MemberRepository memberRepository;
     private final MemberConverter memberConverter;
     private static final String USER1_EMAIL = "user1@example.com";
-    private static final String LOOP_CHRISTMAS = "크리스마스";
+    private static final String LOOP_TRAVEL = "강릉 당일치기";
     private static final String LOOP_RUNNING = "동계 런닝 훈련";
     private static final String LOOP_TOEIC = "토익 공부하기";
     private static final String LOOP_CODING = "코딩 테스트 준비";
 
     // [유저 1이 주간 루프 생성]
-    // 0) 단일 루프(2025-12-25) - 크리스마스
-    // 1) 반복 루프(주 2회: 월/수, 12/22~12/24) - 동계 런닝 훈련
-    // 2) 반복 루프(주 2회: 월/수, 12/22~12/24) - 토익 공부하기
+    // 0) 단일 루프(오늘) - 강릉 당일치기
+    // 1) 반복 루프(주 2회: 월/수, 이번주/저번주) - 동계 런닝 훈련
+    // 2) 반복 루프(주 2회: 월/수, 이번주/저번주) - 토익 공부하기
     @Transactional
     public void createWeekLoops() {
         CurrentUserDto user1 = user1CurrentUser();
-
-        // 0) 단일 루프: 크리스마스
+        LocalDate today = LocalDate.now();
+        LocalDate thisWeekMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate lastWeekMonday = thisWeekMonday.minusWeeks(1);
+        LocalDate thisWeekSunday = thisWeekMonday.plusDays(6);
+        // 0) 단일 루프: 강릉 당일치기
         loopService.createLoop(
                 new LoopCreateRequest(
-                        LOOP_CHRISTMAS,
-                        "친구들이랑 놀기",
+                        LOOP_TRAVEL,
+                        "친구들이랑 여행",
                         RepeatType.NONE,
-                        LocalDate.of(2025, 12, 25),
+                        today,
                         null,
                         null,
                         null,
-                        List.of("명동 신세계 백화점 방문")
+                        List.of("주문진 해수욕장")
                 ),
                 user1
         );
-        // 1) 반복 루프: 동계 런닝 훈련 (월/수) - 12/22~12/24
+        // 1) 반복 루프: 동계 런닝 훈련 (월/수) - 이번주/저번주
         loopService.createLoop(
                 new LoopCreateRequest(
                         LOOP_RUNNING,
                         "3km 10분 달성 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
-                        LocalDate.of(2025, 12, 22),
-                        LocalDate.of(2025, 12, 24),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        lastWeekMonday,
+                        thisWeekSunday,
                         List.of("아침에 3km 런닝", "런닝 후 샐러드 건강식 먹기")
                 ),
                 user1
         );
-        // 2) 반복 루프: 토익 공부하기 (월/수) - 12/22~12/24
+        // 2) 반복 루프: 토익 공부하기 (월/수) - 이번주/저번주
         loopService.createLoop(
                 new LoopCreateRequest(
                         LOOP_TOEIC,
                         "950점 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
-                        LocalDate.of(2025, 12, 22),
-                        LocalDate.of(2025, 12, 24),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        lastWeekMonday,
+                        thisWeekSunday,
                         List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기")
                 ),
                 user1
         );
         log.info("[NotProd] createWeekLoops done for user1={}", USER1_EMAIL);
     }
-
 
     // [유저 1이 주간 체크리스트 완료 처리(1)-1]
     // 0) 단일 루프 완료(2025-12-25)
@@ -97,8 +99,8 @@ public class NotProdLoopService {
     public void completeScenario_1_1() {
         Long user1Id = user1Id();
 
-        // 0) 크리스마스 단일 루프 체크리스트 완료
-        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+        // 0) 강릉 당일치기 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_TRAVEL, LocalDate.of(2025, 12, 25));
 
         // 1) 동계 런닝 훈련 (12/22~12/24)
         LocalDate start = LocalDate.of(2025, 12, 22);
@@ -120,7 +122,6 @@ public class NotProdLoopService {
         log.info("[NotProd] completeScenario_1_1 done");
     }
 
-
     // [유저 1이 주간 체크리스트 완료 처리(1)-2]
     // 0) 단일 루프 완료(2025-12-25)
     // 1) 동계 런닝 훈련(12/22~12/24): MONDAY(1번만 완료), WEDNESDAY(모두 미완료)
@@ -130,8 +131,8 @@ public class NotProdLoopService {
     public void completeScenario_1_2() {
         Long user1Id = user1Id();
 
-        // 0) 크리스마스 단일 루프 체크리스트 완료
-        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+        // 0) 강릉 당일치기 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_TRAVEL, LocalDate.of(2025, 12, 25));
 
         // 1) 동계 런닝 훈련 (12/22~12/24)
         LocalDate start = LocalDate.of(2025, 12, 22);
@@ -154,23 +155,32 @@ public class NotProdLoopService {
 
     // [유저 1이 월간 루프 생성]
     // 0) 단일 루프(2025-12-25)
-    // 1) 반복 루프(주 2회: 월/수, 12/1~12/31) - 동계 런닝 훈련
-    // 2) 반복 루프(주 2회: 월/수, 12/1~12/31) - 토익 공부하기
-    // 3) 반복 루프(주 1회: 화, 12/23~12/31) - 코딩 테스트 준비
+    // 1) 반복 루프(주 2회: 월/수, 이번달 내내) - 동계 런닝 훈련
+    // 2) 반복 루프(주 2회: 월/수, 이번달 내내) - 토익 공부하기
+    // 3) 반복 루프(주 1회: 화, 이번달 내내) - 코딩 테스트 준비
     @Transactional
     public void createMonthLoops() {
         CurrentUserDto user1 = user1CurrentUser();
-        // 0) 단일 루프: 크리스마스
+        LocalDate today = LocalDate.now();
+        LocalDate thisMonthStart = today.with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate thisMonthEnd = today.with(TemporalAdjusters.lastDayOfMonth());
+        // 이번주 월요일
+        LocalDate thisWeekMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        // 저번주 월요일
+        LocalDate lastWeekMonday = thisWeekMonday.minusWeeks(1);
+        // 이번주 일요일
+        LocalDate thisWeekSunday = thisWeekMonday.plusDays(6);
+        // 0) 단일 루프: 당일 치기 여행
         loopService.createLoop(
                 new LoopCreateRequest(
-                        "크리스마스",
-                        "친구들이랑 놀기",
+                        LOOP_TRAVEL,
+                        "친구들이랑 여행",
                         RepeatType.NONE,
-                        LocalDate.of(2025, 12, 25),
+                        today,
                         null,
                         null,
                         null,
-                        List.of("명동 신세계 백화점 방문")
+                        List.of("주문진 해수욕장")
                 ),
                 user1
         );
@@ -181,9 +191,9 @@ public class NotProdLoopService {
                         "3km 10분 달성 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
-                        LocalDate.of(2025, 12, 1),
-                        LocalDate.of(2025, 12, 31),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        thisMonthStart,
+                        thisMonthEnd,
                         List.of("런닝 전 스트레칭", "아침에 3km 런닝", "런닝 후 1km 조깅", "마무리 스트레칭", "런닝 후 샐러드 건강식 먹기")
                 ),
                 user1
@@ -195,9 +205,9 @@ public class NotProdLoopService {
                         "950점 목표",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
-                        LocalDate.of(2025, 12, 1),
-                        LocalDate.of(2025, 12, 31),
+                        List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
+                        thisMonthStart,
+                        thisMonthEnd,
                         List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기", "오답 단어 1회독")
                 ),
                 user1
@@ -209,9 +219,9 @@ public class NotProdLoopService {
                         "1일 1회 기출 풀기",
                         RepeatType.WEEKLY,
                         null,
-                        Set.of(DayOfWeek.TUESDAY),
-                        LocalDate.of(2025, 12, 23),
-                        LocalDate.of(2025, 12, 31),
+                        List.of(DayOfWeek.TUESDAY),
+                        lastWeekMonday,
+                        thisWeekSunday,
                         List.of("카카오 기출 1회 풀기")
                 ),
                 user1
@@ -230,8 +240,8 @@ public class NotProdLoopService {
     @Transactional
     public void completeScenario_2_1() {
         Long user1Id = user1Id();
-        // 0) 크리스마스 단일 루프 체크리스트 완료
-        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+        // 0) 강릉 당일치기 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_TRAVEL, LocalDate.of(2025, 12, 25));
 
         // 1) 동계 런닝 훈련 (12/1~12/31) - 매주 월/수 1~4번 체크리스트 완료
         LocalDate start = LocalDate.of(2025, 12, 1);
@@ -267,8 +277,8 @@ public class NotProdLoopService {
     @Transactional
     public void completeScenario_2_2() {
         Long user1Id = user1Id();
-        // 0) 크리스마스 단일 루프 체크리스트 완료
-        completeAllChecklists(user1Id, LOOP_CHRISTMAS, LocalDate.of(2025, 12, 25));
+        // 0) 강릉 당일치기 단일 루프 체크리스트 완료
+        completeAllChecklists(user1Id, LOOP_TRAVEL, LocalDate.of(2025, 12, 25));
         LocalDate start = LocalDate.of(2025, 12, 1);
 
         // 1) 동계 런닝 훈련: 12/1~12/8, 월/수 모두 all complete (마지막은 12/8 월)

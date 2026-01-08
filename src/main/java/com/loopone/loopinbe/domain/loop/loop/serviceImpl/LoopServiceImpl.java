@@ -26,10 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -193,25 +190,46 @@ public class LoopServiceImpl implements LoopService {
     // 루프 그룹 전체 삭제
     @Override
     @Transactional
-    public void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser) {
+    public void deleteLoopGroup(Long loopId, CurrentUserDto currentUser) {
         // 루프 조회
-        LoopRule loopRule = loopRuleRepository.findById(loopRuleId)
-                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
+        Loop selectedLoop = loopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        LoopRule loopRule = selectedLoop.getLoopRule();
+
+        // 그룹 루프가 아닌 경우 예외 처리
+        if (loopRule == null) {
+            loopRepository.delete(selectedLoop);
+            return;
+        }
 
         // loopRule 검증
         validateLoopRuleOwner(loopRule, currentUser);
+        LocalDate targetDate = selectedLoop.getLoopDate();
 
-        // loopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
+        // loopRule의 루프 리스트를 조회 (선택된 날짜 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopRule(loopRule, targetDate);
         // 해당 루프 리스트 삭제
         loopRepository.deleteAll(LoopList);
 
         // 과거 루프는 연결 끊기
-        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, LocalDate.now());
+        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, targetDate);
         pastLoopList.forEach(loop -> loop.setLoopRule(null));
 
         // loopRule 삭제 (자식이 없기에 삭제 가능)
         loopRuleRepository.delete(loopRule);
+    }
+
+    // 사용자가 생성한 루프 전체 삭제
+    @Override
+    @Transactional
+    public void deleteMyLoops(Long memberId) {
+        // 1) Loop 먼저 전부 삭제 (LoopChecklist는 cascade로 같이 삭제됨)
+        List<Loop> loops = loopRepository.findAllByMemberId(memberId);
+        if (!loops.isEmpty()) {
+            loopRepository.deleteAll(loops);
+        }
+        // 2) TeamLoop가 참조하지 않는 개인 LoopRule만 삭제
+        loopRuleRepository.deletePersonalRulesNotUsedAnywhere(memberId);
     }
 
     // ========== 비즈니스 로직 메서드 ==========
@@ -299,7 +317,9 @@ public class LoopServiceImpl implements LoopService {
         LoopRule loopRule = LoopRule.builder()
                 .member(memberConverter.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
-                .daysOfWeek(requestDTO.daysOfWeek()) // WEEKLY가 아니면 null이 저장됨
+                .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
+                                ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                                : null) // WEEKLY가 아니면 null이 저장됨
                 .startDate(start)
                 .endDate(end)
                 .build();
@@ -348,7 +368,9 @@ public class LoopServiceImpl implements LoopService {
 
         // 입력값으로 loopRule 업데이트
         loopRule.setScheduleType(requestDTO.scheduleType());
-        loopRule.setDaysOfWeek((Set<DayOfWeek>) requestDTO.daysOfWeek());
+        loopRule.setDaysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
+                ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                : null);
         loopRule.setStartDate(requestDTO.startDate());
         loopRule.setEndDate(requestDTO.endDate());
 
@@ -387,6 +409,12 @@ public class LoopServiceImpl implements LoopService {
         if (pageSize > maxPageSize) {
             throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
         }
+    }
+
+    // List -> Set 변환
+    private Set<DayOfWeek> toDayOfWeekSet(List<DayOfWeek> days) {
+        if (days == null || days.isEmpty()) return null; // WEEKLY 아니면 null 저장하려는 의도 유지
+        return EnumSet.copyOf(days); // 중복 제거 + Enum 최적화 Set
     }
 
     // ========== 검증 메서드 ==========

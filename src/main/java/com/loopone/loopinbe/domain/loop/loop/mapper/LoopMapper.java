@@ -13,7 +13,10 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import java.time.DayOfWeek;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Mapper(componentModel = "spring")
 public interface LoopMapper {
@@ -47,6 +50,7 @@ public interface LoopMapper {
     LoopDetailResponse toDetailResponse(Loop loop);
 
     @Mapping(target = "ruleId", source = "id")
+    @Mapping(target = "daysOfWeek", source = "daysOfWeek", qualifiedByName = "toSortedDayOfWeekList")
     LoopDetailResponse.LoopRuleDTO loopRuleToLoopRuleDTO(LoopRule loopRule);
 
     //LoopChecklist 엔티티를 LoopChecklistResponse로 변환
@@ -54,6 +58,17 @@ public interface LoopMapper {
 
     //LoopGroupUpdateRequest를 LoopCreateRequest로 변환
     LoopCreateRequest toLoopCreateRequest(LoopGroupUpdateRequest requestDTO);
+
+    // Set<DayOfWeek> -> List<DayOfWeek>로 변환(월=1.. 일=7)으로 정렬
+    @Named("toSortedDayOfWeekList")
+    default List<DayOfWeek> toSortedDayOfWeekList(Set<DayOfWeek> daysOfWeek) {
+        if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+            return List.of();
+        }
+        return daysOfWeek.stream()
+                .sorted(Comparator.comparingInt(DayOfWeek::getValue))
+                .toList();
+    }
 
     //진행률(progress)을 계산하는 헬퍼 메서드
     @Named("calculateProgress")

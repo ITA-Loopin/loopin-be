@@ -18,7 +18,11 @@ import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberProgressRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,6 +46,7 @@ public class TeamServiceImpl implements TeamService {
     private final MemberRepository memberRepository;
     private final TeamMapper teamMapper;
     private final TeamLoopRepository teamLoopRepository;
+    private final TeamLoopService teamLoopService;
     private final ChatRoomService chatRoomService;
 
     @Override
@@ -142,6 +148,48 @@ public class TeamServiceImpl implements TeamService {
                         .profileImage(tm.getMember().getProfileImageUrl())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
+    @Override
+    @Transactional
+    public void deleteMyTeams(Member member) {
+        List<TeamMember> myMemberships = teamMemberRepository.findAllByMember(member);
+        if (myMemberships.isEmpty()) return;
+        List<Long> myTeamIds = myMemberships.stream()
+                .map(tm -> tm.getTeam().getId())
+                .distinct()
+                .toList();
+        // 내가 리더인 팀들 중, (다른 팀원이 없어서) 팀 자체를 삭제해야 하는 팀들
+        List<Team> myLeaderTeams = teamRepository.findAllByLeaderId(member.getId());
+        List<Long> teamsToDelete = new ArrayList<>();
+        for (Team team : myLeaderTeams) {
+            if (!myTeamIds.contains(team.getId())) continue;
+            teamMemberRepository.findFirstMemberByTeamIdAndMemberIdNot(team.getId(), member.getId())
+                    .ifPresentOrElse(
+                            nextLeader -> {
+                                team.setLeader(nextLeader); // 1) 팀 리더 위임
+                                // 2) TeamLoop에 연결된 LoopRule의 member도 새 리더로 위임
+                                teamLoopService.transferTeamLoopRuleOwner(team.getId(), member.getId(), nextLeader);
+                            },
+                            () -> teamsToDelete.add(team.getId())
+                    );
+        }
+        // 팀은 남고, 나는 탈퇴만 하는 팀들
+        List<Long> remainingTeamIds = myTeamIds.stream()
+                .filter(id -> !teamsToDelete.contains(id))
+                .toList();
+        // 루프 관련 삭제는 TeamLoopService가 담당
+        teamLoopService.deleteMyTeamLoops(member.getId(), teamsToDelete, remainingTeamIds);
+        // (A) 팀 전체 삭제: TeamMember + Team만 삭제 (루프쪽은 이미 위에서 삭제됨)
+        if (!teamsToDelete.isEmpty()) {
+            teamMemberRepository.deleteByTeamIds(teamsToDelete);
+            teamRepository.deleteAllByIdInBatch(teamsToDelete);
+        }
+        // (B) 팀은 남음: TeamMember만 삭제(탈퇴)
+        if (!remainingTeamIds.isEmpty()) {
+            teamMemberRepository.deleteByMemberAndTeamIds(member.getId(), remainingTeamIds);
+        }
     }
 
     // ========== 비즈니스 로직 메서드 ==========
