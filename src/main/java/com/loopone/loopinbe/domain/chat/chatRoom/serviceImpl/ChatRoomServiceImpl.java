@@ -18,6 +18,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
+import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -116,6 +116,33 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoomRepository.save(chatRoom);
         memberRepository.save(member);
         return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
+    }
+
+    @Override
+    public void createTeamChatRoom(Long userId, Team team, List<Member> members) {
+        ChatRoom chatRoom = ChatRoom.builder()
+                .title(team.getName())
+                .member(team.getLeader())
+                .isBotRoom(false)
+                .build();
+
+        List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
+
+        chatRoomMembers.add(ChatRoomMember.builder()
+                .member(team.getLeader())
+                .chatRoom(chatRoom)
+                .build());
+        
+        // 팀원 모두 추가
+        for (Member member : members) {
+            chatRoomMembers.add(ChatRoomMember.builder()
+                    .member(member)
+                    .chatRoom(chatRoom)
+                    .build());
+        }
+
+        chatRoom.setChatRoomMembers(chatRoomMembers);
+        chatRoomRepository.save(chatRoom);
     }
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)

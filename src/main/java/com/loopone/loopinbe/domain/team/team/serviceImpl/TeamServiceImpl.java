@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.team.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
@@ -40,6 +41,7 @@ public class TeamServiceImpl implements TeamService {
     private final MemberRepository memberRepository;
     private final TeamMapper teamMapper;
     private final TeamLoopRepository teamLoopRepository;
+    private final ChatRoomService chatRoomService;
 
     @Override
     @Transactional
@@ -53,7 +55,9 @@ public class TeamServiceImpl implements TeamService {
         saveLeaderAsMember(team, leader);
 
         //초대된 멤버들 등록
-        inviteMembers(team, request.invitedNicknames());
+        List<Member> members = inviteMembers(team, request.invitedNicknames());
+
+        chatRoomService.createTeamChatRoom(currentUser.id(), team, members);
 
         return team.getId();
     }
@@ -162,9 +166,9 @@ public class TeamServiceImpl implements TeamService {
     }
 
     // 멤버 초대 및 등록
-    private void inviteMembers(Team team, List<String> invitedNicknames) {
+    private List<Member> inviteMembers(Team team, List<String> invitedNicknames) {
         if (invitedNicknames == null || invitedNicknames.isEmpty()) {
-            return;
+            return null;
         }
 
         // 닉네임 리스트로 멤버 한 번에 조회
@@ -179,6 +183,8 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
 
         teamMemberRepository.saveAll(teamMembers);
+
+        return invitedMembers;
     }
 
     // ========== 조회 메서드 ==========

@@ -5,9 +5,12 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
+import com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomType;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
+import com.loopone.loopinbe.domain.team.team.entity.Team;
 
 import java.time.Instant;
+import java.util.List;
 
 public interface ChatRoomService {
     // 채팅방 생성(DM/그룹)
@@ -15,6 +18,8 @@ public interface ChatRoomService {
 
     // AI 채팅방 생성
     ChatRoomResponse createAiChatRoom(Long userId);
+
+    void createTeamChatRoom(Long userId, Team team, List<Member> members);
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     void leaveAllChatRooms(Long memberId);
