@@ -24,8 +24,8 @@ public interface ChatRoomService {
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     void leaveAllChatRooms(Long memberId);
 
-    // AI 채팅방 리스트 조회
-    ChatRoomListResponse getChatRooms(Long memberId);
+    // 채팅방 리스트 조회
+    ChatRoomListResponse getChatRooms(Long memberId, ChatRoomType chatRoomType);
 
     // AI 채팅방 루프 선택
     void selectLoop(Long chatRoomId, Long loopId);
