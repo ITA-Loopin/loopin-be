@@ -37,6 +37,7 @@ public enum ReturnCode {
     // Member
     MEMBER_ALREADY_EXISTS(409, "MEMBER_001", "이미 존재하는 사용자입니다."),
     NICKNAME_ALREADY_USED(409, "MEMBER_002", "이미 사용중인 닉네임입니다."),
+    PROFILE_IMAGE_REQUIRED(400, "MEMBER_003", "프로필 이미지가 필요합니다."),
 
     // User
     USER_NOT_FOUND(404, "USER_001", "사용자를 찾을 수 없습니다."),

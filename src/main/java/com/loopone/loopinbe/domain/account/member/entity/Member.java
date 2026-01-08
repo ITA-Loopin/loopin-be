@@ -100,7 +100,7 @@ public class Member extends BaseEntity {
     // ----------------- 회원정보 수정 메서드 -----------------
 
     public void update(MemberUpdateRequest req, String newProfileImageUrl, PasswordEncoder passwordEncoder) {
-        if (req.email() != null) this.email = req.email();
+//        if (req.email() != null) this.email = req.email();
 //        if (req.password() != null) this.password = passwordEncoder.encode(req.password());
         if (req.nickname() != null) this.nickname = req.nickname();
 //        if (req.phone() != null) this.phone = req.phone();
