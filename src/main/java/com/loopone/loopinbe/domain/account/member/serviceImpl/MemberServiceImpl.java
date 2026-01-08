@@ -11,6 +11,7 @@ import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
 import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.enums.ProfileImageState;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowRepository;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepository;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -136,22 +138,38 @@ public class MemberServiceImpl implements MemberService {
         if (memberRepository.existsByNickname(memberUpdateRequest.nickname())) {
             throw new ServiceException(ReturnCode.NICKNAME_ALREADY_USED);
         }
-        // 기존 이미지 삭제 후 입력 받은 이미지 S3에 저장
-        String imageUrl = currentUser.profileImageUrl(); // 기본적으로 기존 이미지 URL을 사용
-        if (imageFile != null && !imageFile.isEmpty()) {
-            // 기존 이미지 없으면 바로 새로운 이미지 저장
-            if (imageUrl != null && !imageUrl.isEmpty()) s3Service.deleteFile(imageUrl);
-            try {
-                imageUrl = s3Service.uploadImageFile(imageFile, "profile-image");
-            } catch (IOException e) {
-                throw new ServiceException(ReturnCode.INTERNAL_ERROR);
+        ProfileImageState state = (memberUpdateRequest.profileImageState() != null)
+                ? memberUpdateRequest.profileImageState() : ProfileImageState.MAINTAIN;
+        String currentImageUrl = currentUser.profileImageUrl(); // 기본적으로 기존 이미지 URL을 사용
+        String finalImageUrl = currentImageUrl;
+        switch (state) {
+            case MAINTAIN -> {
+                // 유지: 아무것도 안 함 (imageFile이 와도 무시/유지)
+                finalImageUrl = currentImageUrl;
             }
-        } else {
-            // imageFile이 없으면 기존 이미지가 있다면 삭제한다
-            if (imageUrl != null && !imageUrl.isEmpty()) s3Service.deleteFile(imageUrl); // 기존 이미지 삭제
-            imageUrl = null;
+            case UPDATE -> {
+                // 교체: imageFile 필수, 기존 이미지 있으면 삭제 후 새 이미지 업로드
+                if (imageFile == null || imageFile.isEmpty()) {
+                    throw new ServiceException(ReturnCode.PROFILE_IMAGE_REQUIRED);
+                }
+                if (StringUtils.hasText(currentImageUrl)) {
+                    s3Service.deleteFile(currentImageUrl);
+                }
+                try {
+                    finalImageUrl = s3Service.uploadImageFile(imageFile, "profile-image");
+                } catch (IOException e) {
+                    throw new ServiceException(ReturnCode.INTERNAL_ERROR);
+                }
+            }
+            case DELETE -> {
+                // 삭제: 기존 이미지 있으면 삭제 후 비움
+                if (StringUtils.hasText(currentImageUrl)) {
+                    s3Service.deleteFile(currentImageUrl);
+                }
+                finalImageUrl = "";
+            }
         }
-        member.update(memberUpdateRequest, imageUrl, null);
+        member.update(memberUpdateRequest, finalImageUrl, null);
     }
 
     // 회원탈퇴
