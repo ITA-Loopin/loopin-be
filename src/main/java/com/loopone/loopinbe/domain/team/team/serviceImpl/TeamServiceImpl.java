@@ -192,6 +192,24 @@ public class TeamServiceImpl implements TeamService {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteTeam(Long teamId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+
+        if (!team.getLeader().getId().equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        chatRoomService.deleteTeamChatRoom(currentUser.id(), teamId);
+
+        List<TeamLoop> loops = teamLoopRepository.findAllByTeamId(teamId);
+        teamLoopRepository.deleteAll(loops);
+
+        // 팀 삭제
+        teamRepository.delete(team);
+    }
+
     // ========== 비즈니스 로직 메서드 ==========
     // 팀 저장
     private Team saveTeam(TeamCreateRequest request, Member leader) {
