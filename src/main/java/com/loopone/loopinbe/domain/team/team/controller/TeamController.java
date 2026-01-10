@@ -38,7 +38,7 @@ public class TeamController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "나의 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
+    @Operation(summary = "내 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
