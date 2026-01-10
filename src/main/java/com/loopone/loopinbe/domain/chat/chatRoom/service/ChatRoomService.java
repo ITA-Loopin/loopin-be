@@ -27,8 +27,5 @@ public interface ChatRoomService {
     // 채팅방 리스트 조회
     ChatRoomListResponse getChatRooms(Long memberId, ChatRoomType chatRoomType);
 
-    // AI 채팅방 루프 선택
-    void selectLoop(Long chatRoomId, Long loopId);
-
     LoopDetailResponse findLoopDetailResponse(Long chatRoomId);
 }
