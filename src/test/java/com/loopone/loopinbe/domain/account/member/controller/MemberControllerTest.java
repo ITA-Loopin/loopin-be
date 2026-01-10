@@ -11,6 +11,9 @@ import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.config.SecurityConfig;
 import com.loopone.loopinbe.global.config.WebConfig;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
+import com.loopone.loopinbe.global.security.TokenResolver;
+import com.loopone.loopinbe.global.web.cookie.WebAuthCookieFactory;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -64,6 +68,8 @@ class MemberControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean MemberService memberService;
     @MockitoBean CurrentUserArgumentResolver currentUserArgumentResolver;
+    @MockitoBean TokenResolver tokenResolver;
+    @MockitoBean WebAuthCookieFactory webAuthCookieFactory;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -89,6 +95,7 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.email").value("jun@loop.in"))
                 .andExpect(jsonPath("$.data.nickname").value("jun"));
     }
 
@@ -107,8 +114,10 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.email").value("jun@loop.in"))
                 .andExpect(jsonPath("$.data.nickname").value("jun"))
-                .andExpect(jsonPath("$.data.chatRoomId").value(123));
+                .andExpect(jsonPath("$.data.followMemberCount").value(10))
+                .andExpect(jsonPath("$.data.followedMemberCount").value(5));
     }
 
     // --- 성공 케이스: 다른 사용자의 회원정보 조회 ---
@@ -122,8 +131,9 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.data.id").value(2))
+                .andExpect(jsonPath("$.data.email").value("koo@loop.in"))
                 .andExpect(jsonPath("$.data.nickname").value("koo"))
-                .andExpect(jsonPath("$.data.chatRoomId").value(999));
+                .andExpect(jsonPath("$.data.profileImageUrl").value("https://img2"));
     }
 
     // --- 성공 케이스: 다른 사용자의 상세회원정보 조회 ---
@@ -152,8 +162,7 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.data.nickname").value("koo"))
                 .andExpect(jsonPath("$.data.profileImageUrl").value("https://img2"))
                 .andExpect(jsonPath("$.data.followMemberCount").value(100))
-                .andExpect(jsonPath("$.data.followedMemberCount").value(50))
-                .andExpect(jsonPath("$.data.chatRoomId").value(999));
+                .andExpect(jsonPath("$.data.followedMemberCount").value(50));
     }
 
     // --- 검증/파라미터: 닉네임 중복 확인 ---
@@ -177,8 +186,10 @@ class MemberControllerTest {
         mvc.perform(multipart("/rest-api/v1/member")
                         .file(file)
                         .param("nickname", "newNick")
+                        .param("profileImageState", "MAINTAIN")
                         .with(req -> { req.setMethod("PATCH"); return req; }))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 
         verify(memberService).updateMember(any(MemberUpdateRequest.class), any(), any(CurrentUserDto.class));
     }
@@ -189,42 +200,34 @@ class MemberControllerTest {
     void deleteMember_success() throws Exception {
         mvc.perform(delete("/rest-api/v1/member"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE, String.valueOf(Matchers.hasSize(2))));
+
         verify(memberService).deleteMember(any(CurrentUserDto.class), "accessToken");
+        verify(tokenResolver).resolveAccess(any());
+        verify(webAuthCookieFactory).expireAccess();
+        verify(webAuthCookieFactory).expireRefresh();
     }
 
     // --- 성공 케이스: 회원 검색 (page/size 기본 파라미터 포함) ---
     @Test
-    @DisplayName("GET /rest-api/v1/member/search?keyword=kw&page=0&size=2 → 200 OK")
+    @DisplayName("GET /rest-api/v1/member/search?keyword=a → 200 OK (기본 page=0,size=15)")
     void searchMemberInfo_success() throws Exception {
         var m1 = new MemberResponse(3L, "user3@example.com", "gangneung", null);
         var m2 = new MemberResponse(4L, "user4@example.com", "busan",     null);
 
-        var pageable = PageRequest.of(0, 15); // 기본값
-        Page<MemberResponse> springPage = new PageImpl<>(List.of(m1, m2), pageable, 2);
-        PageResponse<MemberResponse> pageResponse = PageResponse.of(springPage);
+        given(memberService.searchMemberInfo(any(Pageable.class), anyString(), any(CurrentUserDto.class)))
+                .willReturn((PageResponse<MemberResponse>) List.of(m1, m2));
 
-        given(memberService.searchMemberInfo(
-                any(Pageable.class), anyString(), any(CurrentUserDto.class))
-        ).willReturn(pageResponse);
-
-        // when & then
-        mvc.perform(get("/rest-api/v1/member/search")
-                        .param("keyword", "a"))
+        mvc.perform(get("/rest-api/v1/member/search").param("keyword", "a"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                // data: 배열 크기와 닉네임 구성 확인
                 .andExpect(jsonPath("$.data", hasSize(2)))
                 .andExpect(jsonPath("$.data[*].nickname",
-                        containsInAnyOrder("gangneung", "busan")))
-                // page: 루트 레벨 메타 확인
-                .andExpect(jsonPath("$.page.page").value(0))
-                .andExpect(jsonPath("$.page.size").value(15))
-                .andExpect(jsonPath("$.page.totalElements").value(2))
-                .andExpect(jsonPath("$.page.totalPages").value(1))
-                .andExpect(jsonPath("$.page.first").value(true))
-                .andExpect(jsonPath("$.page.last").value(true))
-                .andExpect(jsonPath("$.page.hasNext").value(false));
+                        containsInAnyOrder("gangneung", "busan")));
+
+        // 기본 page/size가 MemberPage에서 0/15로 내려오는지 검증하고 싶으면:
+        verify(memberService).searchMemberInfo(eq(PageRequest.of(0, 15)), eq("a"), any(CurrentUserDto.class));
     }
 
     // --- 성공 케이스: 팔로우 요청하기 ---

@@ -22,7 +22,7 @@ public class ChatRoomController {
 
     // AI 채팅방 리스트 조회
     @GetMapping
-    @Operation(summary = "채팅방 리스트 조회", description = "AI 채팅방 리스트를 조회합니다.")
+    @Operation(summary = "AI 채팅방 리스트 조회", description = "AI 채팅방 리스트를 조회합니다.")
     public ApiResponse<ChatRoomListResponse> getChatRooms(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto user,
             @Parameter(description = "채팅방 타입(ALL, TEAM, AI") @RequestParam ChatRoomType chatRoomType
