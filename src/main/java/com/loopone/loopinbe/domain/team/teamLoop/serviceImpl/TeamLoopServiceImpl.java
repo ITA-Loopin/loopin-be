@@ -14,6 +14,7 @@ import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
@@ -123,6 +124,65 @@ public class TeamLoopServiceImpl implements TeamLoopService {
             }
             default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
+    }
+
+    // 내 팀 루프 상세조회
+    @Override
+    public TeamLoopDetailResponse getMyTeamLoopDetail(Long teamId, Long loopId, CurrentUserDto currentUser) {
+        // 팀원 검증
+        validateTeamMember(teamId, currentUser.id());
+
+        // 팀 루프 조회
+        TeamLoop teamLoop = teamLoopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_LOOP_NOT_FOUND));
+
+        // 팀 ID 일치 검증
+        if (!teamLoop.getTeam().getId().equals(teamId)) {
+            throw new ServiceException(ReturnCode.INVALID_REQUEST_TEAM);
+        }
+
+        Long myId = currentUser.id();
+
+        // 참여 여부 확인
+        boolean isParticipating = teamLoop.isParticipating(myId);
+        if (!isParticipating) {
+            throw new ServiceException(ReturnCode.NOT_PARTICIPATING_IN_LOOP);
+        }
+
+        // 나의 진행률 계산
+        double personalProgress = teamLoop.calculatePersonalProgress(myId);
+        // 나의 상태
+        TeamLoopStatus status = teamLoop.calculatePersonalStatus(myId);
+        // 반복 주기 문자열
+        String repeatCycle = formatRepeatCycle(teamLoop.getLoopRule());
+
+        // 나의 Progress 찾기
+        TeamLoopMemberProgress myProgress = teamLoop.getMemberProgress().stream()
+                .filter(p -> p.getMember().getId().equals(myId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException(ReturnCode.PROGRESS_NOT_FOUND));
+
+        // 체크리스트 목록
+        List<TeamLoopDetailResponse.ChecklistItem> checklistItems = myProgress.getChecks().stream()
+                .map(check -> TeamLoopDetailResponse.ChecklistItem.builder()
+                        .checklistId(check.getChecklist().getId())
+                        .content(check.getChecklist().getContent())
+                        .isCompleted(check.isChecked())
+                        .build())
+                .toList();
+
+        return TeamLoopDetailResponse.builder()
+                .id(teamLoop.getId())
+                .title(teamLoop.getTitle())
+                .loopDate(teamLoop.getLoopDate())
+                .type(teamLoop.getType())
+                .repeatCycle(repeatCycle)
+                .importance(teamLoop.getImportance())
+                .status(status)
+                .personalProgress(personalProgress)
+                .totalChecklistCount(teamLoop.getTeamLoopChecklists().size())
+                .checklists(checklistItems)
+                .build();
     }
 
     // (A) teamsToDelete: 팀 자체가 삭제될 팀들 -> 팀에 속한 루프/체크/진행률/체크리스트 "전체 삭제"

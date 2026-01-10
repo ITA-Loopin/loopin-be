@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.teamLoop.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
@@ -45,5 +46,16 @@ public class TeamLoopController {
     ) {
         Long loopRuleId = teamLoopService.createTeamLoop(teamId, request, currentUser);
         return ApiResponse.success(loopRuleId);
+    }
+
+    @GetMapping("/{teamId}/my/loops/{loopId}")
+    @Operation(summary = "내 팀 루프 상세 조회", description = "내가 참여 중인 팀 루프의 상세 정보를 조회합니다.")
+    public ApiResponse<TeamLoopDetailResponse> getMyTeamLoopDetail(
+            @PathVariable Long teamId,
+            @PathVariable Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        TeamLoopDetailResponse response = teamLoopService.getMyTeamLoopDetail(teamId, loopId, currentUser);
+        return ApiResponse.success(response);
     }
 }
