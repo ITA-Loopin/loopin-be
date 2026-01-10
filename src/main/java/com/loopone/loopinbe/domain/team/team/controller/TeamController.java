@@ -75,4 +75,14 @@ public class TeamController {
         List<TeamMemberResponse> response = teamService.getTeamMembers(teamId);
         return ApiResponse.success(response);
     }
+
+    @DeleteMapping("/{teamId}")
+    @Operation(summary = "팀 삭제", description = "팀 리더만 삭제 가능합니다. 팀, 팀루프, 팀채팅방이 삭제됩니다.")
+    public ApiResponse<Void> deleteTeam(
+            @CurrentUser CurrentUserDto currentUser,
+            @PathVariable Long teamId
+    ) {
+        teamService.deleteTeam(teamId, currentUser);
+        return ApiResponse.success();
+    }
 }

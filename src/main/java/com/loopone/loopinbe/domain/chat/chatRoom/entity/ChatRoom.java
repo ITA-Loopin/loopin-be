@@ -38,6 +38,8 @@ public class ChatRoom extends BaseEntity {
     @Builder.Default
     private boolean isBotRoom = true;
 
+    private Long teamId;
+
     private Instant lastMessageAt;
 
     public void selectLoop(Loop loop) {

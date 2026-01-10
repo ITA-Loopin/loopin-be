@@ -14,6 +14,8 @@ import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
+    Optional<ChatRoom> findByTeamId(Long teamId);
+
     // 현재 사용자가 otherMember와 이미 1대1 채팅방이 존재하는지 확인
     @Query("SELECT EXISTS (" +
             "    SELECT 1 FROM ChatRoom c " +

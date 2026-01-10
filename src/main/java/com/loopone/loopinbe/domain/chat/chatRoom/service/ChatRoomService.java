@@ -19,7 +19,11 @@ public interface ChatRoomService {
     // AI 채팅방 생성
     ChatRoomResponse createAiChatRoom(Long userId);
 
+    // 팀 채팅방 생성
     void createTeamChatRoom(Long userId, Team team, List<Member> members);
+
+    // 팀 채팅방 삭제
+    void deleteTeamChatRoom(Long userId, Long teamId);
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     void leaveAllChatRooms(Long memberId);
