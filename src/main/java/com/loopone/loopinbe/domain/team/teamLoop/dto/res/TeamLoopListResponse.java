@@ -27,5 +27,8 @@ public record TeamLoopListResponse(
         double personalProgress,
 
         @Schema(description = "루프의 참여자인지")
-        boolean isParticipating
+        boolean isParticipating,
+
+        @Schema(description = "반복 주기 문자열 (예: '매주 월금', '매월 1일', '없음')")
+        String repeatCycle
 ) {}
