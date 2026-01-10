@@ -192,17 +192,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         };
     }
 
-    // AI 채팅방 루프 선택
-    @Override
-    @Transactional
-    public void selectLoop(Long chatRoomId, Long loopId) {
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
-        Loop loop = loopRepository.findById(loopId)
-                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
-        chatRoom.selectLoop(loop);
-    }
-
     @Override
     @Transactional(readOnly = true)
     public LoopDetailResponse findLoopDetailResponse(Long chatRoomId) {
