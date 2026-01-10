@@ -9,8 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import static com.loopone.loopinbe.global.constants.KafkaKey.CHAT_MESSAGE_TOPIC;
-import static com.loopone.loopinbe.global.constants.KafkaKey.CHAT_READ_UP_TO_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 
 @Slf4j
 @Component
@@ -34,6 +33,7 @@ public class ChatMessageEventPublisher {
         return switch (type) {
             case MESSAGE -> CHAT_MESSAGE_TOPIC;
             case READ_UP_TO -> CHAT_READ_UP_TO_TOPIC;
+            case DELETE -> CHAT_DELETE_TOPIC;
             default -> throw new IllegalArgumentException("Unsupported WS messageType: " + type);
         };
     }
