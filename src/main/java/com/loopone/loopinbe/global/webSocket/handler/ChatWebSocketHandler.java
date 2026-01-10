@@ -169,17 +169,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     chatMessageEventPublisher.publishWsEvent(out);
                 }
                 case DELETE -> {
-                    if (in.getChatMessageResponse() == null || in.getChatMessageResponse().getId() == null) {
+                    if (in.getDeleteId() == null) {
                         sendWsError(session, "BAD_REQUEST", "messageId is required");
                         return;
                     }
-                    String messageId = in.getChatMessageResponse().getId();
+                    String messageId = String.valueOf(in.getDeleteId());
                     try {
                         chatMessageService.deleteChatMessage(messageId, memberId);
                         ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                                 .messageType(MessageType.DELETE)
                                 .chatRoomId(chatRoomId)
-                                .chatMessageResponse(ChatMessageResponse.builder().id(messageId).build())
+                                .deleteId(in.getDeleteId())
                                 .build();
                         chatMessageEventPublisher.publishWsEvent(out);
                     } catch (Exception e) {

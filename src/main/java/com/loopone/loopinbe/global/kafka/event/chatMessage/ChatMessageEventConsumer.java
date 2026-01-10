@@ -18,7 +18,7 @@ public class ChatMessageEventConsumer {
     private final ObjectMapper objectMapper;
     private final ChatWebSocketHandler chatWebSocketHandler;
 
-    @KafkaListener(topics = {CHAT_MESSAGE_TOPIC, CHAT_READ_UP_TO_TOPIC},
+    @KafkaListener(topics = {CHAT_MESSAGE_TOPIC, CHAT_READ_UP_TO_TOPIC, CHAT_DELETE_TOPIC},
             groupId = CHAT_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
     public void consumeWsEvent(ConsumerRecord<String, String> rec) {
         try {
