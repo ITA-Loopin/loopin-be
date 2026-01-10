@@ -19,6 +19,7 @@ import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
@@ -70,6 +71,10 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                             loop.calculatePersonalProgress(myId) : 0.0;
                     //해당 루프의 팀 진행률
                     double teamProgress = loop.calculateTeamProgress();
+                    //반복 주기 문자열
+                    String repeatCycle = formatRepeatCycle(loop.getLoopRule());
+                    //나의 루프 상태
+                    TeamLoopStatus status = loop.calculatePersonalStatus(myId);
 
                     return TeamLoopListResponse.builder()
                             .id(loop.getId())
@@ -80,6 +85,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                             .teamProgress(teamProgress)
                             .personalProgress(myProgress)
                             .isParticipating(isParticipating)
+                            .repeatCycle(repeatCycle)
+                            .status(status)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -383,5 +390,56 @@ public class TeamLoopServiceImpl implements TeamLoopService {
     private Set<DayOfWeek> toDayOfWeekSet(List<DayOfWeek> days) {
         if (days == null || days.isEmpty()) return null; // WEEKLY 아니면 null 저장하려는 의도 유지
         return EnumSet.copyOf(days); // 중복 제거 + Enum 최적화 Set
+    }
+
+    // 반복 주기를 한국어 문자열로 변환
+    private String formatRepeatCycle(LoopRule loopRule) {
+        if (loopRule == null) {
+            return "없음";
+        }
+        RepeatType scheduleType = loopRule.getScheduleType();
+        LocalDate startDate = loopRule.getStartDate();
+        return switch (scheduleType) {
+            case NONE -> "없음";
+            case WEEKLY -> {
+                Set<DayOfWeek> daysOfWeek = loopRule.getDaysOfWeek();
+                if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+                    yield "매주";
+                }
+                String daysStr = daysOfWeek.stream()
+                        .sorted()
+                        .map(this::dayOfWeekToKorean)
+                        .collect(Collectors.joining(""));
+                yield "매주 " + daysStr;
+            }
+            case MONTHLY -> {
+                if (startDate != null) {
+                    int dayOfMonth = startDate.getDayOfMonth();
+                    yield "매월 " + dayOfMonth + "일";
+                }
+                yield "매월";
+            }
+            case YEARLY -> {
+                if (startDate != null) {
+                    int month = startDate.getMonthValue();
+                    int dayOfMonth = startDate.getDayOfMonth();
+                    yield "매년 " + month + "월 " + dayOfMonth + "일";
+                }
+                yield "매년";
+            }
+        };
+    }
+
+    // DayOfWeek를 한국어 단축 문자로 변환
+    private String dayOfWeekToKorean(DayOfWeek day) {
+        return switch (day) {
+            case MONDAY -> "월";
+            case TUESDAY -> "화";
+            case WEDNESDAY -> "수";
+            case THURSDAY -> "목";
+            case FRIDAY -> "금";
+            case SATURDAY -> "토";
+            case SUNDAY -> "일";
+        };
     }
 }

@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopCalendarResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 
 import java.time.LocalDate;
@@ -40,4 +41,7 @@ public interface LoopService {
 
     // 사용자가 생성한 루프 전체 삭제
     void deleteMyLoops(Long memberId);
+
+    //루프 캘린더 조회
+    LoopCalendarResponse getLoopCalendar(int year, int month, CurrentUserDto currentUser);
 }

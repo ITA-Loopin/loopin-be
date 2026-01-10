@@ -20,4 +20,7 @@ public interface TeamService {
     List<TeamMemberResponse> getTeamMembers(Long teamId);
     // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
     void deleteMyTeams(Member member);
+
+    // 팀 삭제
+    void deleteTeam(Long teamId, CurrentUserDto currentUser);
 }

@@ -28,7 +28,7 @@ public class NotProdTeamLoopService {
     private final MemberRepository memberRepository;
     private final MemberConverter memberConverter;
 
-    // 1번 팀에 1번 팀 루프 ("매일 러닝 3km") + 체크리스트 ("아침 루틴")
+    // 1번 팀에 1번 팀 루프 ("스터디 자료 준비") + 체크리스트 ("자료 조사")
     // 2번 팀에 2번 팀 루프 ("매일 파쿠르 30분") + 체크리스트 ("오후 루틴")
     @Transactional
     public void createTeamLoops(Long team1Id, Long team2Id) {
@@ -41,14 +41,14 @@ public class NotProdTeamLoopService {
         teamLoopService.createTeamLoop(
                 team1Id,
                 new TeamLoopCreateRequest(
-                        "매일 러닝 3km",
+                        "스터디 자료 준비",
                         null,
                         RepeatType.WEEKLY,
                         null,          // specificDate (NONE일 때만 사용)
                         allDays,       // daysOfWeek
                         today,         // startDate
                         endDate,          // endDate
-                        List.of("아침 루틴"),
+                        List.of("자료 조사"),
                         TeamLoopType.COMMON,
                         TeamLoopImportance.MEDIUM,
                         null           // targetMemberIds (INDIVIDUAL일 때만 의미)
@@ -59,7 +59,7 @@ public class NotProdTeamLoopService {
         teamLoopService.createTeamLoop(
                 team2Id,
                 new TeamLoopCreateRequest(
-                        "매일 파쿠르 30분",
+                        "어노테이션 공부",
                         null,
                         RepeatType.WEEKLY,
                         null,

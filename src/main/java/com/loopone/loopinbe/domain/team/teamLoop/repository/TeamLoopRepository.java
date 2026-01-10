@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface TeamLoopRepository extends JpaRepository<TeamLoop, Long> {
 
+    List<TeamLoop> findAllByTeamId(Long teamId);
+
     List<TeamLoop> findByTeamAndLoopDate(Team team, LocalDate loopDate);
 
     @Query("""
