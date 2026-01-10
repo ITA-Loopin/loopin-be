@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistUpdateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMemberChecklistResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
@@ -110,25 +111,36 @@ public class TeamLoopChecklistServiceImpl implements TeamLoopChecklistService {
                 .build();
     }
 
+    //체크리스트 현황 조회
     @Override
     @Transactional(readOnly = true)
-    public List<TeamLoopChecklistResponse> getChecklistStatus(Long loopId, Long memberId, CurrentUserDto currentUser) {
+    public TeamLoopMemberChecklistResponse getChecklistStatus(Long loopId, Long memberId, CurrentUserDto currentUser) {
         TeamLoop teamLoop = getTeamLoopOrThrow(loopId);
-
         // memberId가 null이면 현재 사용자
         Long targetMemberId = (memberId == null) ? currentUser.id() : memberId;
         Member targetMember = getMemberOrThrow(targetMemberId);
-
         TeamLoopMemberProgress progress = getMyProgressOrThrow(teamLoop, targetMember);
         List<TeamLoopMemberCheck> checks = teamLoopMemberCheckRepository.findByMemberProgressIdOrderByIdAsc(progress.getId());
 
-        return checks.stream()
+        // 체크리스트 목록
+        List<TeamLoopChecklistResponse> checklistResponses = checks.stream()
                 .map(check -> TeamLoopChecklistResponse.builder()
                         .id(check.getChecklist().getId())
                         .content(check.getChecklist().getContent())
                         .isChecked(check.isChecked())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
+
+        // 진행률 계산
+        int totalChecklistCount = teamLoop.getTeamLoopChecklists().size();
+        double progressRate = progress.calculateProgress(totalChecklistCount);
+
+        return TeamLoopMemberChecklistResponse.builder()
+                .memberId(targetMember.getId())
+                .nickname(targetMember.getNickname())
+                .progress(progressRate)
+                .checklists(checklistResponses)
+                .build();
     }
 
     // ========== 비즈니스 로직 메서드 ==========
