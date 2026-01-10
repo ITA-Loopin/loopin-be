@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.team.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -38,7 +40,7 @@ public class TeamController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "나의 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
+    @Operation(summary = "내 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
@@ -74,6 +76,16 @@ public class TeamController {
     ) {
         List<TeamMemberResponse> response = teamService.getTeamMembers(teamId);
         return ApiResponse.success(response);
+    }
+
+    @PutMapping("/order")
+    @Operation(summary = "내 팀 목록 순서 변경", description = "드래그로 변경한 팀 목록 순서를 저장합니다.")
+    public ApiResponse<Void> updateTeamOrder(
+            @Valid @RequestBody TeamOrderUpdateRequest request,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        teamService.updateTeamOrder(request, currentUser);
+        return ApiResponse.success();
     }
 
     @DeleteMapping("/{teamId}")

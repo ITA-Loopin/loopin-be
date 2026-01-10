@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistUpdateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMemberChecklistResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopChecklistService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,13 +68,13 @@ public class TeamLoopChecklistController {
     }
 
     @GetMapping("/{loopId}/checklists")
-    @Operation(summary = "체크리스트 현황 조회", description = "특정 루프의 체크리스트 목록과 해당 멤버의 수행 여부를 조회합니다. (memberId 생략 시 현재 사용자)")
-    public ApiResponse<List<TeamLoopChecklistResponse>> getChecklistStatus(
+    @Operation(summary = "특정 루프, 멤버의 체크리스트 현황 조회", description = "특정 루프의 체크리스트 목록과 특정 멤버의 수행 여부를 조회합니다. (memberId 생략 시 현재 사용자)")
+    public ApiResponse<TeamLoopMemberChecklistResponse> getChecklistStatus(
             @PathVariable Long loopId,
             @RequestParam(required = false) Long memberId,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
-        List<TeamLoopChecklistResponse> response = teamLoopChecklistService.getChecklistStatus(loopId, memberId, currentUser);
+        TeamLoopMemberChecklistResponse response = teamLoopChecklistService.getChecklistStatus(loopId, memberId, currentUser);
         return ApiResponse.success(response);
     }
 }

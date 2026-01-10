@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.team.teamLoop.entity;
 
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopImportance;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
@@ -115,5 +116,33 @@ public class TeamLoop extends BaseEntity {
         } else {
             return TeamLoopStatus.IN_PROGRESS;
         }
+    }
+
+    // 팀 전체 상태 계산
+    public TeamLoopStatus calculateTeamStatus() {
+        if (this.memberProgress.isEmpty()) {
+            return TeamLoopStatus.NOT_STARTED;
+        }
+
+        // 모든 팀원이 완료했는지 확인
+        boolean allCompleted = this.memberProgress.stream()
+                .allMatch(p -> calculatePersonalStatus(p.getMember().getId()) == TeamLoopStatus.COMPLETED);
+
+        if (allCompleted) {
+            return TeamLoopStatus.COMPLETED;
+        }
+
+        // 한 명이라도 진행 중이거나 완료한 사람이 있는지 확인
+        boolean hasStarted = this.memberProgress.stream()
+                .anyMatch(p -> {
+                    TeamLoopStatus status = calculatePersonalStatus(p.getMember().getId());
+                    return status == TeamLoopStatus.IN_PROGRESS || status == TeamLoopStatus.COMPLETED;
+                });
+
+        if (hasStarted) {
+            return TeamLoopStatus.IN_PROGRESS;
+        }
+
+        return TeamLoopStatus.NOT_STARTED;
     }
 }

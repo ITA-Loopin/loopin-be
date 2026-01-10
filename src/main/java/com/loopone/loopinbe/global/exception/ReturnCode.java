@@ -122,6 +122,9 @@ public enum ReturnCode {
     TEAM_NOT_FOUND(404, "TEAM_001", "팀을 찾을 수 없습니다."),
     INVALID_REQUEST_TEAM(400, "TEAM_002", "팀 요청문이 올바르지 않습니다"),
     USER_NOT_IN_TEAM(403, "TEAM_003", "팀원이 아닌 유저가 있습니다"),
+    TEAM_LOOP_NOT_FOUND(404, "TEAM_004", "팀 루프를 찾을 수 없습니다."),
+    NOT_PARTICIPATING_IN_LOOP(404, "TEAM_005", "해당 루프에 참여하지 않았습니다."),
+    PROGRESS_NOT_FOUND(404, "TEAM_006", "팀 루프의 내 진행 상태를 찾을 수 없습니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
