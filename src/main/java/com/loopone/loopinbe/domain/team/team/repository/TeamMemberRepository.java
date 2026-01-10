@@ -26,6 +26,17 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     Optional<Member> findFirstMemberByTeamIdAndMemberIdNot(
             @Param("teamId") Long teamId, @Param("memberId") Long memberId);
 
+    //sortOrder 우선 정렬, null이면 createdAt DESC로 정렬
+    @Query("""
+        SELECT tm FROM TeamMember tm
+        WHERE tm.member = :member
+        ORDER BY
+            CASE WHEN tm.sortOrder IS NULL THEN 1 ELSE 0 END,
+            tm.sortOrder ASC,
+            tm.createdAt DESC
+    """)
+    List<TeamMember> findAllByMemberOrderBySortOrder(@Param("member") Member member);
+
     // (B) 내 탈퇴용
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from TeamMember tm " +

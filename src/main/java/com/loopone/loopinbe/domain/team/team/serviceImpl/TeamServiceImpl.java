@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -72,10 +74,8 @@ public class TeamServiceImpl implements TeamService {
     public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
 
-        //내가 속한 팀 멤버 정보 조회
-        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
-
-        LocalDate today = LocalDate.now();
+        //내가 속한 팀들과의 연결 정보 조회 (sortOrder 우선, null이면 createdAt DESC)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
 
         //DTO 변환
         return myTeamMembers.stream()
@@ -148,6 +148,45 @@ public class TeamServiceImpl implements TeamService {
                         .profileImage(tm.getMember().getProfileImageUrl())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    //팀 순서 변경
+    @Override
+    @Transactional
+    public void updateTeamOrder(TeamOrderUpdateRequest request, CurrentUserDto currentUser) {
+        Member member = getMemberOrThrow(currentUser.id());
+
+        Long movingTeamId = request.teamId();
+        Integer newPosition = request.newPosition();
+
+        // 내가 속한 팀들과의 연결 정보 조회 (정렬된 순서로)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
+        if (myTeamMembers.isEmpty()) {
+            throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
+        }
+
+        // 이동할 팀 찾기
+        TeamMember movingTeamMember = myTeamMembers.stream()
+                .filter(tm -> tm.getTeam().getId().equals(movingTeamId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+
+        // 현재 위치 찾기
+        int currentPosition = myTeamMembers.indexOf(movingTeamMember);
+        // 위치가 같으면 아무 작업 안 함
+        if (currentPosition == newPosition) {
+            return;
+        }
+
+        // 리스트에서 제거 후 새 위치에 삽입
+        myTeamMembers.remove(currentPosition);
+        myTeamMembers.add(newPosition, movingTeamMember);
+        // 모든 팀의 sortOrder 재설정 (sortOrder가 null이었던 항목들도 값 할당하기 위해)
+        for (int i = 0; i < myTeamMembers.size(); i++) {
+            myTeamMembers.get(i).setSortOrder(i);
+        }
+
+        teamMemberRepository.saveAll(myTeamMembers);
     }
 
     // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
