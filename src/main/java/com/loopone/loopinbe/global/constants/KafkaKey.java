@@ -10,6 +10,7 @@ public class KafkaKey {
     public static final String FCM_SEND_TOPIC =  "fcm-send-topic";
     public static final String CHAT_MESSAGE_TOPIC = "chat-message-topic";
     public static final String CHAT_READ_UP_TO_TOPIC =  "chat-read-up-to-topic";
+    public static final String CHAT_DELETE_TOPIC = "chat-delete-topic";
     public static final String NOTIFICATION_GROUP_ID = "notification-group";
     public static final String FCM_GROUP_ID =  "fcm-group";
     public static final String CHAT_GROUP_ID = "chat-group";
