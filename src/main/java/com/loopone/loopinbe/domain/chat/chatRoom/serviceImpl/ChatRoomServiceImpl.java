@@ -136,13 +136,15 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .member(team.getLeader())
                 .chatRoom(chatRoom)
                 .build());
-        
-        // 팀원 모두 추가
-        for (Member member : members) {
-            chatRoomMembers.add(ChatRoomMember.builder()
-                    .member(member)
-                    .chatRoom(chatRoom)
-                    .build());
+
+        if (members != null && !members.isEmpty()) {
+            // 팀원 모두 추가
+            for (Member member : members) {
+                chatRoomMembers.add(ChatRoomMember.builder()
+                        .member(member)
+                        .chatRoom(chatRoom)
+                        .build());
+            }
         }
 
         chatRoom.setChatRoomMembers(chatRoomMembers);
