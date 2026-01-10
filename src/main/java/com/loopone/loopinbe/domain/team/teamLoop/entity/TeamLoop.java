@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.teamLoop.entity;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopImportance;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
@@ -81,5 +82,38 @@ public class TeamLoop extends BaseEntity {
     public boolean isParticipating(Long memberId) {
         return this.memberProgress.stream()
                 .anyMatch(p -> p.getMember().getId().equals(memberId));
+    }
+
+    // 특정 멤버의 루프 상태 계산
+    public TeamLoopStatus calculatePersonalStatus(Long memberId) {
+        // 참여하지 않은 경우 시작전으로 간주
+        if (!isParticipating(memberId)) {
+            return TeamLoopStatus.NOT_STARTED;
+        }
+        // 해당 멤버의 Progress 찾기
+        TeamLoopMemberProgress myProgress = this.memberProgress.stream()
+                .filter(p -> p.getMember().getId().equals(memberId))
+                .findFirst()
+                .orElse(null);
+        if (myProgress == null) {
+            return TeamLoopStatus.NOT_STARTED;
+        }
+        // 체크리스트가 없는 경우 시작전
+        int totalChecklistCount = this.teamLoopChecklists.size();
+        if (totalChecklistCount == 0) {
+            return TeamLoopStatus.NOT_STARTED;
+        }
+        // 내가 체크한 개수 계산
+        long checkedCount = myProgress.getChecks().stream()
+                .filter(TeamLoopMemberCheck::isChecked)
+                .count();
+        // 상태 판단
+        if (checkedCount == 0) {
+            return TeamLoopStatus.NOT_STARTED;
+        } else if (checkedCount == totalChecklistCount) {
+            return TeamLoopStatus.COMPLETED;
+        } else {
+            return TeamLoopStatus.IN_PROGRESS;
+        }
     }
 }

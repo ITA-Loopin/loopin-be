@@ -19,6 +19,7 @@ import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
@@ -72,6 +73,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                     double teamProgress = loop.calculateTeamProgress();
                     //반복 주기 문자열
                     String repeatCycle = formatRepeatCycle(loop.getLoopRule());
+                    //나의 루프 상태
+                    TeamLoopStatus status = loop.calculatePersonalStatus(myId);
 
                     return TeamLoopListResponse.builder()
                             .id(loop.getId())
@@ -83,6 +86,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                             .personalProgress(myProgress)
                             .isParticipating(isParticipating)
                             .repeatCycle(repeatCycle)
+                            .status(status)
                             .build();
                 })
                 .collect(Collectors.toList());
