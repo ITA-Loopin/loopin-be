@@ -3,7 +3,6 @@ package com.loopone.loopinbe.domain.team.teamLoop.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
-import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
@@ -11,10 +10,9 @@ import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
-import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
-import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopChecklistResponse;
-import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopDetailResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
@@ -31,7 +29,6 @@ import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,14 +125,12 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     // 내 팀 루프 상세조회
     @Override
-    public TeamLoopDetailResponse getMyTeamLoopDetail(Long teamId, Long loopId, CurrentUserDto currentUser) {
+    public TeamLoopMyDetailResponse getTeamLoopMyDetail(Long teamId, Long loopId, CurrentUserDto currentUser) {
         // 팀원 검증
         validateTeamMember(teamId, currentUser.id());
-
         // 팀 루프 조회
         TeamLoop teamLoop = teamLoopRepository.findById(loopId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_LOOP_NOT_FOUND));
-
         // 팀 ID 일치 검증
         if (!teamLoop.getTeam().getId().equals(teamId)) {
             throw new ServiceException(ReturnCode.INVALID_REQUEST_TEAM);
@@ -151,9 +146,9 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
         // 나의 진행률 계산
         double personalProgress = teamLoop.calculatePersonalProgress(myId);
-        // 나의 상태
+        // 나의 상태 확인
         TeamLoopStatus status = teamLoop.calculatePersonalStatus(myId);
-        // 반복 주기 문자열
+        // 반복 주기 문자열 변환
         String repeatCycle = formatRepeatCycle(teamLoop.getLoopRule());
 
         // 나의 Progress 찾기
@@ -163,15 +158,15 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.PROGRESS_NOT_FOUND));
 
         // 체크리스트 목록
-        List<TeamLoopDetailResponse.ChecklistItem> checklistItems = myProgress.getChecks().stream()
-                .map(check -> TeamLoopDetailResponse.ChecklistItem.builder()
+        List<TeamLoopMyDetailResponse.ChecklistItem> checklistItems = myProgress.getChecks().stream()
+                .map(check -> TeamLoopMyDetailResponse.ChecklistItem.builder()
                         .checklistId(check.getChecklist().getId())
                         .content(check.getChecklist().getContent())
                         .isCompleted(check.isChecked())
                         .build())
                 .toList();
 
-        return TeamLoopDetailResponse.builder()
+        return TeamLoopMyDetailResponse.builder()
                 .id(teamLoop.getId())
                 .title(teamLoop.getTitle())
                 .loopDate(teamLoop.getLoopDate())
@@ -182,6 +177,67 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                 .personalProgress(personalProgress)
                 .totalChecklistCount(teamLoop.getTeamLoopChecklists().size())
                 .checklists(checklistItems)
+                .build();
+    }
+
+    // 팀 전체 팀 루프 상세 조회
+    @Override
+    public TeamLoopAllDetailResponse getTeamLoopAllDetail(Long teamId, Long loopId, CurrentUserDto currentUser) {
+        // 팀원 검증
+        validateTeamMember(teamId, currentUser.id());
+        // 팀 루프 조회
+        TeamLoop teamLoop = teamLoopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_LOOP_NOT_FOUND));
+        // 팀 ID 일치 검증
+        if (!teamLoop.getTeam().getId().equals(teamId)) {
+            throw new ServiceException(ReturnCode.INVALID_REQUEST_TEAM);
+        }
+
+        // 팀 진행률 계산
+        double teamProgress = teamLoop.calculateTeamProgress();
+        // 반복주기 문자열 변환
+        String repeatCycle = formatRepeatCycle(teamLoop.getLoopRule());
+
+        // 체크리스트 목록
+        List<TeamLoopAllDetailResponse.ChecklistInfo> checklistInfos = teamLoop.getTeamLoopChecklists().stream()
+                .map(checklist -> TeamLoopAllDetailResponse.ChecklistInfo.builder()
+                        .checklistId(checklist.getId())
+                        .content(checklist.getContent())
+                        .build())
+                .toList();
+
+        // 팀원 진행 상황
+        int totalChecklistCount = teamLoop.getTeamLoopChecklists().size();
+        List<TeamLoopAllDetailResponse.MemberProgress> memberProgresses = teamLoop.getMemberProgress().stream()
+                .map(progress -> {
+                    Member member = progress.getMember();
+                    double memberProgressRate = progress.calculateProgress(totalChecklistCount);
+                    TeamLoopStatus memberStatus = teamLoop.calculatePersonalStatus(member.getId());
+
+                    return TeamLoopAllDetailResponse.MemberProgress.builder()
+                            .memberId(member.getId())
+                            .nickname(member.getNickname())
+                            .status(memberStatus)
+                            .progress(memberProgressRate)
+                            .build();
+                })
+                .toList();
+
+        // 팀 전체 상태 계산
+        TeamLoopStatus teamStatus = teamLoop.calculateTeamStatus();
+
+        return TeamLoopAllDetailResponse.builder()
+                .id(teamLoop.getId())
+                .title(teamLoop.getTitle())
+                .loopDate(teamLoop.getLoopDate())
+                .type(teamLoop.getType())
+                .repeatCycle(repeatCycle)
+                .importance(teamLoop.getImportance())
+                .status(teamStatus)
+                .teamProgress(teamProgress)
+                .totalChecklistCount(totalChecklistCount)
+                .checklists(checklistInfos)
+                .memberProgresses(memberProgresses)
                 .build();
     }
 

@@ -12,6 +12,6 @@ public record TeamLoopChecklistResponse(
         @Schema(description = "체크리스트 내용")
         String content,
 
-        @Schema(description = "체크 여부 (true: 완료, false: 미완료)")
+        @Schema(description = "체크 여부")
         boolean isChecked
 ) {}

@@ -18,7 +18,7 @@ public record TeamLoopListResponse(
         @Schema(description = "나의 루프 상태 (시작전/진행중/완료됨)")
         TeamLoopStatus status,
 
-        @Schema(description = "루프 유형")
+        @Schema(description = "루프 유형 (COMMON/INDIVIDUAL)")
         TeamLoopType type,
 
         @Schema(description = "루프 중요도")
