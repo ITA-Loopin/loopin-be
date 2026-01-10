@@ -20,6 +20,7 @@ import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
+import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomConverter chatRoomConverter;
     private final LoopRepository loopRepository;
     private final LoopMapper loopMapper;
+    private final TeamRepository teamRepository;
 
     // 채팅방 생성(DM/그룹)
     @Override
@@ -125,6 +127,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .title(team.getName())
                 .member(team.getLeader())
                 .isBotRoom(false)
+                .teamId(team.getId())
                 .build();
 
         List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
@@ -144,6 +147,22 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
+    }
+
+    @Override
+    @Transactional
+    public void deleteTeamChatRoom(Long memberId, Long teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
+
+        if (!team.getLeader().getId().equals(memberId)) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        chatRoomRepository.findByTeamId(teamId).ifPresent(chatRoom -> {
+            chatMessageService.deleteAllChatMessages(chatRoom.getId());
+            chatRoomRepository.delete(chatRoom);
+        });
     }
 
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
