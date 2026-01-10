@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -72,10 +74,8 @@ public class TeamServiceImpl implements TeamService {
     public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
 
-        //내가 속한 팀 멤버 정보 조회
-        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
-
-        LocalDate today = LocalDate.now();
+        //팀을 정렬한 TeamMember 조회 (sortOrder 우선, null이면 createdAt DESC)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
 
         //DTO 변환
         return myTeamMembers.stream()
@@ -148,6 +148,39 @@ public class TeamServiceImpl implements TeamService {
                         .profileImage(tm.getMember().getProfileImageUrl())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    //팀 순서 변경
+    @Override
+    @Transactional
+    public void updateTeamOrder(TeamOrderUpdateRequest request, CurrentUserDto currentUser) {
+        Member member = getMemberOrThrow(currentUser.id());
+        List<Long> orderedTeamIds = request.teamIds();
+
+        // 내가 속한 팀 멤버 정보 조회
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
+
+        // 요청된 팀 ID로 매핑
+        Map<Long, TeamMember> teamMemberMap = myTeamMembers.stream()
+                .collect(Collectors.toMap(
+                        tm -> tm.getTeam().getId(),
+                        tm -> tm
+                ));
+
+        // 순서 업데이트
+        for (int i = 0; i < orderedTeamIds.size(); i++) {
+            Long teamId = orderedTeamIds.get(i);
+            TeamMember teamMember = teamMemberMap.get(teamId);
+
+            if (teamMember == null) {
+                throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
+            }
+
+            teamMember.setSortOrder(i);
+        }
+
+        // 일괄 저장
+        teamMemberRepository.saveAll(myTeamMembers);
     }
 
     // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
