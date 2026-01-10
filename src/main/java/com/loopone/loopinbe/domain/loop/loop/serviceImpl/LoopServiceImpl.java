@@ -2,6 +2,8 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
+import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
@@ -36,30 +38,40 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
+    private final ChatRoomRepository chatRoomRepository;
 
     // 루프 생성
     @Override
     @Transactional
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        Long loopId;
         LoopRule loopRule;
         switch (requestDTO.scheduleType()) {
             case NONE -> {
-                return createSingleLoop(requestDTO, currentUser);
+                loopId = createSingleLoop(requestDTO, currentUser);
             }
             case WEEKLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createWeeklyLoops(requestDTO, currentUser, loopRule);
+                loopId = createWeeklyLoops(requestDTO, currentUser, loopRule);
             }
             case MONTHLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createMonthlyLoops(requestDTO, currentUser, loopRule);
+                loopId = createMonthlyLoops(requestDTO, currentUser, loopRule);
             }
             case YEARLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createYearlyLoops(requestDTO, currentUser, loopRule);
+                loopId = createYearlyLoops(requestDTO, currentUser, loopRule);
             }
             default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
+
+        if (requestDTO.chatRoomId() != null && loopId != null) {
+            Loop loop = loopRepository.findById(loopId)
+                    .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+        }
+
+        return loopId;
     }
 
     // 루프 상세 조회
@@ -151,6 +163,10 @@ public class LoopServiceImpl implements LoopService {
                     loop.addChecklist(LoopChecklist.builder().content(cl).build());
                 }
             }
+        }
+
+        if (requestDTO.chatRoomId() != null) {
+            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
         }
     }
 
@@ -430,5 +446,11 @@ public class LoopServiceImpl implements LoopService {
         if (!loopRule.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
+    }
+
+    private void linkLoopToChatRoom(Long chatRoomId, Loop loop) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+        chatRoom.selectLoop(loop);
     }
 }

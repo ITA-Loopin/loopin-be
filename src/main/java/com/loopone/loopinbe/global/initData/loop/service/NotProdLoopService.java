@@ -56,7 +56,8 @@ public class NotProdLoopService {
                         null,
                         null,
                         null,
-                        List.of("주문진 해수욕장")
+                        List.of("주문진 해수욕장"),
+                        null
                 ),
                 user1
         );
@@ -70,7 +71,8 @@ public class NotProdLoopService {
                         List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         lastWeekMonday,
                         thisWeekSunday,
-                        List.of("아침에 3km 런닝", "런닝 후 샐러드 건강식 먹기")
+                        List.of("아침에 3km 런닝", "런닝 후 샐러드 건강식 먹기"),
+                        null
                 ),
                 user1
         );
@@ -84,7 +86,8 @@ public class NotProdLoopService {
                         List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         lastWeekMonday,
                         thisWeekSunday,
-                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기")
+                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기"),
+                        null
                 ),
                 user1
         );
@@ -180,7 +183,8 @@ public class NotProdLoopService {
                         null,
                         null,
                         null,
-                        List.of("주문진 해수욕장")
+                        List.of("주문진 해수욕장"),
+                        null
                 ),
                 user1
         );
@@ -194,7 +198,8 @@ public class NotProdLoopService {
                         List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         thisMonthStart,
                         thisMonthEnd,
-                        List.of("런닝 전 스트레칭", "아침에 3km 런닝", "런닝 후 1km 조깅", "마무리 스트레칭", "런닝 후 샐러드 건강식 먹기")
+                        List.of("런닝 전 스트레칭", "아침에 3km 런닝", "런닝 후 1km 조깅", "마무리 스트레칭", "런닝 후 샐러드 건강식 먹기"),
+                        null
                 ),
                 user1
         );
@@ -208,7 +213,8 @@ public class NotProdLoopService {
                         List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                         thisMonthStart,
                         thisMonthEnd,
-                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기", "오답 단어 1회독")
+                        List.of("아침에 오답단어 복습", "듣기 연습", "기출 1회 풀기", "오답노트하기", "오답 단어 1회독"),
+                        null
                 ),
                 user1
         );
@@ -222,7 +228,8 @@ public class NotProdLoopService {
                         List.of(DayOfWeek.TUESDAY),
                         lastWeekMonday,
                         thisWeekSunday,
-                        List.of("카카오 기출 1회 풀기")
+                        List.of("카카오 기출 1회 풀기"),
+                        null
                 ),
                 user1
         );
