@@ -90,4 +90,28 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     order by cr.lastMessageAt desc
 """)
     List<ChatRoomMember> findMyChatRooms(@Param("memberId") Long memberId);
+
+    @Query("""
+    select crm
+    from ChatRoomMember crm
+    join fetch crm.chatRoom cr
+    join fetch crm.member owner
+    left join fetch cr.loop
+    where crm.member.id = :memberId
+      and cr.isBotRoom = true
+    order by cr.lastMessageAt desc
+""")
+    List<ChatRoomMember> findAiChatRooms(@Param("memberId") Long memberId);
+
+    @Query("""
+    select crm
+    from ChatRoomMember crm
+    join fetch crm.chatRoom cr
+    join fetch crm.member owner
+    left join fetch cr.loop
+    where crm.member.id = :memberId
+      and (cr.isBotRoom = false or cr.isBotRoom is null)
+    order by cr.lastMessageAt desc
+""")
+    List<ChatRoomMember> findTeamChatRooms(@Param("memberId") Long memberId);
 }
