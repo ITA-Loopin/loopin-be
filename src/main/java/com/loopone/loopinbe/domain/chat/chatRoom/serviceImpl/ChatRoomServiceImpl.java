@@ -11,6 +11,7 @@ import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
+import com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomType;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
@@ -18,6 +19,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
+import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -118,6 +119,33 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
     }
 
+    @Override
+    public void createTeamChatRoom(Long userId, Team team, List<Member> members) {
+        ChatRoom chatRoom = ChatRoom.builder()
+                .title(team.getName())
+                .member(team.getLeader())
+                .isBotRoom(false)
+                .build();
+
+        List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
+
+        chatRoomMembers.add(ChatRoomMember.builder()
+                .member(team.getLeader())
+                .chatRoom(chatRoom)
+                .build());
+        
+        // 팀원 모두 추가
+        for (Member member : members) {
+            chatRoomMembers.add(ChatRoomMember.builder()
+                    .member(member)
+                    .chatRoom(chatRoom)
+                    .build());
+        }
+
+        chatRoom.setChatRoomMembers(chatRoomMembers);
+        chatRoomRepository.save(chatRoom);
+    }
+
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     @Override
     @Transactional
@@ -154,11 +182,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
     }
 
-    // AI 채팅방 리스트 조회
+    // 채팅방 리스트 조회 (ALL, TEAM, AI)
     @Override
-    public ChatRoomListResponse getChatRooms(Long memberId) {
-        List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
-        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+    public ChatRoomListResponse getChatRooms(Long memberId, ChatRoomType chatRoomType) {
+        return switch (chatRoomType) {
+            case ALL -> getAllChatRooms(memberId);
+            case AI -> getAiChatRooms(memberId);
+            case TEAM -> getTeamChatRooms(memberId);
+        };
     }
 
     // AI 채팅방 루프 선택
@@ -179,5 +210,20 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
         return loopMapper.toDetailResponse(chatRoom.getLoop());
+    }
+
+    private ChatRoomListResponse getAllChatRooms(Long memberId) {
+        List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
+        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+    }
+
+    private ChatRoomListResponse getAiChatRooms(Long memberId) {
+        List<ChatRoomMember> chatRoomList = chatRoomRepository.findAiChatRooms(memberId);
+        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+    }
+
+    private ChatRoomListResponse getTeamChatRooms(Long memberId) {
+        List<ChatRoomMember> chatRoomList = chatRoomRepository.findTeamChatRooms(memberId);
+        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
     }
 }
