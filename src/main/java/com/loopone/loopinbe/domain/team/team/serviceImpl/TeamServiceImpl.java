@@ -74,7 +74,7 @@ public class TeamServiceImpl implements TeamService {
     public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
 
-        //팀을 정렬한 TeamMember 조회 (sortOrder 우선, null이면 createdAt DESC)
+        //내가 속한 팀들과의 연결 정보 조회 (sortOrder 우선, null이면 createdAt DESC)
         List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
 
         //DTO 변환
@@ -155,31 +155,37 @@ public class TeamServiceImpl implements TeamService {
     @Transactional
     public void updateTeamOrder(TeamOrderUpdateRequest request, CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
-        List<Long> orderedTeamIds = request.teamIds();
 
-        // 내가 속한 팀 멤버 정보 조회
-        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
+        Long movingTeamId = request.teamId();
+        Integer newPosition = request.newPosition();
 
-        // 요청된 팀 ID로 매핑
-        Map<Long, TeamMember> teamMemberMap = myTeamMembers.stream()
-                .collect(Collectors.toMap(
-                        tm -> tm.getTeam().getId(),
-                        tm -> tm
-                ));
-
-        // 순서 업데이트
-        for (int i = 0; i < orderedTeamIds.size(); i++) {
-            Long teamId = orderedTeamIds.get(i);
-            TeamMember teamMember = teamMemberMap.get(teamId);
-
-            if (teamMember == null) {
-                throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
-            }
-
-            teamMember.setSortOrder(i);
+        // 내가 속한 팀들과의 연결 정보 조회 (정렬된 순서로)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
+        if (myTeamMembers.isEmpty()) {
+            throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
         }
 
-        // 일괄 저장
+        // 이동할 팀 찾기
+        TeamMember movingTeamMember = myTeamMembers.stream()
+                .filter(tm -> tm.getTeam().getId().equals(movingTeamId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+
+        // 현재 위치 찾기
+        int currentPosition = myTeamMembers.indexOf(movingTeamMember);
+        // 위치가 같으면 아무 작업 안 함
+        if (currentPosition == newPosition) {
+            return;
+        }
+
+        // 리스트에서 제거 후 새 위치에 삽입
+        myTeamMembers.remove(currentPosition);
+        myTeamMembers.add(newPosition, movingTeamMember);
+        // 모든 팀의 sortOrder 재설정 (sortOrder가 null이었던 항목들도 값 할당하기 위해)
+        for (int i = 0; i < myTeamMembers.size(); i++) {
+            myTeamMembers.get(i).setSortOrder(i);
+        }
+
         teamMemberRepository.saveAll(myTeamMembers);
     }
 
