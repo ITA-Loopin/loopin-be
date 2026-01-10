@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.team.teamLoop.dto.res;
 
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopImportance;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -13,6 +14,9 @@ public record TeamLoopListResponse(
         Long id,
         String title,
         LocalDate loopDate,
+
+        @Schema(description = "나의 루프 상태 (시작전/진행중/완료됨)")
+        TeamLoopStatus status,
 
         @Schema(description = "루프 유형")
         TeamLoopType type,
@@ -27,5 +31,8 @@ public record TeamLoopListResponse(
         double personalProgress,
 
         @Schema(description = "루프의 참여자인지")
-        boolean isParticipating
+        boolean isParticipating,
+
+        @Schema(description = "반복 주기 문자열 (예: '매주 월금', '매월 1일', '없음')")
+        String repeatCycle
 ) {}

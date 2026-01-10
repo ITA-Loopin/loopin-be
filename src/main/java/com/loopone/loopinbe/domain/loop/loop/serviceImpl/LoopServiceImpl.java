@@ -9,6 +9,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopCalendarResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.*;
 
 @Slf4j
@@ -246,6 +248,37 @@ public class LoopServiceImpl implements LoopService {
         }
         // 2) TeamLoop가 참조하지 않는 개인 LoopRule만 삭제
         loopRuleRepository.deletePersonalRulesNotUsedAnywhere(memberId);
+    }
+
+    //루프 캘린더 조회
+    @Override
+    @Transactional(readOnly = true)
+    public LoopCalendarResponse getLoopCalendar(int year, int month, CurrentUserDto currentUser) {
+        YearMonth targetYearMonth = YearMonth.of(year, month);
+
+        // 조회 범위 계산
+        LocalDate startDate = targetYearMonth.atDay(1).minusDays(7); // 전월 마지막 주 포함
+        LocalDate endDate = targetYearMonth.atEndOfMonth().plusDays(7); // 익월 첫 주 포함
+
+        // 해당 기간 내 개인 루프가 존재하는 날짜들만 조회
+        List<LocalDate> existingLoopDates = loopRepository.findLoopDatesByMemberIdAndDateRange(
+                currentUser.id(), startDate, endDate
+        );
+
+        // 빠른 조회를 위해 Set으로 변환
+        Set<LocalDate> hasLoopDateSet = new HashSet<>(existingLoopDates);
+
+        // 시작일부터 종료일까지 하루씩 순회하며 결과 리스트 생성
+        List<LoopCalendarResponse.CalendarDay> calendarDays = new ArrayList<>();
+        startDate.datesUntil(endDate.plusDays(1)).forEach(currentDate -> {
+            boolean hasLoop = hasLoopDateSet.contains(currentDate);
+            calendarDays.add(new LoopCalendarResponse.CalendarDay(currentDate, hasLoop));
+        });
+
+        // 결과 반환
+        return LoopCalendarResponse.builder()
+                .days(calendarDays)
+                .build();
     }
 
     // ========== 비즈니스 로직 메서드 ==========
