@@ -3,16 +3,10 @@ package com.loopone.loopinbe.domain.account.member.converter;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
-import com.loopone.loopinbe.domain.account.member.dto.res.SimpleMemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
-import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
 import org.mapstruct.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Mapper(componentModel = "spring", uses = SimpleMemberMapper.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", uses = SimpleMemberConverter.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface MemberConverter {
     // ---------- Member -> MemberResponse ----------
     MemberResponse toMemberResponse(Member source);

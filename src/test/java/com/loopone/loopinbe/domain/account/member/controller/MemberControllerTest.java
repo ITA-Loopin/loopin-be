@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
+import com.loopone.loopinbe.global.common.response.PageMeta;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.config.SecurityConfig;
 import com.loopone.loopinbe.global.config.WebConfig;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
@@ -31,6 +34,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -39,10 +43,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -59,7 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         excludeAutoConfiguration = {
                 SecurityAutoConfiguration.class,
                 SecurityFilterAutoConfiguration.class,
-                OAuth2ResourceServerAutoConfiguration.class
+                OAuth2ClientAutoConfiguration.class,
+                OAuth2ClientWebSecurityAutoConfiguration.class
         }
 )
 @AutoConfigureMockMvc(addFilters = false)
@@ -198,13 +205,32 @@ class MemberControllerTest {
     @Test
     @DisplayName("DELETE /rest-api/v1/member → 200 OK")
     void deleteMember_success() throws Exception {
+        given(tokenResolver.resolveAccess(any())).willReturn("accessToken");
+        given(webAuthCookieFactory.expireAccess())
+                .willReturn(ResponseCookie.from("accessToken", "")
+                        .path("/")
+                        .maxAge(0)
+                        .httpOnly(true)
+                        .build());
+        given(webAuthCookieFactory.expireRefresh())
+                .willReturn(ResponseCookie.from("refreshToken", "")
+                        .path("/")
+                        .maxAge(0)
+                        .httpOnly(true)
+                        .build());
+        willDoNothing().given(memberService).deleteMember(any(CurrentUserDto.class), eq("accessToken"));
+
         mvc.perform(delete("/rest-api/v1/member"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(header().stringValues(HttpHeaders.SET_COOKIE, String.valueOf(Matchers.hasSize(2))));
-
-        verify(memberService).deleteMember(any(CurrentUserDto.class), "accessToken");
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(result -> {
+                    var setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+                    assertThat(setCookies).hasSize(2);
+                    assertThat(setCookies.get(0)).contains("accessToken=");
+                    assertThat(setCookies.get(1)).contains("refreshToken=");
+                });
         verify(tokenResolver).resolveAccess(any());
+        verify(memberService).deleteMember(any(CurrentUserDto.class), eq("accessToken"));
         verify(webAuthCookieFactory).expireAccess();
         verify(webAuthCookieFactory).expireRefresh();
     }
@@ -216,18 +242,40 @@ class MemberControllerTest {
         var m1 = new MemberResponse(3L, "user3@example.com", "gangneung", null);
         var m2 = new MemberResponse(4L, "user4@example.com", "busan",     null);
 
+        Page<MemberResponse> page = new PageImpl<>(
+                List.of(m1, m2),
+                PageRequest.of(0, 15),
+                2 // totalElements
+        );
+        PageMeta meta = PageMeta.of(page);
+
+        // 실제 PageResponse 객체를 만들어 반환해야 함
+        PageResponse<MemberResponse> pageResponse = PageResponse.of(page);
         given(memberService.searchMemberInfo(any(Pageable.class), anyString(), any(CurrentUserDto.class)))
-                .willReturn((PageResponse<MemberResponse>) List.of(m1, m2));
+                .willReturn(pageResponse);
 
         mvc.perform(get("/rest-api/v1/member/search").param("keyword", "a"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[*].nickname",
-                        containsInAnyOrder("gangneung", "busan")));
 
-        // 기본 page/size가 MemberPage에서 0/15로 내려오는지 검증하고 싶으면:
-        verify(memberService).searchMemberInfo(eq(PageRequest.of(0, 15)), eq("a"), any(CurrentUserDto.class));
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data.[*].nickname",
+                        containsInAnyOrder("gangneung", "busan")))
+
+                .andExpect(jsonPath("$.page.page").value(0))
+                .andExpect(jsonPath("$.page.size").value(15))
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.totalPages").value(1))
+                .andExpect(jsonPath("$.page.first").value(true))
+                .andExpect(jsonPath("$.page.last").value(true))
+                .andExpect(jsonPath("$.page.hasNext").value(false));
+
+        // 기본 page/size가 0/15로 내려오는지 검증
+        verify(memberService).searchMemberInfo(
+                argThat(p -> p.getPageNumber() == 0 && p.getPageSize() == 15),
+                eq("a"),
+                any(CurrentUserDto.class)
+        );
     }
 
     // --- 성공 케이스: 팔로우 요청하기 ---

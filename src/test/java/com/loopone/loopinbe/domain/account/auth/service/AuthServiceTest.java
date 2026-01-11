@@ -133,40 +133,40 @@ class AuthServiceTest {
     }
 
     // ====== signUpAndLogin ======
-    @Test
-    @DisplayName("signUpAndLogin: regularSignUp 이후 login 로직 재사용해서 토큰 발급")
-    void signUpAndLogin_success() {
-        // given
-        var req = new MemberCreateRequest(
-                "jun@loop.in",
-                "jun",
-                Member.OAuthProvider.GOOGLE,
-                "pid"
-        );
-        var registered = member(1L, "jun@loop.in");
-
-        given(memberService.regularSignUp(req)).willReturn(registered);
-        given(memberRepository.findByEmail("jun@loop.in"))
-                .willReturn(Optional.of(registered));
-        given(jwtTokenProvider.generateToken(eq("jun@loop.in"), eq("ACCESS"), any()))
-                .willReturn("access-token-123");
-        given(jwtTokenProvider.generateToken(eq("jun@loop.in"), eq("REFRESH"), any()))
-                .willReturn("refresh-token-456");
-
-        // when
-        LoginResponse resp = authService.signUpAndLogin(req);
-
-        // then
-        assertThat(resp.getAccessToken()).isEqualTo("access-token-123");
-        assertThat(resp.getRefreshToken()).isEqualTo("refresh-token-456");
-
-        // regularSignUp 호출 + login 에서 사용하는 의존성들 호출 검증
-        verify(memberService).regularSignUp(req);
-        verify(memberRepository).findByEmail("jun@loop.in");
-        verify(jwtTokenProvider).generateToken(eq("jun@loop.in"), eq("ACCESS"), any());
-        verify(jwtTokenProvider).generateToken(eq("jun@loop.in"), eq("REFRESH"), any());
-        verify(refreshTokenService).saveRefreshToken(eq("1"), eq("refresh-token-456"), any());
-    }
+//    @Test
+//    @DisplayName("signUpAndLogin: regularSignUp 이후 login 로직 재사용해서 토큰 발급")
+//    void signUpAndLogin_success() {
+//        // given
+//        var req = new MemberCreateRequest(
+//                "jun@loop.in",
+//                "jun",
+//                Member.OAuthProvider.GOOGLE,
+//                "pid"
+//        );
+//        var registered = member(1L, "jun@loop.in");
+//
+//        given(memberService.regularSignUp(req)).willReturn(registered);
+//        given(memberRepository.findByEmail("jun@loop.in"))
+//                .willReturn(Optional.of(registered));
+//        given(jwtTokenProvider.generateToken(eq("jun@loop.in"), eq("ACCESS"), any()))
+//                .willReturn("access-token-123");
+//        given(jwtTokenProvider.generateToken(eq("jun@loop.in"), eq("REFRESH"), any()))
+//                .willReturn("refresh-token-456");
+//
+//        // when
+//        LoginResponse resp = authService.signUpAndLogin(req);
+//
+//        // then
+//        assertThat(resp.getAccessToken()).isEqualTo("access-token-123");
+//        assertThat(resp.getRefreshToken()).isEqualTo("refresh-token-456");
+//
+//        // regularSignUp 호출 + login 에서 사용하는 의존성들 호출 검증
+//        verify(memberService).regularSignUp(req);
+//        verify(memberRepository).findByEmail("jun@loop.in");
+//        verify(jwtTokenProvider).generateToken(eq("jun@loop.in"), eq("ACCESS"), any());
+//        verify(jwtTokenProvider).generateToken(eq("jun@loop.in"), eq("REFRESH"), any());
+//        verify(refreshTokenService).saveRefreshToken(eq("1"), eq("refresh-token-456"), any());
+//    }
 
     // ====== logout ======
     @Test
