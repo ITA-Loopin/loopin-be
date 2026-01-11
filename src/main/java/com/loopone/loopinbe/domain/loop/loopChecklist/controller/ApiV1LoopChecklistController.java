@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse;
 import com.loopone.loopinbe.domain.loop.loopChecklist.service.LoopChecklistService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,13 +24,13 @@ public class ApiV1LoopChecklistController {
     //체크리스트 생성
     @PostMapping("/loops/{loopId}/checklists")
     @Operation(summary = "체크리스트 생성")
-    public ApiResponse<Void> addLoopChecklist(
+    public ApiResponse<LoopChecklistResponse> addLoopChecklist(
             @PathVariable Long loopId,
             @RequestBody @Valid LoopChecklistCreateRequest loopChecklistCreateRequest,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ){
-        loopChecklistService.addLoopChecklist(loopId, loopChecklistCreateRequest, currentUser);
-        return ApiResponse.success();
+        LoopChecklistResponse response = loopChecklistService.addLoopChecklist(loopId, loopChecklistCreateRequest, currentUser);
+        return ApiResponse.success(response);
     }
 
     //TODO: 체크리스트 단일 조회

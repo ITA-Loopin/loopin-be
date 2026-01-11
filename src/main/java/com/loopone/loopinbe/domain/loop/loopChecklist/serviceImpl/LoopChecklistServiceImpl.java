@@ -5,6 +5,7 @@ import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistUpdateRequest;
+import com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
 import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.service.LoopChecklistService;
@@ -27,7 +28,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
     //체크리스트 생성
     @Override
     @Transactional
-    public void addLoopChecklist(Long loopId, LoopChecklistCreateRequest loopChecklistCreateRequest, CurrentUserDto currentUser){
+    public LoopChecklistResponse addLoopChecklist(Long loopId, LoopChecklistCreateRequest loopChecklistCreateRequest, CurrentUserDto currentUser){
         //부모 루프 찾기
         Loop loop = loopRepository.findById(loopId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
@@ -41,7 +42,13 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
                 .loop(loop)
                 .build();
 
-        LoopChecklistRepository.save(checklist);
+        LoopChecklist savedChecklist = LoopChecklistRepository.save(checklist);
+
+        return LoopChecklistResponse.builder()
+                .id(savedChecklist.getId())
+                .content(savedChecklist.getContent())
+                .completed(savedChecklist.getCompleted())
+                .build();
     }
 
     //체크리스트 수정

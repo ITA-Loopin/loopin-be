@@ -14,6 +14,8 @@ import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
+    Optional<ChatRoom> findByTeamId(Long teamId);
+
     // 현재 사용자가 otherMember와 이미 1대1 채팅방이 존재하는지 확인
     @Query("SELECT EXISTS (" +
             "    SELECT 1 FROM ChatRoom c " +
@@ -90,4 +92,28 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     order by cr.lastMessageAt desc
 """)
     List<ChatRoomMember> findMyChatRooms(@Param("memberId") Long memberId);
+
+    @Query("""
+    select crm
+    from ChatRoomMember crm
+    join fetch crm.chatRoom cr
+    join fetch crm.member owner
+    left join fetch cr.loop
+    where crm.member.id = :memberId
+      and cr.isBotRoom = true
+    order by cr.lastMessageAt desc
+""")
+    List<ChatRoomMember> findAiChatRooms(@Param("memberId") Long memberId);
+
+    @Query("""
+    select crm
+    from ChatRoomMember crm
+    join fetch crm.chatRoom cr
+    join fetch crm.member owner
+    left join fetch cr.loop
+    where crm.member.id = :memberId
+      and (cr.isBotRoom = false or cr.isBotRoom is null)
+    order by cr.lastMessageAt desc
+""")
+    List<ChatRoomMember> findTeamChatRooms(@Param("memberId") Long memberId);
 }

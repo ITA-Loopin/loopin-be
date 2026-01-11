@@ -3,6 +3,8 @@ package com.loopone.loopinbe.domain.team.teamLoop.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
@@ -14,11 +16,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/rest-api/v1")
+@RequestMapping("/rest-api/v1/teams")
 @RequiredArgsConstructor
 @Tag(name = "Team", description = "팀 루프 API")
 public class TeamLoopController {
@@ -47,4 +48,27 @@ public class TeamLoopController {
         Long loopRuleId = teamLoopService.createTeamLoop(teamId, request, currentUser);
         return ApiResponse.success(loopRuleId);
     }
+
+    @GetMapping("/{teamId}/loops/{loopId}/my")
+    @Operation(summary = "팀 루프 상세 조회 (내 루프)", description = "내가 참여 중인 팀 루프의 나의 상세 정보를 조회합니다.")
+    public ApiResponse<TeamLoopMyDetailResponse> getTeamLoopMyDetail(
+            @PathVariable Long teamId,
+            @PathVariable Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        TeamLoopMyDetailResponse response = teamLoopService.getTeamLoopMyDetail(teamId, loopId, currentUser);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{teamId}/loops/{loopId}/all")
+    @Operation(summary = "팀 루프 상세 조회 (팀 루프)", description = "팀 루프의 전체 진행 상황과 팀원별 진행 현황을 조회합니다.")
+    public ApiResponse<TeamLoopAllDetailResponse> getTeamLoopDetail(
+            @PathVariable Long teamId,
+            @PathVariable Long loopId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        TeamLoopAllDetailResponse response = teamLoopService.getTeamLoopAllDetail(teamId, loopId, currentUser);
+        return ApiResponse.success(response);
+    }
 }
+

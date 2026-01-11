@@ -2,11 +2,14 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
+import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
+import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopCalendarResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
@@ -26,10 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.YearMonth;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -39,30 +40,40 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
+    private final ChatRoomRepository chatRoomRepository;
 
     // 루프 생성
     @Override
     @Transactional
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        Long loopId;
         LoopRule loopRule;
         switch (requestDTO.scheduleType()) {
             case NONE -> {
-                return createSingleLoop(requestDTO, currentUser);
+                loopId = createSingleLoop(requestDTO, currentUser);
             }
             case WEEKLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createWeeklyLoops(requestDTO, currentUser, loopRule);
+                loopId = createWeeklyLoops(requestDTO, currentUser, loopRule);
             }
             case MONTHLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createMonthlyLoops(requestDTO, currentUser, loopRule);
+                loopId = createMonthlyLoops(requestDTO, currentUser, loopRule);
             }
             case YEARLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                return createYearlyLoops(requestDTO, currentUser, loopRule);
+                loopId = createYearlyLoops(requestDTO, currentUser, loopRule);
             }
             default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
+
+        if (requestDTO.chatRoomId() != null && loopId != null) {
+            Loop loop = loopRepository.findById(loopId)
+                    .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+        }
+
+        return loopId;
     }
 
     // 루프 상세 조회
@@ -155,6 +166,10 @@ public class LoopServiceImpl implements LoopService {
                 }
             }
         }
+
+        if (requestDTO.chatRoomId() != null) {
+            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+        }
     }
 
     // 루프 그룹 전체 수정
@@ -193,25 +208,77 @@ public class LoopServiceImpl implements LoopService {
     // 루프 그룹 전체 삭제
     @Override
     @Transactional
-    public void deleteLoopGroup(Long loopRuleId, CurrentUserDto currentUser) {
+    public void deleteLoopGroup(Long loopId, CurrentUserDto currentUser) {
         // 루프 조회
-        LoopRule loopRule = loopRuleRepository.findById(loopRuleId)
-                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_RULE_NOT_FOUND));
+        Loop selectedLoop = loopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        LoopRule loopRule = selectedLoop.getLoopRule();
+
+        // 그룹 루프가 아닌 경우 예외 처리
+        if (loopRule == null) {
+            loopRepository.delete(selectedLoop);
+            return;
+        }
 
         // loopRule 검증
         validateLoopRuleOwner(loopRule, currentUser);
+        LocalDate targetDate = selectedLoop.getLoopDate();
 
-        // loopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
+        // loopRule의 루프 리스트를 조회 (선택된 날짜 포함 미래만 조회)
+        List<Loop> LoopList = findAllByLoopRule(loopRule, targetDate);
         // 해당 루프 리스트 삭제
         loopRepository.deleteAll(LoopList);
 
         // 과거 루프는 연결 끊기
-        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, LocalDate.now());
+        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, targetDate);
         pastLoopList.forEach(loop -> loop.setLoopRule(null));
 
         // loopRule 삭제 (자식이 없기에 삭제 가능)
         loopRuleRepository.delete(loopRule);
+    }
+
+    // 사용자가 생성한 루프 전체 삭제
+    @Override
+    @Transactional
+    public void deleteMyLoops(Long memberId) {
+        // 1) Loop 먼저 전부 삭제 (LoopChecklist는 cascade로 같이 삭제됨)
+        List<Loop> loops = loopRepository.findAllByMemberId(memberId);
+        if (!loops.isEmpty()) {
+            loopRepository.deleteAll(loops);
+        }
+        // 2) TeamLoop가 참조하지 않는 개인 LoopRule만 삭제
+        loopRuleRepository.deletePersonalRulesNotUsedAnywhere(memberId);
+    }
+
+    //루프 캘린더 조회
+    @Override
+    @Transactional(readOnly = true)
+    public LoopCalendarResponse getLoopCalendar(int year, int month, CurrentUserDto currentUser) {
+        YearMonth targetYearMonth = YearMonth.of(year, month);
+
+        // 조회 범위 계산
+        LocalDate startDate = targetYearMonth.atDay(1).minusDays(7); // 전월 마지막 주 포함
+        LocalDate endDate = targetYearMonth.atEndOfMonth().plusDays(7); // 익월 첫 주 포함
+
+        // 해당 기간 내 개인 루프가 존재하는 날짜들만 조회
+        List<LocalDate> existingLoopDates = loopRepository.findLoopDatesByMemberIdAndDateRange(
+                currentUser.id(), startDate, endDate
+        );
+
+        // 빠른 조회를 위해 Set으로 변환
+        Set<LocalDate> hasLoopDateSet = new HashSet<>(existingLoopDates);
+
+        // 시작일부터 종료일까지 하루씩 순회하며 결과 리스트 생성
+        List<LoopCalendarResponse.CalendarDay> calendarDays = new ArrayList<>();
+        startDate.datesUntil(endDate.plusDays(1)).forEach(currentDate -> {
+            boolean hasLoop = hasLoopDateSet.contains(currentDate);
+            calendarDays.add(new LoopCalendarResponse.CalendarDay(currentDate, hasLoop));
+        });
+
+        // 결과 반환
+        return LoopCalendarResponse.builder()
+                .days(calendarDays)
+                .build();
     }
 
     // ========== 비즈니스 로직 메서드 ==========
@@ -299,7 +366,9 @@ public class LoopServiceImpl implements LoopService {
         LoopRule loopRule = LoopRule.builder()
                 .member(memberConverter.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
-                .daysOfWeek(requestDTO.daysOfWeek()) // WEEKLY가 아니면 null이 저장됨
+                .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
+                                ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                                : null) // WEEKLY가 아니면 null이 저장됨
                 .startDate(start)
                 .endDate(end)
                 .build();
@@ -348,7 +417,9 @@ public class LoopServiceImpl implements LoopService {
 
         // 입력값으로 loopRule 업데이트
         loopRule.setScheduleType(requestDTO.scheduleType());
-        loopRule.setDaysOfWeek((Set<DayOfWeek>) requestDTO.daysOfWeek());
+        loopRule.setDaysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
+                ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                : null);
         loopRule.setStartDate(requestDTO.startDate());
         loopRule.setEndDate(requestDTO.endDate());
 
@@ -389,6 +460,12 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
+    // List -> Set 변환
+    private Set<DayOfWeek> toDayOfWeekSet(List<DayOfWeek> days) {
+        if (days == null || days.isEmpty()) return null; // WEEKLY 아니면 null 저장하려는 의도 유지
+        return EnumSet.copyOf(days); // 중복 제거 + Enum 최적화 Set
+    }
+
     // ========== 검증 메서드 ==========
     // 루프 사용자 검증
     public void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
@@ -402,5 +479,11 @@ public class LoopServiceImpl implements LoopService {
         if (!loopRule.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
         }
+    }
+
+    private void linkLoopToChatRoom(Long chatRoomId, Loop loop) {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+        chatRoom.selectLoop(loop);
     }
 }

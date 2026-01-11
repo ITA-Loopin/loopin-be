@@ -7,6 +7,7 @@ import com.loopone.loopinbe.global.oauth.handler.WebOAuth2SuccessHandler;
 import com.loopone.loopinbe.global.oauth.user.CustomOAuth2UserService;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
 import com.loopone.loopinbe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +51,8 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/error", "/favicon.ico").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/rest-api/v1/auth/signup-login",
@@ -59,7 +62,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api/v1/health-check",
                                 "/ws/**",
-                                "/oauth2/**",              // OAuth2 시작 엔드포인트
+                                "/oauth2/**",              // OAuth2 시작 엔드포인트.
                                 "/login/oauth2/**"         // OAuth2 콜백 엔드포인트
                         ).permitAll()
                         .anyRequest().authenticated()
@@ -99,7 +102,7 @@ public class SecurityConfig {
                 "https://develop.loopin.co.kr"
         ));
         configuration.setAllowedMethods(Arrays.asList("HEAD", "POST", "GET", "DELETE", "PUT", "PATCH", "OPTIONS"));
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control", "Content-Length", "*"));
         configuration.setAllowCredentials(true); // 쿠키 허용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

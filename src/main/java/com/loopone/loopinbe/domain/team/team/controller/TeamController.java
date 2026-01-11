@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.team.controller;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
@@ -14,20 +15,21 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/rest-api/v1")
+@RequestMapping("/rest-api/v1/teams")
 @RequiredArgsConstructor
 @Tag(name = "Team", description = "팀 API")
 public class TeamController {
 
     private final TeamService teamService;
 
-    @PostMapping("/teams")
+    @PostMapping("/")
     @Operation(summary = "팀 생성", description = "새로운 팀을 생성하고 팀원을 초대합니다.")
     public ApiResponse<Long> createTeam(
             @Valid @RequestBody TeamCreateRequest request,
@@ -37,8 +39,8 @@ public class TeamController {
         return ApiResponse.success(teamId);
     }
 
-    @GetMapping("/teams/my")
-    @Operation(summary = "나의 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
+    @GetMapping("/my")
+    @Operation(summary = "내 팀 리스트 조회", description = "내가 참여 중인 팀 리스트를 조회합니다.")
     public ApiResponse<List<MyTeamResponse>> getMyTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
@@ -46,7 +48,7 @@ public class TeamController {
         return ApiResponse.success(response);
     }
 
-    @GetMapping("/teams/recruiting")
+    @GetMapping("/recruiting")
     @Operation(summary = "모집 중인 팀 리스트 조회", description = "참여 가능한 다른 팀 리스트를 조회합니다.")
     public ApiResponse<List<RecruitingTeamResponse>> getRecruitingTeams(
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
@@ -74,5 +76,25 @@ public class TeamController {
     ) {
         List<TeamMemberResponse> response = teamService.getTeamMembers(teamId);
         return ApiResponse.success(response);
+    }
+
+    @PutMapping("/order")
+    @Operation(summary = "내 팀 목록 순서 변경", description = "드래그로 변경한 팀 목록 순서를 저장합니다.")
+    public ApiResponse<Void> updateTeamOrder(
+            @Valid @RequestBody TeamOrderUpdateRequest request,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        teamService.updateTeamOrder(request, currentUser);
+        return ApiResponse.success();
+    }
+
+    @DeleteMapping("/{teamId}")
+    @Operation(summary = "팀 삭제", description = "팀 리더만 삭제 가능합니다. 팀, 팀루프, 팀채팅방이 삭제됩니다.")
+    public ApiResponse<Void> deleteTeam(
+            @CurrentUser CurrentUserDto currentUser,
+            @PathVariable Long teamId
+    ) {
+        teamService.deleteTeam(teamId, currentUser);
+        return ApiResponse.success();
     }
 }

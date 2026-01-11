@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -35,7 +36,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
         String method = request.getMethod();
-
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         // 인증이 필요 없는 URL 리스트
         return path.startsWith("/rest-api/v1/auth/signup-login")
                 || path.startsWith("/rest-api/v1/auth/login")
@@ -51,6 +54,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        if(CorsUtils.isPreFlightRequest(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String accessToken = tokenResolver.resolveAccess(request); // 쿠키 우선, 없으면 Bearer
 
         // JWT가 없을 경우

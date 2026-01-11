@@ -10,6 +10,8 @@ public enum TeamCategory {
     CONTEST("공모전"),
     STUDY("스터디"),
     ROUTINE("루틴 공유"),
+    CLUB("동아리"),
+    EXTERNALACTIVITY("대외활동"),
     ETC("기타");
 
     private final String description;

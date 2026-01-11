@@ -80,11 +80,11 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:mongodb")
     testImplementation("org.testcontainers:kafka")   // Redpanda 대체
     testImplementation("org.springframework.kafka:spring-kafka-test")
-    //testImplementation("org.testcontainers:redis")
 
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
@@ -103,4 +103,5 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+    systemProperty("spring.profiles.active", "test")
 }

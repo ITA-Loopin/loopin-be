@@ -3,7 +3,9 @@ package com.loopone.loopinbe.domain.team.team.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
@@ -17,7 +19,11 @@ import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberProgressRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopRepository;
+import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +32,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,6 +48,8 @@ public class TeamServiceImpl implements TeamService {
     private final MemberRepository memberRepository;
     private final TeamMapper teamMapper;
     private final TeamLoopRepository teamLoopRepository;
+    private final TeamLoopService teamLoopService;
+    private final ChatRoomService chatRoomService;
 
     @Override
     @Transactional
@@ -53,7 +63,9 @@ public class TeamServiceImpl implements TeamService {
         saveLeaderAsMember(team, leader);
 
         //초대된 멤버들 등록
-        inviteMembers(team, request.invitedNicknames());
+        List<Member> members = inviteMembers(team, request.invitedNicknames());
+
+        chatRoomService.createTeamChatRoom(currentUser.id(), team, members);
 
         return team.getId();
     }
@@ -62,10 +74,8 @@ public class TeamServiceImpl implements TeamService {
     public List<MyTeamResponse> getMyTeams(CurrentUserDto currentUser) {
         Member member = getMemberOrThrow(currentUser.id());
 
-        //내가 속한 팀 멤버 정보 조회
-        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMember(member);
-
-        LocalDate today = LocalDate.now();
+        //내가 속한 팀들과의 연결 정보 조회 (sortOrder 우선, null이면 createdAt DESC)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
 
         //DTO 변환
         return myTeamMembers.stream()
@@ -140,6 +150,105 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
+    //팀 순서 변경
+    @Override
+    @Transactional
+    public void updateTeamOrder(TeamOrderUpdateRequest request, CurrentUserDto currentUser) {
+        Member member = getMemberOrThrow(currentUser.id());
+
+        Long movingTeamId = request.teamId();
+        Integer newPosition = request.newPosition();
+
+        // 내가 속한 팀들과의 연결 정보 조회 (정렬된 순서로)
+        List<TeamMember> myTeamMembers = teamMemberRepository.findAllByMemberOrderBySortOrder(member);
+        if (myTeamMembers.isEmpty()) {
+            throw new ServiceException(ReturnCode.USER_NOT_IN_TEAM);
+        }
+
+        // 이동할 팀 찾기
+        TeamMember movingTeamMember = myTeamMembers.stream()
+                .filter(tm -> tm.getTeam().getId().equals(movingTeamId))
+                .findFirst()
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+
+        // 현재 위치 찾기
+        int currentPosition = myTeamMembers.indexOf(movingTeamMember);
+        // 위치가 같으면 아무 작업 안 함
+        if (currentPosition == newPosition) {
+            return;
+        }
+
+        // 리스트에서 제거 후 새 위치에 삽입
+        myTeamMembers.remove(currentPosition);
+        myTeamMembers.add(newPosition, movingTeamMember);
+        // 모든 팀의 sortOrder 재설정 (sortOrder가 null이었던 항목들도 값 할당하기 위해)
+        for (int i = 0; i < myTeamMembers.size(); i++) {
+            myTeamMembers.get(i).setSortOrder(i);
+        }
+
+        teamMemberRepository.saveAll(myTeamMembers);
+    }
+
+    // 사용자가 참여중인 모든 팀 나가기/관련 엔티티 삭제
+    @Override
+    @Transactional
+    public void deleteMyTeams(Member member) {
+        List<TeamMember> myMemberships = teamMemberRepository.findAllByMember(member);
+        if (myMemberships.isEmpty()) return;
+        List<Long> myTeamIds = myMemberships.stream()
+                .map(tm -> tm.getTeam().getId())
+                .distinct()
+                .toList();
+        // 내가 리더인 팀들 중, (다른 팀원이 없어서) 팀 자체를 삭제해야 하는 팀들
+        List<Team> myLeaderTeams = teamRepository.findAllByLeaderId(member.getId());
+        List<Long> teamsToDelete = new ArrayList<>();
+        for (Team team : myLeaderTeams) {
+            if (!myTeamIds.contains(team.getId())) continue;
+            teamMemberRepository.findFirstMemberByTeamIdAndMemberIdNot(team.getId(), member.getId())
+                    .ifPresentOrElse(
+                            nextLeader -> {
+                                team.setLeader(nextLeader); // 1) 팀 리더 위임
+                                // 2) TeamLoop에 연결된 LoopRule의 member도 새 리더로 위임
+                                teamLoopService.transferTeamLoopRuleOwner(team.getId(), member.getId(), nextLeader);
+                            },
+                            () -> teamsToDelete.add(team.getId())
+                    );
+        }
+        // 팀은 남고, 나는 탈퇴만 하는 팀들
+        List<Long> remainingTeamIds = myTeamIds.stream()
+                .filter(id -> !teamsToDelete.contains(id))
+                .toList();
+        // 루프 관련 삭제는 TeamLoopService가 담당
+        teamLoopService.deleteMyTeamLoops(member.getId(), teamsToDelete, remainingTeamIds);
+        // (A) 팀 전체 삭제: TeamMember + Team만 삭제 (루프쪽은 이미 위에서 삭제됨)
+        if (!teamsToDelete.isEmpty()) {
+            teamMemberRepository.deleteByTeamIds(teamsToDelete);
+            teamRepository.deleteAllByIdInBatch(teamsToDelete);
+        }
+        // (B) 팀은 남음: TeamMember만 삭제(탈퇴)
+        if (!remainingTeamIds.isEmpty()) {
+            teamMemberRepository.deleteByMemberAndTeamIds(member.getId(), remainingTeamIds);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteTeam(Long teamId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+
+        if (!team.getLeader().getId().equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        chatRoomService.deleteTeamChatRoom(currentUser.id(), teamId);
+
+        List<TeamLoop> loops = teamLoopRepository.findAllByTeamId(teamId);
+        teamLoopRepository.deleteAll(loops);
+
+        // 팀 삭제
+        teamRepository.delete(team);
+    }
+
     // ========== 비즈니스 로직 메서드 ==========
     // 팀 저장
     private Team saveTeam(TeamCreateRequest request, Member leader) {
@@ -162,9 +271,9 @@ public class TeamServiceImpl implements TeamService {
     }
 
     // 멤버 초대 및 등록
-    private void inviteMembers(Team team, List<String> invitedNicknames) {
+    private List<Member> inviteMembers(Team team, List<String> invitedNicknames) {
         if (invitedNicknames == null || invitedNicknames.isEmpty()) {
-            return;
+            return null;
         }
 
         // 닉네임 리스트로 멤버 한 번에 조회
@@ -179,6 +288,8 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
 
         teamMemberRepository.saveAll(teamMembers);
+
+        return invitedMembers;
     }
 
     // ========== 조회 메서드 ==========

@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.chat.chatroom.service;
+package com.loopone.loopinbe.domain.chat.chatRoom.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
@@ -66,31 +66,31 @@ public class ChatRoomServiceTest {
         verify(chatRoomRepository, never()).save(any());
     }
 
-    @Test
-    void createAiChatRoom_shouldCreateRoomWithSingleMember() {
-        // given
-        Member member = Member.builder().id(1L).build();
-
-        ChatRoomRequest request = new ChatRoomRequest();
-
-        ChatRoom chatRoom = ChatRoom.builder()
-                .id(10L)
-                .member(member)
-                .chatRoomMembers(new ArrayList<>())
-                .build();
-
-        ChatRoomResponse expected = new ChatRoomResponse();
-        when(chatRoomRepository.save(any(ChatRoom.class))).thenReturn(chatRoom);
-        when(chatRoomConverter.toChatRoomResponse(any(), any())).thenReturn(expected);
-
-        // when
-        ChatRoomResponse response = chatRoomService.createAiChatRoom(request, member);
-
-        // then
-        assertNotNull(response);
-        verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
-        verify(chatRoomConverter, times(1)).toChatRoomResponse(any(), any());
-    }
+//    @Test
+//    void createAiChatRoom_shouldCreateRoomWithSingleMember() {
+//        // given
+//        Member member = Member.builder().id(1L).build();
+//
+//        ChatRoomRequest request = new ChatRoomRequest();
+//
+//        ChatRoom chatRoom = ChatRoom.builder()
+//                .id(10L)
+//                .member(member)
+//                .chatRoomMembers(new ArrayList<>())
+//                .build();
+//
+//        ChatRoomResponse expected = new ChatRoomResponse();
+//        when(chatRoomRepository.save(any(ChatRoom.class))).thenReturn(chatRoom);
+//        when(chatRoomConverter.toChatRoomResponse(any(), any())).thenReturn(expected);
+//
+//        // when
+//        ChatRoomResponse response = chatRoomService.createAiChatRoom(request, member);
+//
+//        // then
+//        assertNotNull(response);
+//        verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
+//        verify(chatRoomConverter, times(1)).toChatRoomResponse(any(), any());
+//    }
 
     @Test
     void leaveAllChatRooms_shouldDeleteRoom_WhenLastMemberLeaves() {

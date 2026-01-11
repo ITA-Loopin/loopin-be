@@ -29,4 +29,7 @@ public class ChatWebSocketPayload {
     // READ_UP_TO일 때만 존재
     private Long memberId;
     private Instant lastReadAt;
+
+    // DELETE일 때만 존재
+    private Long deleteId;
 }

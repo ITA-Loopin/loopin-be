@@ -27,7 +27,7 @@ public record LoopCreateRequest (
         LocalDate specificDate,
 
         @Schema(description = "scheduleType이 WEEKLY일 때 사용할 요일 목록")
-        Set<DayOfWeek> daysOfWeek,
+        List<DayOfWeek> daysOfWeek,
 
         @Schema(description = "반복 시작일 (WEEKLY, MONTHLY, YEARLY일 때 사용, 기본값은 당일로 설정)")
         LocalDate startDate,
@@ -36,5 +36,8 @@ public record LoopCreateRequest (
         LocalDate endDate,
 
         @Schema(description = "각 루프에 포함될 체크리스트 내용 목록")
-        List<String> checklists
+        List<String> checklists,
+
+        @Schema(description = "채팅방 ID (AI 채팅방 등에서 루프 생성 시 사용, null 가능)")
+        Long chatRoomId
 ){}
