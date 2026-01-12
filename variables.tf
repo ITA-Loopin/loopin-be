@@ -19,3 +19,9 @@ variable "ssh_public_keys" {
   type        = list(string)
   default     = []
 }
+
+variable "s3_bucket_name" {
+  description = "loopin-bucket-test-v1"
+  type        = string
+  default     = "loopin-bucket-test-v1"
+}

@@ -1,5 +1,27 @@
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+  ai:
+    model:
+      moderation: none
+      chat: none
+      image: none
+      embedding: none
+      audio:
+        speech: none   # openai 대신 none -> 오디오 TTS 자동구성 비활성화
+        transcription: none
+
+custom:
+  jwt:
+    secretKey: "9pX/bR/ofnyarJIWySMhnAYjo4b6xrNBCMfEXn4ikQk="
+
+app:
+  cookie:
+    secure: false
+    domain: ""

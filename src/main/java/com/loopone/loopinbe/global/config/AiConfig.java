@@ -10,6 +10,7 @@ import org.springframework.ai.retry.RetryUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.ResponseErrorHandler;
@@ -17,6 +18,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
+@Profile("!test")
 public class AiConfig {
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
