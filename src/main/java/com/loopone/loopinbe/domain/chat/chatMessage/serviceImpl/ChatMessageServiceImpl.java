@@ -127,6 +127,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 in.content(),
                 in.attachments(),
                 in.recommendations(),
+                in.loopRuleId(),
                 in.authorType(),
                 in.createdAt(),
                 in.modifiedAt()
@@ -141,6 +142,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 saved.getContent(),
                 saved.getAttachments(),
                 saved.getRecommendations(),
+                saved.getLoopRuleId(),
                 saved.getAuthorType(),
                 isBotRoom,
                 saved.getCreatedAt(),
@@ -279,6 +281,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 userId,
                 content,
                 attachments,
+                null,
                 null,
                 ChatMessage.AuthorType.USER,
                 true,

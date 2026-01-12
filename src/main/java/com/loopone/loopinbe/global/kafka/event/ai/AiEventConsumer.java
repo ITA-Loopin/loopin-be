@@ -90,6 +90,7 @@ public class AiEventConsumer {
                 message,
                 null,
                 recommendationsLoop.recommendations(),
+                recommendationsLoop.loopRuleId(),
                 ChatMessage.AuthorType.BOT,
                 true,
                 Instant.now(),
