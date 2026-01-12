@@ -58,7 +58,7 @@ public abstract class AbstractAiProvider implements AiProvider {
             return objectMapper.readValue(result, RecommendationsLoop.class);
         } catch (JsonProcessingException e) {
             log.warn("AI 응답 JSON 파싱 실패", e);
-            return new RecommendationsLoop(Collections.emptyList());
+            return new RecommendationsLoop(null, Collections.emptyList());
         }
     }
 
@@ -77,7 +77,7 @@ public abstract class AbstractAiProvider implements AiProvider {
 
     private String updatePrompt(String message, LoopDetailResponse loop) {
         String checklistText = loop.checklists().stream()
-                .map(c -> "- " + c.content() + " (완료 여부: " + c.completed() + ")")
+                .map(c -> "- " + c.content())
                 .collect(Collectors.joining("\n"));
 
         return UPDATE_LOOP_PROMPT.formatted(
