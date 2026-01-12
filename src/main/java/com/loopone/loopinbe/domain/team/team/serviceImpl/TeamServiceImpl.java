@@ -204,11 +204,11 @@ public class TeamServiceImpl implements TeamService {
         List<Long> teamsToDelete = new ArrayList<>();
         for (Team team : myLeaderTeams) {
             if (!myTeamIds.contains(team.getId())) continue;
-            teamMemberRepository.findFirstMemberByTeamIdAndMemberIdNot(team.getId(), member.getId())
+            teamMemberRepository.findFirstByTeam_IdAndMember_IdNotOrderByIdAsc(team.getId(), member.getId())
+                    .map(TeamMember::getMember)
                     .ifPresentOrElse(
                             nextLeader -> {
-                                team.setLeader(nextLeader); // 1) 팀 리더 위임
-                                // 2) TeamLoop에 연결된 LoopRule의 member도 새 리더로 위임
+                                team.setLeader(nextLeader);
                                 teamLoopService.transferTeamLoopRuleOwner(team.getId(), member.getId(), nextLeader);
                             },
                             () -> teamsToDelete.add(team.getId())
