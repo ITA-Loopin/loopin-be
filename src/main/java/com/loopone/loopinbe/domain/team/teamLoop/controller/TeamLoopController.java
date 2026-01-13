@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUser;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopCalendarResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
@@ -68,6 +69,18 @@ public class TeamLoopController {
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
         TeamLoopAllDetailResponse response = teamLoopService.getTeamLoopAllDetail(teamId, loopId, currentUser);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/{teamId}/loops/calendar")
+    @Operation(summary = "팀 루프 캘린더 조회", description = "특정 연도와 월을 기준으로 전월~익월(총 3개월)의 팀 루프 존재 여부를 반환합니다.")
+    public ApiResponse<TeamLoopCalendarResponse> getTeamLoopCalendar(
+            @PathVariable Long teamId,
+            @RequestParam int year,
+            @RequestParam int month,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
+    ) {
+        TeamLoopCalendarResponse response = teamLoopService.getTeamLoopCalendar(teamId, year, month, currentUser);
         return ApiResponse.success(response);
     }
 }
