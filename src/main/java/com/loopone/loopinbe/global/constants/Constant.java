@@ -132,4 +132,8 @@ public class Constant {
             """;
 
   public static final String AI_UPDATE_MESSAGE = "더 나은 루틴이 필요하시다면, 더 상세하게 말씀해주세요.";
+  public static final String GET_LOOP_MESSAGE = """
+                    루프를 수정해볼까요?
+                    수정하고 싶은 루프 내용을 자세하게 알려주세요!
+                    """;
 }

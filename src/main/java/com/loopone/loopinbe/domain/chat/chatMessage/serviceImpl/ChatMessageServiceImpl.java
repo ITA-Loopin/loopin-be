@@ -4,9 +4,9 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -31,7 +31,10 @@ import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +43,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
+import static com.loopone.loopinbe.global.constants.Constant.GET_LOOP_MESSAGE;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
 
@@ -201,10 +205,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         if (request.messageType() == GET_LOOP) {
             msgId = UUID.randomUUID();
-            msgContent = """
-                    루프를 수정해볼까요?
-                    수정하고 싶은 루프 내용을 자세하게 알려주세요!
-                    """;
+            msgContent = GET_LOOP_MESSAGE;
             msgAuthor = ChatMessage.AuthorType.BOT;
             if (loopDetailResponse != null) {
                 msgRecommendations = Collections.singletonList(convertToCreateRequest(loopDetailResponse, chatRoomId));
@@ -222,7 +223,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         if (request.messageType() == CREATE_LOOP) {
             publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
-        } else if(request.messageType() == UPDATE_LOOP) {
+        } else if (request.messageType() == UPDATE_LOOP) {
             publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
         }
     }
@@ -291,9 +292,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         List<String> checklists = (detail.checklists() != null)
                 ? detail.checklists().stream().map(com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse::content).toList()
                 : Collections.emptyList();
-        
+
         var rule = detail.loopRule();
-        
+
         return new LoopCreateRequest(
                 detail.title(),
                 detail.content(),
