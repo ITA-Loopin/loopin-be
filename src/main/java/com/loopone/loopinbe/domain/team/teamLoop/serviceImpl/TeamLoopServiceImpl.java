@@ -12,6 +12,7 @@ import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopCalendarResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
@@ -34,10 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
+import java.time.YearMonth;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -238,6 +237,47 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                 .totalChecklistCount(totalChecklistCount)
                 .checklists(checklistInfos)
                 .memberProgresses(memberProgresses)
+                .build();
+    }
+
+    // 팀 루프 캘린더 조회
+    @Override
+    @Transactional(readOnly = true)
+    public TeamLoopCalendarResponse getTeamLoopCalendar(Long teamId, int year, int month, CurrentUserDto currentUser) {
+        // 팀 조회 및 권한 검증
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
+
+        // 팀원 여부 검증
+        boolean isMember = team.getTeamMembers().stream()
+                .anyMatch(tm -> tm.getMember().getId().equals(currentUser.id()));
+        if (!isMember) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        YearMonth targetYearMonth = YearMonth.of(year, month);
+        // 조회 범위 계산
+        LocalDate startDate = targetYearMonth.atDay(1).minusDays(7); // 전월 마지막 주 포함
+        LocalDate endDate = targetYearMonth.atEndOfMonth().plusDays(7); // 익월 첫 주 포함
+
+        // 해당 기간 내 팀 루프가 존재하는 날짜들만 조회
+        List<LocalDate> existingTeamLoopDates = teamLoopRepository.findTeamLoopDatesByTeamIdAndDateRange(
+                teamId, startDate, endDate
+        );
+
+        // 빠른 조회를 위해 Set으로 변환
+        Set<LocalDate> hasTeamLoopDateSet = new HashSet<>(existingTeamLoopDates);
+
+        // 시작일부터 종료일까지 하루씩 순회하며 결과 리스트 생성
+        List<TeamLoopCalendarResponse.CalendarDay> calendarDays = new ArrayList<>();
+        startDate.datesUntil(endDate.plusDays(1)).forEach(currentDate -> {
+            boolean hasTeamLoop = hasTeamLoopDateSet.contains(currentDate);
+            calendarDays.add(new TeamLoopCalendarResponse.CalendarDay(currentDate, hasTeamLoop));
+        });
+
+        return TeamLoopCalendarResponse.builder()
+                .teamName(team.getName())
+                .days(calendarDays)
                 .build();
     }
 
