@@ -83,11 +83,13 @@ public class TeamLoopController {
     }
 
     @GetMapping("/{teamId}/member-activities")
-    @Operation(summary = "팀원 활동 조회", description = "팀원별 활동, 팀 전체 최근 활동 로그를 반환합니다.")
+    @Operation(summary = "팀 활동 조회", description = "특정 날짜의 팀원별 활동 및 팀 전체 최근 활동 로그를 반환합니다. (파라미터 없으면 오늘 기준)")
     public ApiResponse<MemberActivitiesResponse> getMemberActivities(
             @PathVariable Long teamId,
+            @RequestParam(required = false) LocalDate date,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
-        MemberActivitiesResponse response = teamLoopService.getMemberActivities(teamId, currentUser);
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        MemberActivitiesResponse response = teamLoopService.getMemberActivities(teamId, targetDate, currentUser);
         return ApiResponse.success(response);
     }
 }

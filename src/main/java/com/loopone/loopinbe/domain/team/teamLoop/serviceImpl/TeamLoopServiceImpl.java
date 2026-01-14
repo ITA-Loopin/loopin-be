@@ -21,7 +21,6 @@ import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopActivity;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopChecklist;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
-import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopActivityType;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopActivityRepository;
@@ -327,7 +326,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     // 팀원 활동 조회
     @Override
-    public MemberActivitiesResponse getMemberActivities(Long teamId, CurrentUserDto currentUser) {
+    public MemberActivitiesResponse getMemberActivities(Long teamId, LocalDate targetDate, CurrentUserDto currentUser) {
         // 팀원 검증
         validateTeamMember(teamId, currentUser.id());
 
@@ -335,8 +334,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
 
-        // 팀의 모든 팀 루프 조회
-        List<TeamLoop> allTeamLoops = teamLoopRepository.findAllByTeamId(teamId);
+        // 특정 날짜의 팀 루프만 조회
+        List<TeamLoop> teamLoops = teamLoopRepository.findAllByTeamIdAndDate(teamId, targetDate);
 
         // 팀원 목록
         List<Member> teamMembers = team.getTeamMembers().stream()
@@ -345,7 +344,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
         // 팀원별 활동 정보 생성
         List<MemberActivitiesResponse.MemberActivity> memberActivities = teamMembers.stream()
-                .map(member -> calculateMemberActivity(member, allTeamLoops, currentUser.id()))
+                .map(member -> calculateMemberActivity(member, teamLoops, currentUser.id()))
                 .toList();
 
         // 팀 전체 최근 활동 로그 조회 (최대 10개)
@@ -587,7 +586,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
     }
 
     // 개별 팀원의 활동 정보 계산
-    private MemberActivitiesResponse.MemberActivity calculateMemberActivity(Member member, List<TeamLoop> allTeamLoops, Long currentUserId) {
+    private MemberActivitiesResponse.MemberActivity calculateMemberActivity(Member member, List<TeamLoop> allTeamLoops,
+            Long currentUserId) {
         Long memberId = member.getId();
         // 해당 멤버가 참여하는 팀 루프만 필터링
         List<TeamLoop> participatingLoops = allTeamLoops.stream()
@@ -597,36 +597,32 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         Map<TeamLoopStatus, Long> statusCounts = participatingLoops.stream()
                 .collect(Collectors.groupingBy(
                         loop -> loop.calculatePersonalStatus(memberId),
-                        Collectors.counting()
-                ));
+                        Collectors.counting()));
         Map<TeamLoopStatus, Integer> statusStats = Map.of(
                 TeamLoopStatus.NOT_STARTED, statusCounts.getOrDefault(TeamLoopStatus.NOT_STARTED, 0L).intValue(),
                 TeamLoopStatus.IN_PROGRESS, statusCounts.getOrDefault(TeamLoopStatus.IN_PROGRESS, 0L).intValue(),
-                TeamLoopStatus.COMPLETED, statusCounts.getOrDefault(TeamLoopStatus.COMPLETED, 0L).intValue()
-        );
+                TeamLoopStatus.COMPLETED, statusCounts.getOrDefault(TeamLoopStatus.COMPLETED, 0L).intValue());
         // 유형별 개수
         Map<TeamLoopType, Long> typeCounts = participatingLoops.stream()
                 .collect(Collectors.groupingBy(TeamLoop::getType, Collectors.counting()));
         Map<TeamLoopType, Integer> typeStats = Map.of(
                 TeamLoopType.COMMON, typeCounts.getOrDefault(TeamLoopType.COMMON, 0L).intValue(),
-                TeamLoopType.INDIVIDUAL, typeCounts.getOrDefault(TeamLoopType.INDIVIDUAL, 0L).intValue()
-        );
+                TeamLoopType.INDIVIDUAL, typeCounts.getOrDefault(TeamLoopType.INDIVIDUAL, 0L).intValue());
         // 전체 진행률 평균
-        double overallProgress = participatingLoops.isEmpty() ? 0.0 :
-                participatingLoops.stream()
+        double overallProgress = participatingLoops.isEmpty() ? 0.0
+                : participatingLoops.stream()
                         .mapToDouble(loop -> loop.calculatePersonalProgress(memberId))
                         .average()
                         .orElse(0.0);
         // 최근 활동 조회
-        MemberActivitiesResponse.MemberActivity.LastActivity lastActivity =
-                teamLoopActivityRepository
-                        .findFirstByMemberIdOrderByCreatedAtDesc(memberId)
-                        .map(activity -> MemberActivitiesResponse.MemberActivity.LastActivity.builder()
-                                .actionType(activity.getActionType())
-                                .targetName(activity.getTargetName())
-                                .timestamp(activity.getCreatedAt())
-                                .build())
-                        .orElse(null);
+        MemberActivitiesResponse.MemberActivity.LastActivity lastActivity = teamLoopActivityRepository
+                .findFirstByMemberIdOrderByCreatedAtDesc(memberId)
+                .map(activity -> MemberActivitiesResponse.MemberActivity.LastActivity.builder()
+                        .actionType(activity.getActionType())
+                        .targetName(activity.getTargetName())
+                        .timestamp(activity.getCreatedAt())
+                        .build())
+                .orElse(null);
         return MemberActivitiesResponse.MemberActivity.builder()
                 .memberId(memberId)
                 .nickname(member.getNickname())
