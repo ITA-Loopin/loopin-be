@@ -7,17 +7,27 @@ import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailRespon
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopCalendarResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.dto.res.MemberActivitiesResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface TeamLoopService {
-    List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, TeamLoopStatus status, CurrentUserDto currentUser);
+    List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, TeamLoopStatus statusFilter,
+            CurrentUserDto currentUser);
+
     Long createTeamLoop(Long teamId, TeamLoopCreateRequest request, CurrentUserDto currentUser);
+
     TeamLoopMyDetailResponse getTeamLoopMyDetail(Long teamId, Long loopId, CurrentUserDto currentUser);
+
     TeamLoopAllDetailResponse getTeamLoopAllDetail(Long teamId, Long loopId, CurrentUserDto currentUser);
+
     TeamLoopCalendarResponse getTeamLoopCalendar(Long teamId, int year, int month, CurrentUserDto currentUser);
+
     void deleteMyTeamLoops(Long memberId, List<Long> teamsToDelete, List<Long> remainingTeamIds);
+
     void transferTeamLoopRuleOwner(Long teamId, Long oldLeaderId, Member newLeader);
+
+    MemberActivitiesResponse getMemberActivities(Long teamId, CurrentUserDto currentUser);
 }
