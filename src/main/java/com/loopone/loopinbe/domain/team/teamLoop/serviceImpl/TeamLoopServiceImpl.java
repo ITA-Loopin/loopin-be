@@ -55,7 +55,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
 
     //팀 루프 리스트 조회
     @Override
-    public List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, CurrentUserDto currentUser) {
+    public List<TeamLoopListResponse> getTeamLoops(Long teamId, LocalDate targetDate, TeamLoopStatus statusFilter, CurrentUserDto currentUser) {
         List<TeamLoop> teamLoops = teamLoopRepository.findAllByTeamIdAndDate(teamId, targetDate);
         Long myId = currentUser.id();
 
@@ -71,7 +71,12 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                     //반복 주기 문자열
                     String repeatCycle = formatRepeatCycle(loop.getLoopRule());
                     //나의 루프 상태
-                    TeamLoopStatus status = loop.calculatePersonalStatus(myId);
+                    TeamLoopStatus myStatus = loop.calculatePersonalStatus(myId);
+
+                    // 상태 필터링 (statusFilter가 null이 아닐 때만)
+                    if (statusFilter != null && myStatus != statusFilter) {
+                        return null;  // 필터링 대상
+                    }
 
                     return TeamLoopListResponse.builder()
                             .id(loop.getId())
@@ -83,9 +88,10 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                             .personalProgress(myProgress)
                             .isParticipating(isParticipating)
                             .repeatCycle(repeatCycle)
-                            .status(status)
+                            .status(myStatus)
                             .build();
                 })
+                .filter(Objects::nonNull) // null 제거
                 .collect(Collectors.toList());
     }
 

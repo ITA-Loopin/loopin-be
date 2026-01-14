@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopAllDetailRespon
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopCalendarResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopMyDetailResponse;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.res.TeamLoopListResponse;
+import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopStatus;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
 import com.loopone.loopinbe.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,14 +29,15 @@ public class TeamLoopController {
     private final TeamLoopService teamLoopService;
 
     @GetMapping("/{teamId}/loops")
-    @Operation(summary = "팀 루프 리스트 조회", description = "특정 날짜의 팀 루프 리스트를 조회합니다. (파라메터 없으면 오늘 기준)")
+    @Operation(summary = "팀 루프 리스트 조회", description = "특정 날짜의 팀 루프 리스트를 조회합니다. (날짜 파라메터 없으면 오늘 기준) (status 파라미터로 상태 필터링)")
     public ApiResponse<List<TeamLoopListResponse>> getTeamLoops(
             @PathVariable Long teamId,
             @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) @Parameter(description = "루프 상태 필터 (NOT_STARTED/IN_PROGRESS/COMPLETED)") TeamLoopStatus status,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser
     ) {
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
-        List<TeamLoopListResponse> response = teamLoopService.getTeamLoops(teamId, targetDate, currentUser);
+        List<TeamLoopListResponse> response = teamLoopService.getTeamLoops(teamId, targetDate, status,currentUser);
         return ApiResponse.success(response);
     }
 
