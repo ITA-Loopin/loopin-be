@@ -2,6 +2,9 @@ package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
+import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
@@ -32,6 +35,8 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
 
+import static com.loopone.loopinbe.global.constants.Constant.GET_LOOP_MESSAGE;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,8 +46,9 @@ public class LoopServiceImpl implements LoopService {
     private final LoopMapper loopMapper;
     private final MemberConverter memberConverter;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageService chatMessageService;
 
-//    // 루프 생성
+    //    // 루프 생성
     @Override
     @Transactional
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
@@ -76,7 +82,19 @@ public class LoopServiceImpl implements LoopService {
         if (requestDTO.chatRoomId() != null && loopId != null) {
             Loop loop = loopRepository.findById(loopId)
                     .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
-            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+            ChatRoom chatRoom = linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+
+            if (chatRoom.isBotRoom()) {
+                chatMessageService.sendChatMessage(
+                        chatRoom.getId(),
+                        new ChatMessageRequest(
+                                GET_LOOP_MESSAGE,
+                                UUID.randomUUID(),
+                                MessageType.GET_LOOP
+                        ),
+                        currentUser
+                );
+            }
         }
 
         return loopId;
@@ -197,7 +215,7 @@ public class LoopServiceImpl implements LoopService {
         LoopCreateRequest createRequestDTO = loopMapper.toLoopCreateRequest(requestDTO);
         List<Loop> newLoops = createUpdateLoop(createRequestDTO, loopRule, currentUser);
 
-        if(!newLoops.isEmpty()) {
+        if (!newLoops.isEmpty()) {
             chatRoom.setLoop(newLoops.get(0));
         }
     }
@@ -211,6 +229,9 @@ public class LoopServiceImpl implements LoopService {
 
         // 루프 검증
         validateLoopOwner(loop, currentUser);
+
+        // 채팅방 연결 해제
+        chatRoomRepository.unlinkLoop(loopId);
 
         loopRepository.delete(loop);
     }
@@ -226,6 +247,8 @@ public class LoopServiceImpl implements LoopService {
 
         // 그룹 루프가 아닌 경우 예외 처리
         if (loopRule == null) {
+            // 채팅방 연결 해제
+            chatRoomRepository.unlinkLoop(selectedLoop.getId());
             loopRepository.delete(selectedLoop);
             return;
         }
@@ -236,6 +259,13 @@ public class LoopServiceImpl implements LoopService {
 
         // loopRule의 루프 리스트를 조회 (선택된 날짜 포함 미래만 조회)
         List<Loop> LoopList = findAllByLoopRule(loopRule, targetDate);
+
+        // 채팅방 연결 해제
+        List<Long> loopIds = LoopList.stream().map(Loop::getId).toList();
+        if (!loopIds.isEmpty()) {
+            chatRoomRepository.unlinkLoops(loopIds);
+        }
+
         // 해당 루프 리스트 삭제
         loopRepository.deleteAll(LoopList);
 
@@ -254,6 +284,9 @@ public class LoopServiceImpl implements LoopService {
         // 1) Loop 먼저 전부 삭제 (LoopChecklist는 cascade로 같이 삭제됨)
         List<Loop> loops = loopRepository.findAllByMemberId(memberId);
         if (!loops.isEmpty()) {
+            List<Long> loopIds = loops.stream().map(Loop::getId).toList();
+            chatRoomRepository.unlinkLoops(loopIds);
+
             loopRepository.deleteAll(loops);
         }
         // 2) TeamLoop가 참조하지 않는 개인 LoopRule만 삭제
@@ -396,8 +429,8 @@ public class LoopServiceImpl implements LoopService {
                 .member(memberConverter.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
                 .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
-                                ? toDayOfWeekSet(requestDTO.daysOfWeek())
-                                : null) // WEEKLY가 아니면 null이 저장됨
+                        ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                        : null) // WEEKLY가 아니면 null이 저장됨
                 .startDate(start)
                 .endDate(end)
                 .build();
@@ -507,9 +540,10 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-    private void linkLoopToChatRoom(Long chatRoomId, Loop loop) {
+    private ChatRoom linkLoopToChatRoom(Long chatRoomId, Loop loop) {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
         chatRoom.selectLoop(loop);
+        return chatRoom;
     }
 }

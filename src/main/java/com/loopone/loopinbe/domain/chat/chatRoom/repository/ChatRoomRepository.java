@@ -127,4 +127,14 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
                 where c.loop.loopRule.id = :loopRuleId
             """)
     ChatRoom findByLoopRuleId(@Param("loopRuleId") Long loopRuleId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE ChatRoom c SET c.loop = null WHERE c.loop.id = :loopId")
+    void unlinkLoop(@Param("loopId") Long loopId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE ChatRoom c SET c.loop = null WHERE c.loop.id IN :loopIds")
+    void unlinkLoops(@Param("loopIds") List<Long> loopIds);
+
+    List<ChatRoom> findByLoopIdIn(List<Long> loopIds);
 }
