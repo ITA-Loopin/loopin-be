@@ -19,6 +19,7 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
+import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomConverter chatRoomConverter;
     private final LoopMapper loopMapper;
     private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
 
     // 채팅방 생성(DM/그룹)
     @Override
@@ -227,6 +229,19 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
         return loopMapper.toDetailResponse(chatRoom.getLoop());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findByTeamId(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        return chatRoomConverter.toChatRoomResponse(chatRoom);
     }
 
     private ChatRoomListResponse getAllChatRooms(Long memberId) {
