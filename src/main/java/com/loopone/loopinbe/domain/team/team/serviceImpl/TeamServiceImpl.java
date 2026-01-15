@@ -4,6 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
+import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
@@ -12,6 +13,7 @@ import com.loopone.loopinbe.domain.team.team.dto.res.TeamDetailResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamMemberResponse;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
+import com.loopone.loopinbe.domain.team.team.entity.TeamPage;
 import com.loopone.loopinbe.domain.team.team.mapper.TeamMapper;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
@@ -24,10 +26,13 @@ import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckR
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberProgressRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
+import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -84,18 +89,15 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public List<RecruitingTeamResponse> getRecruitingTeams(CurrentUserDto currentUser) {
+    public PageResponse<RecruitingTeamResponse> getRecruitingTeams(Pageable pageable, CurrentUserDto currentUser) {
+        checkPageSize(pageable.getPageSize());
         //모든 팀 조회
-        List<Team> allTeams = teamRepository.findAll();
-
-        //내가 이미 속한 팀 ID 목록 조회
         List<Long> myTeamIds = getMyTeamIds(currentUser.id());
+        Page<Team> page = myTeamIds.isEmpty()
+                ? teamRepository.findAll(pageable)
+                : teamRepository.findByIdNotIn(myTeamIds, pageable);
 
-        //내가 속하지 않은 팀만 필터링하여 반환
-        return allTeams.stream()
-                .filter(team -> !myTeamIds.contains(team.getId()))
-                .map(teamMapper::toRecruitingTeamResponse)
-                .collect(Collectors.toList());
+        return PageResponse.of(page.map(teamMapper::toRecruitingTeamResponse)); // 또는 PageResponse.from(page.map(...))
     }
 
     @Override
@@ -323,6 +325,14 @@ public class TeamServiceImpl implements TeamService {
     private Team getTeamOrThrow(Long teamId) {
         return teamRepository.findById(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
+    }
+
+    // 요청 페이지 수 제한
+    private void checkPageSize(int pageSize) {
+        int maxPageSize = TeamPage.getMaxPageSize();
+        if (pageSize > maxPageSize) {
+            throw new ServiceException(ReturnCode.PAGE_REQUEST_FAIL);
+        }
     }
 
     // ========== 검증 메서드 ==========
