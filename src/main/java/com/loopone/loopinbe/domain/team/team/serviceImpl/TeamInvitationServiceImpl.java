@@ -1,0 +1,225 @@
+package com.loopone.loopinbe.domain.team.team.serviceImpl;
+
+import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamInvitationCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.res.TeamInvitationResponse;
+import com.loopone.loopinbe.domain.team.team.entity.Team;
+import com.loopone.loopinbe.domain.team.team.entity.TeamInvitation;
+import com.loopone.loopinbe.domain.team.team.entity.TeamMember;
+import com.loopone.loopinbe.domain.team.team.enums.InvitationStatus;
+import com.loopone.loopinbe.domain.team.team.repository.TeamInvitationRepository;
+import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
+import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
+import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
+import com.loopone.loopinbe.global.exception.ReturnCode;
+import com.loopone.loopinbe.global.exception.ServiceException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class TeamInvitationServiceImpl implements TeamInvitationService {
+
+    private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
+    private final TeamInvitationRepository teamInvitationRepository;
+    private final MemberRepository memberRepository;
+
+    @Override
+    @Transactional
+    public Long sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+        validateTeamLeader(team, currentUser.id());
+
+        Member invitee = getMemberOrThrow(request.getInviteeId());
+        validateNotTeamMember(teamId, invitee.getId());
+        validateNoPendingInvitation(team, invitee);
+
+        Member inviter = getMemberOrThrow(currentUser.id());
+
+        // 초대 생성
+        TeamInvitation invitation = TeamInvitation.builder()
+                .team(team)
+                .inviter(inviter)
+                .invitee(invitee)
+                .status(InvitationStatus.PENDING)
+                .build();
+
+        teamInvitationRepository.save(invitation);
+
+        // TODO: 알림 전송
+
+        return invitation.getId();
+    }
+
+    @Override
+    @Transactional
+    public void cancelInvitation(Long teamId, Long invitationId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+        validateTeamLeader(team, currentUser.id());
+
+        TeamInvitation invitation = getInvitationOrThrow(invitationId);
+        validateInvitationBelongsToTeam(invitation, teamId);
+        validateInvitationPending(invitation);
+
+        // 초대 상태를 CANCELLED로 변경
+        invitation.setStatus(InvitationStatus.CANCELLED);
+        teamInvitationRepository.save(invitation);
+    }
+
+    @Override
+    @Transactional
+    public void acceptInvitation(Long invitationId, CurrentUserDto currentUser) {
+        TeamInvitation invitation = getInvitationOrThrow(invitationId);
+        validateInvitationRecipient(invitation, currentUser.id());
+        validateInvitationPending(invitation);
+
+        // 초대 상태 업데이트
+        invitation.setStatus(InvitationStatus.ACCEPTED);
+        invitation.setRespondedAt(LocalDateTime.now());
+        teamInvitationRepository.save(invitation);
+
+        // 팀원 추가
+        TeamMember teamMember = TeamMember.builder()
+                .team(invitation.getTeam())
+                .member(invitation.getInvitee())
+                .build();
+        teamMemberRepository.save(teamMember);
+    }
+
+    @Override
+    @Transactional
+    public void rejectInvitation(Long invitationId, CurrentUserDto currentUser) {
+        TeamInvitation invitation = getInvitationOrThrow(invitationId);
+        validateInvitationRecipient(invitation, currentUser.id());
+        validateInvitationPending(invitation);
+
+        // 초대 상태 업데이트
+        invitation.setStatus(InvitationStatus.REJECTED);
+        invitation.setRespondedAt(LocalDateTime.now());
+        teamInvitationRepository.save(invitation);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeamInvitationResponse> getTeamInvitations(Long teamId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+        validateTeamLeader(team, currentUser.id());
+
+        List<TeamInvitation> invitations = getPendingInvitationsByTeam(team);
+
+        return invitations.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeamInvitationResponse> getMyInvitations(CurrentUserDto currentUser) {
+        Member member = getMemberOrThrow(currentUser.id());
+
+        List<TeamInvitation> invitations = getPendingInvitationsByInvitee(member);
+
+        return invitations.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    // ========== 조회 메서드 ==========
+    // 팀 조회
+    private Team getTeamOrThrow(Long teamId) {
+        return teamRepository.findById(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_NOT_FOUND));
+    }
+
+    // 초대 조회
+    private TeamInvitation getInvitationOrThrow(Long invitationId) {
+        return teamInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.INVITATION_NOT_FOUND));
+    }
+
+    // 멤버 조회
+    private Member getMemberOrThrow(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.MEMBER_NOT_FOUND));
+    }
+
+    // 팀의 PENDING 상태 초대 목록 조회
+    private List<TeamInvitation> getPendingInvitationsByTeam(Team team) {
+        return teamInvitationRepository.findByTeamAndStatus(team, InvitationStatus.PENDING);
+    }
+
+    // 멤버가 받은 PENDING 상태 초대 목록 조회
+    private List<TeamInvitation> getPendingInvitationsByInvitee(Member invitee) {
+        return teamInvitationRepository.findByInviteeAndStatus(invitee, InvitationStatus.PENDING);
+    }
+
+    // ========== 검증 메서드 ==========
+    // 팀 리더 권한 검증
+    private void validateTeamLeader(Team team, Long memberId) {
+        if (!team.getLeader().getId().equals(memberId)) {
+            throw new ServiceException(ReturnCode.UNAUTHORIZED_TEAM_LEADER_ONLY);
+        }
+    }
+
+    // 초대가 PENDING 상태인지 검증
+    private void validateInvitationPending(TeamInvitation invitation) {
+        if (invitation.getStatus() != InvitationStatus.PENDING) {
+            throw new ServiceException(ReturnCode.INVITATION_ALREADY_RESPONDED);
+        }
+    }
+
+    // 초대 수신자 본인인지 검증
+    private void validateInvitationRecipient(TeamInvitation invitation, Long memberId) {
+        if (!invitation.getInvitee().getId().equals(memberId)) {
+            throw new ServiceException(ReturnCode.UNAUTHORIZED_INVITATION_RECIPIENT_ONLY);
+        }
+    }
+
+    // 초대가 해당 팀의 것인지 검증
+    private void validateInvitationBelongsToTeam(TeamInvitation invitation, Long teamId) {
+        if (!invitation.getTeam().getId().equals(teamId)) {
+            throw new ServiceException(ReturnCode.INVALID_INVITATION);
+        }
+    }
+
+    // 이미 팀원이 아닌지 검증
+    private void validateNotTeamMember(Long teamId, Long memberId) {
+        if (teamMemberRepository.existsByTeamIdAndMemberId(teamId, memberId)) {
+            throw new ServiceException(ReturnCode.ALREADY_TEAM_MEMBER);
+        }
+    }
+
+    // 대기 중인 초대가 없는지 검증
+    private void validateNoPendingInvitation(Team team, Member invitee) {
+        if (teamInvitationRepository.existsByTeamAndInviteeAndStatus(team, invitee, InvitationStatus.PENDING)) {
+            throw new ServiceException(ReturnCode.INVITATION_ALREADY_SENT);
+        }
+    }
+
+    // ========== DTO 변환 메서드 ==========
+    // TeamInvitation Entity를 Response DTO로 변환
+    private TeamInvitationResponse toResponse(TeamInvitation invitation) {
+        return TeamInvitationResponse.builder()
+                .invitationId(invitation.getId())
+                .teamId(invitation.getTeam().getId())
+                .teamName(invitation.getTeam().getName())
+                .inviterId(invitation.getInviter().getId())
+                .inviterNickname(invitation.getInviter().getNickname())
+                .inviteeId(invitation.getInvitee().getId())
+                .inviteeNickname(invitation.getInvitee().getNickname())
+                .status(invitation.getStatus())
+                .createdAt(invitation.getCreatedAt())
+                .respondedAt(invitation.getRespondedAt())
+                .build();
+    }
+}
