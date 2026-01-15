@@ -21,6 +21,7 @@ import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.notification.factory.NotificationPayloadFactory;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -243,15 +244,8 @@ public class MemberServiceImpl implements MemberService {
                 .followRec(followRec)
                 .build();
         memberFollowReqRepository.save(memberFollowReq);
-        NotificationPayload payload = new NotificationPayload(
-                followReq.getId(),
-                followReq.getNickname(),
-                followReq.getProfileImageUrl(),
-                followRec.getId(),
-                memberFollowReq.getId(),
-                "님이 팔로우를 요청하였습니다.",
-                Notification.TargetObject.Follow
-        );
+        NotificationPayload payload = NotificationPayloadFactory.memberFollowRequest(followReq, followRec, memberFollowReq);
+
         // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -288,15 +282,8 @@ public class MemberServiceImpl implements MemberService {
                 .followed(receiver)
                 .build();
         memberFollowRepository.save(memberFollow);
-        NotificationPayload payload = new NotificationPayload(
-                currentUser.id(),              // 수락한 사람(=receiver)이 sender
-                currentUser.nickname(),
-                currentUser.profileImageUrl(),
-                memberId,                      // requester에게 알림
-                memberFollow.getId(),
-                "님이 팔로우 요청을 수락하였습니다.",
-                Notification.TargetObject.Follow
-        );
+        NotificationPayload payload = NotificationPayloadFactory.memberFollowAccepted(receiver, requester, memberFollow);
+
         // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

@@ -3,6 +3,8 @@ package com.loopone.loopinbe.domain.team.team.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
+import com.loopone.loopinbe.domain.notification.factory.NotificationPayloadFactory;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamInvitationCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.TeamInvitationResponse;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
@@ -15,6 +17,7 @@ import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
+import com.loopone.loopinbe.global.kafka.event.notification.NotificationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.loopone.loopinbe.global.constants.KafkaKey.INVITE_TOPIC;
 
 @Slf4j
 @Service
@@ -33,6 +38,7 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
     private final TeamMemberRepository teamMemberRepository;
     private final TeamInvitationRepository teamInvitationRepository;
     private final MemberRepository memberRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     @Override
     @Transactional
@@ -53,10 +59,11 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
                 .invitee(invitee)
                 .status(InvitationStatus.PENDING)
                 .build();
+        TeamInvitation saved = teamInvitationRepository.save(invitation);
 
-        teamInvitationRepository.save(invitation);
-
-        // TODO: 알림 전송
+        // 2) 알림 이벤트 발행 (요구사항 반영)
+        NotificationPayload payload = NotificationPayloadFactory.teamInvite(saved);
+        notificationEventPublisher.publishNotification(payload, INVITE_TOPIC);
 
         return invitation.getId();
     }
