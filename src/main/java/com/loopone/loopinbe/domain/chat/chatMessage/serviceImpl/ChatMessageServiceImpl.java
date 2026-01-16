@@ -47,6 +47,7 @@ import java.util.*;
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
 import static com.loopone.loopinbe.global.constants.Constant.*;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
+import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
 
 @Slf4j
 @Service
@@ -452,7 +453,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (type == CREATE_LOOP) {
             publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
         } else if (type == UPDATE_LOOP) {
-//            publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
+            publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
             chatRoomStateService.setCallUpdateLoop(chatRoomId, true);
         }
     }
