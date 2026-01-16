@@ -136,5 +136,5 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("UPDATE ChatRoom c SET c.loop = null WHERE c.loop.id IN :loopIds")
     void unlinkLoops(@Param("loopIds") List<Long> loopIds);
 
-    List<ChatRoom> findByLoopIdIn(List<Long> loopIds);
+    Optional<ChatRoom> findByTeamIdAndIsBotRoomFalse(Long teamId);
 }

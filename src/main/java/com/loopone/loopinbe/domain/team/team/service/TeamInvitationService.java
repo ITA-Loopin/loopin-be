@@ -7,7 +7,7 @@ import com.loopone.loopinbe.domain.team.team.dto.res.TeamInvitationResponse;
 import java.util.List;
 
 public interface TeamInvitationService {
-    Long sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser);
+    List<Long> sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser);
 
     void cancelInvitation(Long teamId, Long invitationId, CurrentUserDto currentUser);
 

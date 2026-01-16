@@ -42,7 +42,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final MemberConverter memberConverter;
     private final ChatRoomConverter chatRoomConverter;
-    private final LoopMapper loopMapper;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
@@ -133,31 +132,18 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     @Override
-    public void createTeamChatRoom(Long userId, Team team, List<Member> members) {
+    public void createTeamChatRoom(Long userId, Team team) {
         ChatRoom chatRoom = ChatRoom.builder()
                 .title(team.getName())
                 .member(team.getLeader())
                 .isBotRoom(false)
                 .teamId(team.getId())
                 .build();
-
         List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
-
         chatRoomMembers.add(ChatRoomMember.builder()
                 .member(team.getLeader())
                 .chatRoom(chatRoom)
                 .build());
-
-        if (members != null && !members.isEmpty()) {
-            // 팀원 모두 추가
-            for (Member member : members) {
-                chatRoomMembers.add(ChatRoomMember.builder()
-                        .member(member)
-                        .chatRoom(chatRoom)
-                        .build());
-            }
-        }
-
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
     }
@@ -230,13 +216,44 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         };
     }
 
+    // 팀id로 채팅방 조회
     @Override
     @Transactional(readOnly = true)
-    public LoopDetailResponse findLoopDetailResponse(Long chatRoomId) {
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+    public ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findByTeamId(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
-        return loopMapper.toDetailResponse(chatRoom.getLoop());
+        return chatRoomConverter.toChatRoomResponse(chatRoom);
+    }
+
+    // 초대 수락 시 채팅방에 참여
+    @Override
+    @Transactional
+    public  void participateChatRoom(Long teamId, Long currentUserId) {
+        Member member = memberRepository.findById(currentUserId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.MEMBER_NOT_FOUND));
+        // 1) 팀 채팅방 조회 (없으면 생성까지 해주고 싶으면 아래 create 로직 사용)
+        ChatRoom teamRoom = chatRoomRepository
+                .findByTeamIdAndIsBotRoomFalse(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+        // 2) 이미 참여 중이면 idempotent 하게 종료
+        boolean alreadyJoined = chatRoomMemberRepository.existsByChatRoomIdAndMemberId(teamRoom.getId(), currentUserId);
+        if (alreadyJoined) return;
+        // 3) 인원 제한 체크
+        long currentCount = chatRoomMemberRepository.countByChatRoomId(teamRoom.getId());
+        if (currentCount >= ChatRoom.ROOM_MEMBER_LIMIT) {
+            new ServiceException(ReturnCode.CHATROOM_LIMIT_EXCEEDED);
+        }
+        // 4) ChatRoomMember 생성
+        ChatRoomMember crm = ChatRoomMember.builder()
+                .chatRoom(teamRoom)
+                .member(member)
+                .build();
+        chatRoomMemberRepository.save(crm);
     }
 
     @Override

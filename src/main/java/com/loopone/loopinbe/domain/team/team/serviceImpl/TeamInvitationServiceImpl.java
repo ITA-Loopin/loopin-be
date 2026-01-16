@@ -3,6 +3,7 @@ package com.loopone.loopinbe.domain.team.team.serviceImpl;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.factory.NotificationPayloadFactory;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamInvitationCreateRequest;
@@ -24,7 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.loopone.loopinbe.global.constants.KafkaKey.INVITE_TOPIC;
@@ -39,10 +43,11 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
     private final TeamInvitationRepository teamInvitationRepository;
     private final MemberRepository memberRepository;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final ChatRoomService chatRoomService;
 
     @Override
     @Transactional
-    public Long sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser) {
+    public List<Long> sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser) {
         Team team = getTeamOrThrow(teamId);
         //validateTeamLeader(team, currentUser.id());
 
@@ -51,21 +56,30 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
         validateNoPendingInvitation(team, invitee);
 
         Member inviter = getMemberOrThrow(currentUser.id());
+        List<Member> invitees = getMembersOrThrow(request.getInviteeIds());
+        List<Long> invitationIds = new ArrayList<>(invitees.size());
 
-        // 초대 생성
-        TeamInvitation invitation = TeamInvitation.builder()
-                .team(team)
-                .inviter(inviter)
-                .invitee(invitee)
-                .status(InvitationStatus.PENDING)
-                .build();
-        TeamInvitation saved = teamInvitationRepository.save(invitation);
+        for (Member invitee : invitees) {
+            // 자기 자신 초대 방지
+            if (invitee.getId().equals(inviter.getId())) {
+                throw new ServiceException(ReturnCode.INVALID_INVITATION);
+            }
+            validateNotTeamMember(teamId, invitee.getId());
+            validateNoPendingInvitation(team, invitee);
+            TeamInvitation invitation = TeamInvitation.builder()
+                    .team(team)
+                    .inviter(inviter)
+                    .invitee(invitee)
+                    .status(InvitationStatus.PENDING)
+                    .build();
+            TeamInvitation saved = teamInvitationRepository.save(invitation);
 
-        // 2) 알림 이벤트 발행 (요구사항 반영)
-        NotificationPayload payload = NotificationPayloadFactory.teamInvite(saved);
-        notificationEventPublisher.publishNotification(payload, INVITE_TOPIC);
-
-        return invitation.getId();
+            // 알림 이벤트 발행
+            NotificationPayload payload = NotificationPayloadFactory.teamInvite(saved);
+            notificationEventPublisher.publishNotification(payload, INVITE_TOPIC);
+            invitationIds.add(saved.getId());
+        }
+        return invitationIds;
     }
 
     @Override
@@ -101,6 +115,9 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
                 .member(invitation.getInvitee())
                 .build();
         teamMemberRepository.save(teamMember);
+
+        // 팀 채팅방 참여
+        chatRoomService.participateChatRoom(invitation.getTeam().getId(), currentUser.id());
     }
 
     @Override
@@ -158,6 +175,24 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
     private Member getMemberOrThrow(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.MEMBER_NOT_FOUND));
+    }
+
+    // 멤버 다건 조회 (없으면 예외)
+    private List<Member> getMembersOrThrow(List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            throw new ServiceException(ReturnCode.MEMBER_NOT_FOUND); // 또는 별도 ReturnCode
+        }
+        // 중복 제거 (같은 사람 여러 번 초대 방지)
+        List<Long> distinctIds = memberIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<Member> members = memberRepository.findAllById(distinctIds);
+        // findAllById는 "없는 ID"를 자동으로 걸러서 반환하므로, 누락 검증 필요
+        if (members.size() != distinctIds.size()) {
+            throw new ServiceException(ReturnCode.MEMBER_NOT_FOUND);
+        }
+        return members;
     }
 
     // 팀의 PENDING 상태 초대 목록 조회

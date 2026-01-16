@@ -6,6 +6,7 @@ import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
+import com.loopone.loopinbe.domain.team.team.dto.req.TeamInvitationCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
 import com.loopone.loopinbe.domain.team.team.dto.res.RecruitingTeamResponse;
@@ -17,6 +18,7 @@ import com.loopone.loopinbe.domain.team.team.entity.TeamPage;
 import com.loopone.loopinbe.domain.team.team.mapper.TeamMapper;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
+import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
 
@@ -55,6 +57,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamLoopMemberCheckRepository teamLoopMemberCheckRepository;
     private final TeamLoopService teamLoopService;
     private final ChatRoomService chatRoomService;
+    private final TeamInvitationService teamInvitationService;
 
     @Override
     @Transactional
@@ -66,12 +69,10 @@ public class TeamServiceImpl implements TeamService {
 
         // 팀장을 팀원으로 등록
         saveLeaderAsMember(team, leader);
+        chatRoomService.createTeamChatRoom(currentUser.id(), team);
 
-        // 초대된 멤버들 등록
-        List<Member> members = inviteMembers(team, request.invitedNicknames());
-
-        chatRoomService.createTeamChatRoom(currentUser.id(), team, members);
-
+        // 팀원 초대
+        sendInvitationsByNicknames(team, request.invitedNicknames(), currentUser);
         return team.getId();
     }
 
@@ -349,25 +350,22 @@ public class TeamServiceImpl implements TeamService {
     }
 
     // 멤버 초대 및 등록
-    private List<Member> inviteMembers(Team team, List<String> invitedNicknames) {
+    private void sendInvitationsByNicknames(Team team, List<String> invitedNicknames, CurrentUserDto currentUser) {
         if (invitedNicknames == null || invitedNicknames.isEmpty()) {
-            return null;
+            return;
         }
-
-        // 닉네임 리스트로 멤버 한 번에 조회
-        List<Member> invitedMembers = memberRepository.findAllByNicknameIn(invitedNicknames);
-
-        // TeamMember 리스트 생성
-        List<TeamMember> teamMembers = invitedMembers.stream()
-                .map(member -> TeamMember.builder()
-                        .team(team)
-                        .member(member)
-                        .build())
-                .collect(Collectors.toList());
-
-        teamMemberRepository.saveAll(teamMembers);
-
-        return invitedMembers;
+        // 닉네임으로 멤버 조회
+        List<Member> invitees = memberRepository.findAllByNicknameIn(invitedNicknames);
+        // 팀장 본인 제외 + 중복 제거 + null 방지
+        List<Long> inviteeIds = invitees.stream()
+                .map(Member::getId)
+                .filter(id -> !id.equals(currentUser.id()))
+                .distinct()
+                .toList();
+        if (inviteeIds.isEmpty()) return;
+        TeamInvitationCreateRequest invitationRequest = new TeamInvitationCreateRequest(inviteeIds);
+        // 실제 초대장 발송(= PENDING 생성 + 알림 발행)
+        teamInvitationService.sendInvitation(team.getId(), invitationRequest, currentUser);
     }
 
     // ========== 조회 메서드 ==========
