@@ -21,6 +21,14 @@ public interface ChatRoomConverter {
     @Mapping(target = "lastReadAt", source = "lastReadAt")
     ChatRoomResponse toChatRoomResponse(ChatRoomMember chatRoomMember);
 
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "ownerId", source = "member.id")
+    @Mapping(target = "title", source = "title")
+    @Mapping(target = "loopSelect", expression = "java(chatRoom.getLoop() != null)")
+    @Mapping(target = "lastMessageAt", source = "lastMessageAt")
+    @Mapping(target = "lastReadAt", ignore = true)
+    ChatRoomResponse toChatRoomResponse(ChatRoom chatRoom);
+
     // ---------- ChatRoomList -> ChatRoomListResponse ----------
     List<ChatRoomResponse> toChatRoomResponses(List<ChatRoomMember> chatRoomMembers);
 
