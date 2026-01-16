@@ -48,7 +48,7 @@ public class LoopServiceImpl implements LoopService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
 
-    //    // 루프 생성
+    // 루프 생성
     @Override
     @Transactional
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
