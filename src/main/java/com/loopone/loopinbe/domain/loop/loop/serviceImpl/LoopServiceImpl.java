@@ -85,6 +85,8 @@ public class LoopServiceImpl implements LoopService {
             ChatRoom chatRoom = linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
 
             if (chatRoom.isBotRoom()) {
+                chatMessageService.deleteRecommendationMessages(chatRoom.getId());
+
                 chatMessageService.sendChatMessage(
                         chatRoom.getId(),
                         new ChatMessageRequest(

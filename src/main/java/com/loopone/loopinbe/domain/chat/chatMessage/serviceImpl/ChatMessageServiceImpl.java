@@ -289,6 +289,23 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteRecommendationMessages(Long chatRoomId) {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ChatMessage> recentMessages = chatMessageMongoRepository.findByChatRoomId(chatRoomId, pageable);
+
+        List<ChatMessage> toDelete = recentMessages.getContent().stream()
+                .filter(msg -> msg.getAuthorType() == ChatMessage.AuthorType.BOT
+                        && msg.getRecommendations() != null
+                        && !msg.getRecommendations().isEmpty())
+                .toList();
+
+        if (!toDelete.isEmpty()) {
+            chatMessageMongoRepository.deleteAll(toDelete);
+        }
+    }
+
     // ----------------- 헬퍼 메서드 -----------------
 
     private LoopCreateRequest convertToCreateRequest(LoopDetailResponse detail, Long chatRoomId) {
