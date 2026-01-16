@@ -225,7 +225,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
 
-        publishAiIfNeeded(request.messageType(), saved, loopDetailResponse);
+        publishAiIfNeeded(chatRoom, request.messageType(), saved, loopDetailResponse);
+
+        if(request.messageType() == UPDATE_LOOP) {
+            chatRoom.setCallUpdateLoop(true);
+            chatRoomRepository.save(chatRoom);
+        }
     }
 
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
@@ -447,7 +452,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private void publishAiIfNeeded(MessageType type, ChatMessagePayload saved, LoopDetailResponse loopDetailResponse) {
+    private void publishAiIfNeeded(ChatRoom chatRoom, MessageType type, ChatMessagePayload saved, LoopDetailResponse loopDetailResponse) {
         if (type == CREATE_LOOP) {
             publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
         } else if (type == UPDATE_LOOP) {

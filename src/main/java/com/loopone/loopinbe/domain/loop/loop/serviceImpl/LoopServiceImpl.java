@@ -226,6 +226,8 @@ public class LoopServiceImpl implements LoopService {
                     ),
                     currentUser
             );
+            chatRoom.setCallUpdateLoop(false);
+            chatRoomRepository.save(chatRoom);
         }
     }
 
