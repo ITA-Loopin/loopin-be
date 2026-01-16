@@ -44,7 +44,7 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
     @Transactional
     public Long sendInvitation(Long teamId, TeamInvitationCreateRequest request, CurrentUserDto currentUser) {
         Team team = getTeamOrThrow(teamId);
-        validateTeamLeader(team, currentUser.id());
+        //validateTeamLeader(team, currentUser.id());
 
         Member invitee = getMemberOrThrow(request.getInviteeId());
         validateNotTeamMember(teamId, invitee.getId());
