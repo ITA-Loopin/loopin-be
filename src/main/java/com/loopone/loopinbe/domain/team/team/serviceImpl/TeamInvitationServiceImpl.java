@@ -51,10 +51,6 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
         Team team = getTeamOrThrow(teamId);
         //validateTeamLeader(team, currentUser.id());
 
-        Member invitee = getMemberOrThrow(request.getInviteeId());
-        validateNotTeamMember(teamId, invitee.getId());
-        validateNoPendingInvitation(team, invitee);
-
         Member inviter = getMemberOrThrow(currentUser.id());
         List<Member> invitees = getMembersOrThrow(request.getInviteeIds());
         List<Long> invitationIds = new ArrayList<>(invitees.size());
