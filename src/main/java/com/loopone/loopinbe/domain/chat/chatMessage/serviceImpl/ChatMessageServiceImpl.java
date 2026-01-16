@@ -16,6 +16,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatMessage.validator.AttachmentValidator;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -60,6 +61,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final SseEmitterService sseEmitterService;
     private final S3Service s3Service;
     private final ChatMessageEventPublisher chatMessageEventPublisher;
+    private final ChatRoomStateService chatRoomStateService;
 
     // 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -225,7 +227,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
 
-        publishAiIfNeeded(request.messageType(), saved, loopDetailResponse);
+        publishAiIfNeeded(chatRoom.getId(), request.messageType(), saved, loopDetailResponse);
     }
 
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
@@ -447,11 +449,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private void publishAiIfNeeded(MessageType type, ChatMessagePayload saved, LoopDetailResponse loopDetailResponse) {
+    private void publishAiIfNeeded(Long chatRoomId, MessageType type, ChatMessagePayload saved, LoopDetailResponse loopDetailResponse) {
         if (type == CREATE_LOOP) {
             publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
         } else if (type == UPDATE_LOOP) {
             publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
+            chatRoomStateService.setCallUpdateLoop(chatRoomId, true);
         }
     }
 }
