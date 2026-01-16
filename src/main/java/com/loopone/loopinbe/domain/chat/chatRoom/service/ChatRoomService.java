@@ -34,4 +34,7 @@ public interface ChatRoomService {
     ChatRoomListResponse getChatRooms(Long memberId, ChatRoomType chatRoomType);
 
     LoopDetailResponse findLoopDetailResponse(Long chatRoomId);
+
+    // 팀id로 채팅방 조회
+    ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser);
 }
