@@ -4,7 +4,7 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
-import com.loopone.loopinbe.domain.loop.loop.entity.LoopPage;
+
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamCreateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.req.TeamOrderUpdateRequest;
 import com.loopone.loopinbe.domain.team.team.dto.res.MyTeamResponse;
@@ -19,9 +19,7 @@ import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoop;
-import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberCheck;
-import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopMemberProgress;
-import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopChecklistRepository;
+
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberCheckRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopMemberProgressRepository;
 import com.loopone.loopinbe.domain.team.teamLoop.repository.TeamLoopRepository;
@@ -39,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -53,6 +51,8 @@ public class TeamServiceImpl implements TeamService {
     private final MemberRepository memberRepository;
     private final TeamMapper teamMapper;
     private final TeamLoopRepository teamLoopRepository;
+    private final TeamLoopMemberProgressRepository teamLoopMemberProgressRepository;
+    private final TeamLoopMemberCheckRepository teamLoopMemberCheckRepository;
     private final TeamLoopService teamLoopService;
     private final ChatRoomService chatRoomService;
 
@@ -91,7 +91,7 @@ public class TeamServiceImpl implements TeamService {
     @Override
     public PageResponse<RecruitingTeamResponse> getRecruitingTeams(Pageable pageable, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
-        //모든 팀 조회
+        // 모든 팀 조회
         List<Long> myTeamIds = getMyTeamIds(currentUser.id());
         Page<Team> page = myTeamIds.isEmpty()
                 ? teamRepository.findAll(pageable)
@@ -264,6 +264,35 @@ public class TeamServiceImpl implements TeamService {
 
         // 팀 삭제
         teamRepository.delete(team);
+    }
+
+    @Override
+    @Transactional
+    public void leaveTeam(Long teamId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+
+        // 팀원 여부 검증
+        validateTeamMember(teamId, currentUser.id());
+
+        // 리더인 경우 나가기 불가
+        if (team.getLeader().getId().equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.TEAM_LEADER_CANNOT_LEAVE);
+        }
+
+        TeamMember teamMember = teamMemberRepository.findByTeamIdAndMemberId(teamId, currentUser.id())
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+
+        // 팀 루프 체크리스트 완료 내역 삭제 (외래키 제약으로 인해 먼저 삭제)
+        teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(currentUser.id(), List.of(teamId));
+
+        // 팀 루프 참여 내역 삭제
+        teamLoopMemberProgressRepository.deleteByMemberAndTeamIds(currentUser.id(), List.of(teamId));
+
+        // 팀 채팅방 나가기
+        chatRoomService.leaveTeamChatRoom(currentUser.id(), teamId);
+
+        // 팀원 관계 삭제
+        teamMemberRepository.delete(teamMember);
     }
 
     // ========== 비즈니스 로직 메서드 ==========

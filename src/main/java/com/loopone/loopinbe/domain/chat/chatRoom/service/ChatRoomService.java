@@ -27,6 +27,9 @@ public interface ChatRoomService {
     // 팀 채팅방 삭제
     void deleteTeamChatRoom(Long userId, Long teamId);
 
+    // 팀 채팅방 나가기
+    void leaveTeamChatRoom(Long userId, Long teamId);
+
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     void leaveAllChatRooms(Long memberId);
 
