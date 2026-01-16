@@ -203,6 +203,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessage.AuthorType msgAuthor = ChatMessage.AuthorType.USER;
         List<LoopCreateRequest> msgRecommendations = null;
 
+        Long loopRuleId = null;
         if (request.messageType() == GET_LOOP) {
             msgId = UUID.randomUUID();
             msgContent = GET_LOOP_MESSAGE;
@@ -210,9 +211,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             if (loopDetailResponse != null) {
                 msgRecommendations = Collections.singletonList(convertToCreateRequest(loopDetailResponse, chatRoomId));
             }
+            if (loop != null && loop.getLoopRule() != null) {
+                loopRuleId = loop.getLoopRule().getId();
+            }
         }
 
-        ChatMessagePayload payload = toChatMessagePayload(msgId, chatRoomId, currentUser.id(), msgContent, null, msgRecommendations, msgAuthor);
+        ChatMessagePayload payload = toChatMessagePayload(msgId, chatRoomId, currentUser.id(), msgContent, null, msgRecommendations, msgAuthor, loopRuleId);
         ChatMessagePayload saved = processInbound(payload);
 
         // ChatMessagePayload -> ChatMessageResponse
@@ -267,7 +271,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     null,
                     uploaded,
                     null,
-                    ChatMessage.AuthorType.USER
+                    ChatMessage.AuthorType.USER,
+                    null
             );
             ChatMessagePayload saved = processInbound(payload);
             // 5) Response 변환
@@ -281,6 +286,23 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             s3Service.deleteAllByKeys(keys);
             if (e instanceof ServiceException se) throw se;
             throw new ServiceException(ReturnCode.INTERNAL_ERROR);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteRecommendationMessages(Long chatRoomId) {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ChatMessage> recentMessages = chatMessageMongoRepository.findByChatRoomId(chatRoomId, pageable);
+
+        List<ChatMessage> toDelete = recentMessages.getContent().stream()
+                .filter(msg -> msg.getAuthorType() == ChatMessage.AuthorType.BOT
+                        && msg.getRecommendations() != null
+                        && !msg.getRecommendations().isEmpty())
+                .toList();
+
+        if (!toDelete.isEmpty()) {
+            chatMessageMongoRepository.deleteAll(toDelete);
         }
     }
 
@@ -316,7 +338,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<ChatAttachment> attachments, List<LoopCreateRequest> recommendations, ChatMessage.AuthorType authorType) {
+    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<ChatAttachment> attachments, List<LoopCreateRequest> recommendations, ChatMessage.AuthorType authorType, Long loopRuleId) {
         String id = "u:" + clientMessageId;
         return new ChatMessagePayload(
                 id,
@@ -326,7 +348,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 content,
                 attachments,
                 recommendations,
-                null,
+                loopRuleId,
                 authorType,
                 true,
                 java.time.Instant.now(),
