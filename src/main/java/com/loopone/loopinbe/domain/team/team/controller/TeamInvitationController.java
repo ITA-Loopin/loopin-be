@@ -25,12 +25,12 @@ public class TeamInvitationController {
 
     @PostMapping("/{teamId}/invitations")
     @Operation(summary = "팀 초대 전송", description = "팀 리더가 멤버를 팀에 초대합니다.")
-    public ApiResponse<Long> sendInvitation(
+    public ApiResponse<List<Long>> sendInvitation(
             @PathVariable Long teamId,
             @Valid @RequestBody TeamInvitationCreateRequest request,
             @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
-        Long invitationId = teamInvitationService.sendInvitation(teamId, request, currentUser);
-        return ApiResponse.success(invitationId);
+        List<Long> invitationIds = teamInvitationService.sendInvitation(teamId, request, currentUser);
+        return ApiResponse.success(invitationIds);
     }
 
     @DeleteMapping("/{teamId}/invitations/{invitationId}")

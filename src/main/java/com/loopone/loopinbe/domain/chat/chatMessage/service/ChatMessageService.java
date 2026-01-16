@@ -33,5 +33,5 @@ public interface ChatMessageService {
     // 채팅방에서 파일 메시지 전송 [참여자 권한]
     void sendAttachment(Long chatRoomId, UUID clientMessageId, List<MultipartFile> images, List<MultipartFile> files, CurrentUserDto currentUser);
 
-    void deleteRecommendationMessages(Long chatRoomId);
+    String deleteRecommendationMessage(Long chatRoomId);
 }
