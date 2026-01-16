@@ -7,6 +7,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
@@ -47,6 +48,7 @@ public class LoopServiceImpl implements LoopService {
     private final MemberConverter memberConverter;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
+    private final ChatRoomStateService chatRoomStateService;
 
     // 루프 생성
     @Override
@@ -226,8 +228,7 @@ public class LoopServiceImpl implements LoopService {
                     ),
                     currentUser
             );
-            chatRoom.setCallUpdateLoop(false);
-            chatRoomRepository.save(chatRoom);
+            chatRoomStateService.setCallUpdateLoop(chatRoom.getId(), false);
         }
     }
 
