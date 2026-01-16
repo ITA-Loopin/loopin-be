@@ -35,7 +35,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
 
-import static com.loopone.loopinbe.global.constants.Constant.GET_LOOP_MESSAGE;
+import static com.loopone.loopinbe.global.constants.Constant.AI_AFTER_SELECT_LOOP_MESSAGE;
 
 @Slf4j
 @Service
@@ -85,12 +85,10 @@ public class LoopServiceImpl implements LoopService {
             ChatRoom chatRoom = linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
 
             if (chatRoom.isBotRoom()) {
-                chatMessageService.deleteRecommendationMessages(chatRoom.getId());
-
                 chatMessageService.sendChatMessage(
                         chatRoom.getId(),
                         new ChatMessageRequest(
-                                GET_LOOP_MESSAGE,
+                                AI_AFTER_SELECT_LOOP_MESSAGE,
                                 UUID.randomUUID(),
                                 MessageType.GET_LOOP
                         ),
@@ -219,6 +217,15 @@ public class LoopServiceImpl implements LoopService {
 
         if (!newLoops.isEmpty()) {
             chatRoom.setLoop(newLoops.get(0));
+            chatMessageService.sendChatMessage(
+                    chatRoom.getId(),
+                    new ChatMessageRequest(
+                            AI_AFTER_SELECT_LOOP_MESSAGE,
+                            UUID.randomUUID(),
+                            MessageType.GET_LOOP
+                    ),
+                    currentUser
+            );
         }
     }
 

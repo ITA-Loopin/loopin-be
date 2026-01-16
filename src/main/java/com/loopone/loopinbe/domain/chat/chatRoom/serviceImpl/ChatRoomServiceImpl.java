@@ -4,6 +4,8 @@ import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.converter.ChatRoomConverter;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
@@ -27,10 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
+import static com.loopone.loopinbe.global.constants.Constant.AI_START_MESSAGE;
 
 @Slf4j
 @Service
@@ -99,8 +100,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     // AI 채팅방 생성
     @Override
     @Transactional
-    public ChatRoomResponse createAiChatRoom(Long userId) {
-        Member member = memberRepository.findById(userId)
+    public ChatRoomResponse createAiChatRoom(CurrentUserDto currentUser) {
+        Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
@@ -117,6 +118,15 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
         memberRepository.save(member);
+        chatMessageService.sendChatMessage(
+                chatRoom.getId(),
+                new ChatMessageRequest(
+                        AI_START_MESSAGE,
+                        UUID.randomUUID(),
+                        MessageType.START_CHATROOM
+                ),
+                currentUser
+        );
         return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
     }
 

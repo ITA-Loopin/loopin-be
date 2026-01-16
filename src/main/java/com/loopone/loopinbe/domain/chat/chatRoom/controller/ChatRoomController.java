@@ -36,7 +36,7 @@ public class ChatRoomController {
     public ApiResponse<ChatRoomResponse> createChatRoom(
             @CurrentUser  CurrentUserDto currentUserDto
     ) {
-        return ApiResponse.success(chatRoomService.createAiChatRoom(currentUserDto.id()));
+        return ApiResponse.success(chatRoomService.createAiChatRoom(currentUserDto));
     }
 
     // 팀 ID로 채팅방 조회
