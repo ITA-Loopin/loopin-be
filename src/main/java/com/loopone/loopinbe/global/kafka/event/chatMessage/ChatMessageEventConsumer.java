@@ -71,6 +71,7 @@ public class ChatMessageEventConsumer {
                             null,
                             null,
                             null,
+                            null,
                             ChatMessage.AuthorType.USER,
                             false,
                             now,

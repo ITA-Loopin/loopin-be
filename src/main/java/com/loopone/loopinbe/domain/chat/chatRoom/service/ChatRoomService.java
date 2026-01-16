@@ -17,7 +17,7 @@ public interface ChatRoomService {
     ChatRoomResponse addChatRoom(ChatRoomRequest chatRoomRequest, CurrentUserDto currentUser);
 
     // AI 채팅방 생성
-    ChatRoomResponse createAiChatRoom(Long userId);
+    ChatRoomResponse createAiChatRoom(CurrentUserDto currentUser);
 
     void updateChatRoomTitle(Long chatRoomId, String title);
 
