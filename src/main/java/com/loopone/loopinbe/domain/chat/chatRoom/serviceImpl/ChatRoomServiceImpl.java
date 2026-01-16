@@ -246,7 +246,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // 3) 인원 제한 체크
         long currentCount = chatRoomMemberRepository.countByChatRoomId(teamRoom.getId());
         if (currentCount >= ChatRoom.ROOM_MEMBER_LIMIT) {
-            new ServiceException(ReturnCode.CHATROOM_LIMIT_EXCEEDED);
+            throw new ServiceException(ReturnCode.CHATROOM_LIMIT_EXCEEDED);
         }
         // 4) ChatRoomMember 생성
         ChatRoomMember crm = ChatRoomMember.builder()
