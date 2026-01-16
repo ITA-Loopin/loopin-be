@@ -22,7 +22,7 @@ public interface ChatRoomService {
     void updateChatRoomTitle(Long chatRoomId, String title);
 
     // 팀 채팅방 생성
-    void createTeamChatRoom(Long userId, Team team, List<Member> members);
+    void createTeamChatRoom(Long userId, Team team);
 
     // 팀 채팅방 삭제
     void deleteTeamChatRoom(Long userId, Long teamId);
@@ -33,8 +33,9 @@ public interface ChatRoomService {
     // 채팅방 리스트 조회
     ChatRoomListResponse getChatRooms(Long memberId, ChatRoomType chatRoomType);
 
-    LoopDetailResponse findLoopDetailResponse(Long chatRoomId);
-
     // 팀id로 채팅방 조회
     ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser);
+
+    // 초대 수락 시 채팅방에 참여
+    void participateChatRoom(Long teamId, Long currentUserId);
 }
