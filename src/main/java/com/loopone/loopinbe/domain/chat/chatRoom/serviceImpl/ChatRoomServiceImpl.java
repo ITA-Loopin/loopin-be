@@ -164,6 +164,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         });
     }
 
+    @Override
+    @Transactional
+    public void leaveTeamChatRoom(Long memberId, Long teamId) {
+        chatRoomRepository.findByTeamId(teamId).ifPresent(chatRoom -> {
+            chatRoomMemberRepository.deleteByRoomIdAndMemberId(chatRoom.getId(), memberId);
+        });
+    }
+
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     @Override
     @Transactional

@@ -367,6 +367,52 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                 .build();
     }
 
+    // 팀 루프 완료 처리
+    @Override
+    @Transactional
+    public void completeTeamLoop(Long teamId, Long loopId, CurrentUserDto currentUser) {
+        // 팀원 검증
+        validateTeamMember(teamId, currentUser.id());
+
+        // 팀 루프 조회
+        TeamLoop teamLoop = teamLoopRepository.findById(loopId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.TEAM_LOOP_NOT_FOUND));
+
+        // 팀 ID 일치 검증
+        if (!teamLoop.getTeam().getId().equals(teamId)) {
+            throw new ServiceException(ReturnCode.INVALID_REQUEST_TEAM);
+        }
+
+        // 멤버 조회
+        Member member = memberRepository.findById(currentUser.id())
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
+
+        // 해당 사용자의 Progress 조회
+        TeamLoopMemberProgress myProgress = teamLoopMemberProgressRepository
+                .findByTeamLoopAndMember(teamLoop, member)
+                .orElseThrow(() -> new ServiceException(ReturnCode.NOT_PARTICIPATING_IN_LOOP));
+
+        // 모든 체크리스트 조회 및 완료 처리
+        List<TeamLoopMemberCheck> checks = teamLoopMemberCheckRepository
+                .findByMemberProgressIdOrderByIdAsc(myProgress.getId());
+
+        for (TeamLoopMemberCheck check : checks) {
+            if (!check.isChecked()) {
+                check.setChecked(true);
+            }
+        }
+
+        // 팀 루프 완료 활동 로그 기록
+        TeamLoopActivity activity = TeamLoopActivity.builder()
+                .member(member)
+                .team(teamLoop.getTeam())
+                .teamLoop(teamLoop)
+                .actionType(com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopActivityType.LOOP_COMPLETED)
+                .targetName(teamLoop.getTitle())
+                .build();
+        teamLoopActivityRepository.save(activity);
+    }
+
     // ========== 비즈니스 로직 메서드 ==========
     private Long createSingleTeamLoop(Team team, TeamLoopCreateRequest requestDTO) {
         LocalDate date = (requestDTO.specificDate() == null) ? LocalDate.now() : requestDTO.specificDate();
