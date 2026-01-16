@@ -77,9 +77,11 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                     String repeatCycle = formatRepeatCycle(loop.getLoopRule());
                     // 나의 루프 상태
                     TeamLoopStatus myStatus = loop.calculatePersonalStatus(myId);
+                    // 팀 전체 루프 상태
+                    TeamLoopStatus teamStatus = loop.calculateTeamStatus();
 
-                    // 상태 필터링 (statusFilter가 null이 아닐 때만)
-                    if (statusFilter != null && myStatus != statusFilter) {
+                    // 상태 필터링 (statusFilter가 null이 아닐 때만, 팀 상태 기준)
+                    if (statusFilter != null && teamStatus != statusFilter) {
                         return null; // 필터링 대상
                     }
 
@@ -93,7 +95,8 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                             .personalProgress(myProgress)
                             .isParticipating(isParticipating)
                             .repeatCycle(repeatCycle)
-                            .status(myStatus)
+                            .personalStatus(myStatus)
+                            .teamStatus(teamStatus)
                             .build();
                 })
                 .filter(Objects::nonNull) // null 제거 (필터링된 항목)
