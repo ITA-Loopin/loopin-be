@@ -36,4 +36,7 @@ public interface TeamService {
 
     // 팀 나가기 (팀원만 가능)
     void leaveTeam(Long teamId, CurrentUserDto currentUser);
+
+    // 팀원 삭제 (팀장만 가능)
+    void removeMember(Long teamId, Long targetMemberId, CurrentUserDto currentUser);
 }

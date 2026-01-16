@@ -282,7 +282,7 @@ public class TeamServiceImpl implements TeamService {
         TeamMember teamMember = teamMemberRepository.findByTeamIdAndMemberId(teamId, currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
 
-        // 팀 루프 체크리스트 완료 내역 삭제 (외래키 제약으로 인해 먼저 삭제)
+        // 팀 루프 체크리스트 완료 내역 삭제
         teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(currentUser.id(), List.of(teamId));
 
         // 팀 루프 참여 내역 삭제
@@ -293,6 +293,38 @@ public class TeamServiceImpl implements TeamService {
 
         // 팀원 관계 삭제
         teamMemberRepository.delete(teamMember);
+    }
+
+    @Override
+    @Transactional
+    public void removeMember(Long teamId, Long targetMemberId, CurrentUserDto currentUser) {
+        Team team = getTeamOrThrow(teamId);
+
+        // 팀장 권한 검증
+        if (!team.getLeader().getId().equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.UNAUTHORIZED_TEAM_LEADER_ONLY);
+        }
+
+        // 자기 자신 삭제 방지
+        if (targetMemberId.equals(currentUser.id())) {
+            throw new ServiceException(ReturnCode.CANNOT_REMOVE_SELF);
+        }
+
+        // 대상 팀원이 실제로 팀에 속해있는지 검증
+        TeamMember targetTeamMember = teamMemberRepository.findByTeamIdAndMemberId(teamId, targetMemberId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_IN_TEAM));
+
+        // 팀 루프 체크리스트 완료 내역 삭제
+        teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(targetMemberId, List.of(teamId));
+
+        // 팀 루프 참여 내역 삭제
+        teamLoopMemberProgressRepository.deleteByMemberAndTeamIds(targetMemberId, List.of(teamId));
+
+        // 팀 채팅방에서 제거
+        chatRoomService.leaveTeamChatRoom(targetMemberId, teamId);
+
+        // 팀원 관계 삭제
+        teamMemberRepository.delete(targetTeamMember);
     }
 
     // ========== 비즈니스 로직 메서드 ==========

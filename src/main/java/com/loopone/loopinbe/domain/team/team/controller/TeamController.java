@@ -105,4 +105,14 @@ public class TeamController {
         teamService.leaveTeam(teamId, currentUser);
         return ApiResponse.success();
     }
+
+    @DeleteMapping("/{teamId}/members/{memberId}")
+    @Operation(summary = "팀원 삭제", description = "팀 리더가 팀원을 삭제합니다. (자기 자신은 삭제 불가)")
+    public ApiResponse<Void> removeMember(
+            @PathVariable Long teamId,
+            @PathVariable Long memberId,
+            @Parameter(hidden = true) @CurrentUser CurrentUserDto currentUser) {
+        teamService.removeMember(teamId, memberId, currentUser);
+        return ApiResponse.success();
+    }
 }
