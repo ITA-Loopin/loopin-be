@@ -248,6 +248,19 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoomMemberRepository.save(crm);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findByTeamId(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        return chatRoomConverter.toChatRoomResponse(chatRoom);
+    }
+
     private ChatRoomListResponse getAllChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
         return chatRoomConverter.toChatRoomListResponse(chatRoomList);
