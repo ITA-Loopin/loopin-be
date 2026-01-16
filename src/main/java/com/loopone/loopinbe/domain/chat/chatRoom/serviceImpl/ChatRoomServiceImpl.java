@@ -164,6 +164,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         });
     }
 
+    @Override
+    @Transactional
+    public void leaveTeamChatRoom(Long memberId, Long teamId) {
+        chatRoomRepository.findByTeamId(teamId).ifPresent(chatRoom -> {
+            chatRoomMemberRepository.deleteByRoomIdAndMemberId(chatRoom.getId(), memberId);
+        });
+    }
+
     // 멤버가 참여중인 모든 채팅방 나가기(DM/그룹)
     @Override
     @Transactional
@@ -246,6 +254,19 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .member(member)
                 .build();
         chatRoomMemberRepository.save(crm);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatRoomResponse findChatRoomByTeamId(Long teamId, CurrentUserDto currentUser) {
+        if (!teamMemberRepository.existsByTeamIdAndMemberId(teamId, currentUser.id())) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findByTeamId(teamId)
+                .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        return chatRoomConverter.toChatRoomResponse(chatRoom);
     }
 
     private ChatRoomListResponse getAllChatRooms(Long memberId) {

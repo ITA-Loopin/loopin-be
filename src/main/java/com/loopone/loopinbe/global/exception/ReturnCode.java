@@ -136,6 +136,8 @@ public enum ReturnCode {
     INVITATION_ALREADY_RESPONDED(400, "TEAM_012", "이미 응답한 초대입니다."),
     UNAUTHORIZED_TEAM_LEADER_ONLY(403, "TEAM_013", "팀 리더만 수행할 수 있습니다."),
     UNAUTHORIZED_INVITATION_RECIPIENT_ONLY(403, "TEAM_014", "초대받은 사람만 수행할 수 있습니다."),
+    TEAM_LEADER_CANNOT_LEAVE(403, "TEAM_015", "팀 리더는 팀을 나갈 수 없습니다."),
+    CANNOT_REMOVE_SELF(400, "TEAM_016", "자기 자신은 삭제할 수 없습니다."),
 
     // Follow
     ALREADY_REQUESTED(409, "FOLLOW_001", "이미 팔로우 요청을 보냈습니다."),
