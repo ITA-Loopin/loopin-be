@@ -26,6 +26,7 @@ public class ChatMessageResponse {
     private Long loopRuleId;
     private String deleteMessageId;
     private ChatMessage.AuthorType authorType;
+    private Boolean callUpdateLoop;
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Instant createdAt;
 }

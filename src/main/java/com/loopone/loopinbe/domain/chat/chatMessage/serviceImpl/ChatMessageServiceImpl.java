@@ -155,6 +155,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 saved.getDeleteMessageId(),
                 saved.getAuthorType(),
                 isBotRoom,
+                in.callUpdateLoop(),
                 saved.getCreatedAt(),
                 saved.getModifiedAt()
         );
@@ -225,6 +226,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
         ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+        response.setCallUpdateLoop(false);
+
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
 
         publishAiIfNeeded(chatRoom.getId(), request.messageType(), saved, loopDetailResponse);
@@ -360,6 +363,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 deleteMessageId,
                 authorType,
                 true,
+                false,
                 java.time.Instant.now(),
                 java.time.Instant.now());
     }
