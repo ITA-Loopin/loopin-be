@@ -69,7 +69,12 @@ public class AiEventConsumer {
 
     private void processAiResponse(AiPayload req, RecommendationsLoop recommendations, String message) {
         // 1) AI 결과 기반 Inbound 메시지 생성
-        ChatMessagePayload inbound = createBotPayload(req, recommendations, message);
+        ChatMessagePayload inbound;
+        if(req.loopDetailResponse() != null) {
+            inbound = createBotPayload(req, recommendations, message, true);
+        } else {
+            inbound = createBotPayload(req, recommendations, message, false);
+        }
 
         // 2) SSE 전송 (클라이언트에게 먼저 보여줌)
         sendSseEvent(inbound);
@@ -81,7 +86,7 @@ public class AiEventConsumer {
         chatRoomService.updateChatRoomTitle(req.chatRoomId(), recommendations.title());
     }
 
-    private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message) {
+    private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message, boolean callUpdateLoop) {
         return new ChatMessagePayload(
                 generateDeterministicKey(req),
                 req.clientMessageId(),
@@ -94,6 +99,7 @@ public class AiEventConsumer {
                 null,
                 ChatMessage.AuthorType.BOT,
                 true,
+                callUpdateLoop,
                 Instant.now(),
                 Instant.now()
         );
