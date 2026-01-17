@@ -24,6 +24,7 @@ import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
+import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,7 @@ public class LoopServiceImpl implements LoopService {
     private final ChatMessageService chatMessageService;
     private final CacheManager cacheManager;
     private final ChatRoomStateService chatRoomStateService;
+    private final LoopChecklistRepository loopChecklistRepository;
 
     // 루프 생성
     @Override
@@ -375,12 +377,10 @@ public class LoopServiceImpl implements LoopService {
         if (!futureLoopIds.isEmpty()) {
             chatRoomRepository.unlinkLoops(futureLoopIds);
         }
-
-        // 해당 루프 리스트 삭제
-        loopRepository.deleteAll(futureLoops);
-
-        // 과거 루프는 연결 끊기
-        pastLoops.forEach(l -> l.setLoopRule(null));
+        loopChecklistRepository.deleteFutureChecklists(loopRule.getId(), targetDate);
+        loopRepository.deleteFuture(loopRule.getId(), targetDate);
+        loopRepository.detachPast(loopRule.getId(), targetDate);
+        loopRepository.detachNullDate(loopRule.getId()); // loopDate nullable면 거의 필수
 
         // loopRule 삭제 (자식이 없기에 삭제 가능)
         loopRuleRepository.delete(loopRule);
