@@ -7,7 +7,7 @@ public enum MessageType {
     CREATE_LOOP,
     RECREATE_LOOP,
     UPDATE_LOOP,
-    BEFORE_UDATE_LOOP,
+    BEFORE_UPDATE_LOOP,
     GET_LOOP,
     READ_UP_TO,
     DELETE
