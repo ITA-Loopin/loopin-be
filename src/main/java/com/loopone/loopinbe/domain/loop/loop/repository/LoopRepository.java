@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -94,4 +95,31 @@ public interface LoopRepository extends JpaRepository<Loop, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+update Loop l
+set l.loopRule = null
+where l.loopRule.id = :ruleId
+  and l.loopDate < :targetDate
+""")
+    int detachPast(@Param("ruleId") Long ruleId, @Param("targetDate") LocalDate targetDate);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+delete from Loop l
+where l.loopRule.id = :ruleId
+  and l.loopDate >= :targetDate
+""")
+    int deleteFuture(@Param("ruleId") Long ruleId, @Param("targetDate") LocalDate targetDate);
+
+    // null 날짜 처리(있다면 꼭)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+update Loop l
+set l.loopRule = null
+where l.loopRule.id = :ruleId
+  and l.loopDate is null
+""")
+    int detachNullDate(@Param("ruleId") Long ruleId);
 }

@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loopChecklist.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.loop.helper.LoopCacheEvictionHelper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
@@ -13,9 +14,16 @@ import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -24,6 +32,8 @@ import java.util.List;
 public class LoopChecklistServiceImpl implements LoopChecklistService {
     private final LoopChecklistRepository LoopChecklistRepository;
     private final LoopRepository loopRepository;
+    private final CacheManager cacheManager;
+    private final LoopCacheEvictionHelper loopCacheEvictionHelper;
 
     //체크리스트 생성
     @Override
@@ -44,6 +54,15 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
 
         LoopChecklist savedChecklist = LoopChecklistRepository.save(checklist);
 
+        // 커밋 후 캐시 무효화
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
+        loopCacheEvictionHelper.evictAfterCommit(
+                currentUser.id(),
+                List.of(loop.getId()),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
         return LoopChecklistResponse.builder()
                 .id(savedChecklist.getId())
                 .content(savedChecklist.getContent())
@@ -69,6 +88,18 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         if (loopChecklistUpdateRequest.completed() != null) {
             loopChecklist.setCompleted(loopChecklistUpdateRequest.completed());
         }
+
+        // 커밋 후 캐시 무효화
+        Loop loop = loopChecklist.getLoop();
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
+
+        loopCacheEvictionHelper.evictAfterCommit(
+                currentUser.id(),
+                List.of(loop.getId()),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
     }
 
     //체크리스트 삭제
@@ -82,7 +113,20 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         //체크리스트의 소유자가 현재 사용자인지 확인
         validateLoopChecklistOwner(loopChecklist, currentUser);
 
+        // delete 전에 캐시 무효화에 필요한 값 확보
+        Loop loop = loopChecklist.getLoop();
+        Long loopId = loop.getId();
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
         LoopChecklistRepository.delete(loopChecklist);
+
+        // 커밋 후 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(
+                currentUser.id(),
+                List.of(loopId),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
     }
 
     //루프 내의 체크리스트 전체 삭제
@@ -100,6 +144,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
             throw new ServiceException(ReturnCode.CHECKLIST_ACCESS_DENIED);
         }
     }
+
     //루프 사용자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
