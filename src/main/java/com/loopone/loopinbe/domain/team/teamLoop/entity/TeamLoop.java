@@ -55,6 +55,10 @@ public class TeamLoop extends BaseEntity {
     @Builder.Default
     private List<TeamLoopChecklist> teamLoopChecklists = new ArrayList<>();
 
+    @OneToMany(mappedBy = "teamLoop", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TeamLoopActivity> activities = new ArrayList<>();
+
     // 팀 전체 평균 진행률 계산
     public double calculateTeamProgress() {
         if (this.memberProgress.isEmpty()) return 0.0;
