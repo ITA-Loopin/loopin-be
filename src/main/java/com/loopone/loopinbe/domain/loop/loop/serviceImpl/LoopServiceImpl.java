@@ -248,7 +248,9 @@ public class LoopServiceImpl implements LoopService {
         validateLoopRuleOwner(loopRule, currentUser);
 
         ChatRoom chatRoom = chatRoomRepository.findByLoopRuleId(loopRule.getId());
-        chatRoom.setLoop(null);
+        if (chatRoom != null) {
+            chatRoom.setLoop(null);
+        }
 
         List<Loop> oldLoops = findAllByLoopRule(loopRule, LocalDate.now());
 
@@ -276,7 +278,7 @@ public class LoopServiceImpl implements LoopService {
             if (d != null) yms.add(YearMonth.from(d));
         }
 
-        if (!newLoops.isEmpty()) {
+        if (chatRoom != null && !newLoops.isEmpty()) {
             chatRoom.setLoop(newLoops.get(0));
             chatMessageService.sendChatMessage(
                     chatRoom.getId(),
