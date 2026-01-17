@@ -37,7 +37,7 @@ public class TeamLoop extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TeamLoopType type; //루프 유형
+    private TeamLoopType type; // 루프 유형
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -61,9 +61,11 @@ public class TeamLoop extends BaseEntity {
 
     // 팀 전체 평균 진행률 계산
     public double calculateTeamProgress() {
-        if (this.memberProgress.isEmpty()) return 0.0;
+        if (this.memberProgress.isEmpty())
+            return 0.0;
         int totalChecklistCount = this.teamLoopChecklists.size();
-        if (totalChecklistCount == 0) return 0.0;
+        if (totalChecklistCount == 0)
+            return 0.0;
 
         return this.memberProgress.stream()
                 .mapToDouble(p -> p.calculateProgress(totalChecklistCount)) // Progress 엔티티 메서드 호출
@@ -74,7 +76,8 @@ public class TeamLoop extends BaseEntity {
     // 특정 멤버의 개인 진행률 계산
     public double calculatePersonalProgress(Long memberId) {
         int totalChecklistCount = this.teamLoopChecklists.size();
-        if (totalChecklistCount == 0) return 0.0;
+        if (totalChecklistCount == 0)
+            return 0.0;
 
         return this.memberProgress.stream()
                 .filter(p -> p.getMember().getId().equals(memberId))
@@ -103,15 +106,23 @@ public class TeamLoop extends BaseEntity {
         if (myProgress == null) {
             return TeamLoopStatus.NOT_STARTED;
         }
-        // 체크리스트가 없는 경우 시작전
+
+        // status 필드가 COMPLETED면 우선 반환 (체크리스트 없는 경우에도 완료 처리되도록)
+        if (myProgress.getStatus() == TeamLoopStatus.COMPLETED) {
+            return TeamLoopStatus.COMPLETED;
+        }
+
+        // 체크리스트가 없는 경우 status 필드 기준
         int totalChecklistCount = this.teamLoopChecklists.size();
         if (totalChecklistCount == 0) {
-            return TeamLoopStatus.NOT_STARTED;
+            return myProgress.getStatus();
         }
-        // 내가 체크한 개수 계산
+
+        // 체크리스트 기반 상태 계산
         long checkedCount = myProgress.getChecks().stream()
                 .filter(TeamLoopMemberCheck::isChecked)
                 .count();
+
         // 상태 판단
         if (checkedCount == 0) {
             return TeamLoopStatus.NOT_STARTED;

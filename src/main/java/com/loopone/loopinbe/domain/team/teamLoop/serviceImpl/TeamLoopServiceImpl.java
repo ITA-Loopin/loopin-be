@@ -395,13 +395,18 @@ public class TeamLoopServiceImpl implements TeamLoopService {
                 .findByTeamLoopAndMember(teamLoop, member)
                 .orElseThrow(() -> new ServiceException(ReturnCode.NOT_PARTICIPATING_IN_LOOP));
 
-        // 모든 체크리스트 조회 및 완료 처리
+        // Progress 상태를 COMPLETED로 변경
+        myProgress.setStatus(TeamLoopStatus.COMPLETED);
+
+        // 모든 체크리스트 조회 및 완료 처리 (체크리스트가 있는 경우)
         List<TeamLoopMemberCheck> checks = teamLoopMemberCheckRepository
                 .findByMemberProgressIdOrderByIdAsc(myProgress.getId());
 
-        for (TeamLoopMemberCheck check : checks) {
-            if (!check.isChecked()) {
-                check.setChecked(true);
+        if (!checks.isEmpty()) {
+            for (TeamLoopMemberCheck check : checks) {
+                if (!check.isChecked()) {
+                    check.setChecked(true);
+                }
             }
         }
 
