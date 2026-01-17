@@ -13,9 +13,16 @@ import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -24,6 +31,7 @@ import java.util.List;
 public class LoopChecklistServiceImpl implements LoopChecklistService {
     private final LoopChecklistRepository LoopChecklistRepository;
     private final LoopRepository loopRepository;
+    private final CacheManager cacheManager;
 
     //체크리스트 생성
     @Override
@@ -44,6 +52,15 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
 
         LoopChecklist savedChecklist = LoopChecklistRepository.save(checklist);
 
+        // 커밋 후 캐시 무효화
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
+        evictLoopCachesAfterCommit(
+                currentUser.id(),
+                List.of(loop.getId()),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
         return LoopChecklistResponse.builder()
                 .id(savedChecklist.getId())
                 .content(savedChecklist.getContent())
@@ -69,6 +86,18 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         if (loopChecklistUpdateRequest.completed() != null) {
             loopChecklist.setCompleted(loopChecklistUpdateRequest.completed());
         }
+
+        // 커밋 후 캐시 무효화
+        Loop loop = loopChecklist.getLoop();
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
+
+        evictLoopCachesAfterCommit(
+                currentUser.id(),
+                List.of(loop.getId()),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
     }
 
     //체크리스트 삭제
@@ -82,7 +111,20 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         //체크리스트의 소유자가 현재 사용자인지 확인
         validateLoopChecklistOwner(loopChecklist, currentUser);
 
+        // delete 전에 캐시 무효화에 필요한 값 확보
+        Loop loop = loopChecklist.getLoop();
+        Long loopId = loop.getId();
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
         LoopChecklistRepository.delete(loopChecklist);
+
+        // 커밋 후 캐시 무효화
+        evictLoopCachesAfterCommit(
+                currentUser.id(),
+                List.of(loopId),
+                (loopDate != null) ? List.of(loopDate) : List.of(),
+                (ym != null) ? List.of(ym) : List.of()
+        );
     }
 
     //루프 내의 체크리스트 전체 삭제
@@ -100,10 +142,70 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
             throw new ServiceException(ReturnCode.CHECKLIST_ACCESS_DENIED);
         }
     }
+
     //루프 사용자 검증
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.LOOP_ACCESS_DENIED);
+        }
+    }
+
+    // ========== 캐시 무효화 메서드 ==========
+    // 트랜잭션 커밋 이후 관련 캐시 무효화 (롤백 시 유지)
+    private void evictLoopCachesAfterCommit(
+            Long memberId,
+            Collection<Long> loopIds,
+            Collection<LocalDate> dates,
+            Collection<YearMonth> yearMonths
+    ) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            evictLoopCaches(memberId, loopIds, dates, yearMonths);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                evictLoopCaches(memberId, loopIds, dates, yearMonths);
+            }
+        });
+    }
+
+    // 실제 캐시 무효화 로직 (LoopServiceImpl과 동일)
+    private void evictLoopCaches(
+            Long memberId,
+            Collection<Long> loopIds,
+            Collection<LocalDate> dates,
+            Collection<YearMonth> yearMonths
+    ) {
+        // 1) loopReport
+        Cache reportCache = cacheManager.getCache("loopReport");
+        if (reportCache != null) {
+            reportCache.evictIfPresent(memberId);
+            log.debug("LoopReport cache evicted: {}", memberId);
+        }
+        // 2) loopDetail
+        Cache detailCache = cacheManager.getCache("loopDetail");
+        if (detailCache != null && loopIds != null) {
+            for (Long loopId : loopIds) {
+                if (loopId == null) continue;
+                detailCache.evictIfPresent(memberId + ":" + loopId);
+            }
+        }
+        // 3) dailyLoops
+        Cache dailyCache = cacheManager.getCache("dailyLoops");
+        if (dailyCache != null && dates != null) {
+            for (LocalDate d : dates) {
+                if (d == null) continue;
+                dailyCache.evictIfPresent(memberId + ":" + d);
+            }
+        }
+        // 4) loopCalendar
+        Cache calendarCache = cacheManager.getCache("loopCalendar");
+        if (calendarCache != null && yearMonths != null) {
+            for (YearMonth ym : yearMonths) {
+                if (ym == null) continue;
+                calendarCache.evictIfPresent(memberId + ":" + ym.getYear() + ":" + ym.getMonthValue());
+            }
         }
     }
 }
