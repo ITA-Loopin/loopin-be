@@ -200,7 +200,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         MessageContext ctx = switch (request.messageType()) {
             case START_CHATROOM -> handleStartChatRoom(chatRoomId);
             case GET_LOOP -> handleGetLoop(loop, loopDetailResponse, chatRoomId);
-            case BEFORE_UDATE_LOOP -> handleBeforeUpdateLoop(loop, loopDetailResponse, chatRoomId);
+            case BEFORE_UPDATE_LOOP -> handleBeforeUpdateLoop(loop, loopDetailResponse, chatRoomId);
             case RECREATE_LOOP -> handleRecreateLoop(chatRoomId);
             default -> MessageContext.builder()
                     .msgId(request.clientMessageId())
@@ -438,7 +438,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     }
 
     private void validateMessageType(MessageType type) {
-        if (!EnumSet.of(START_CHATROOM, CREATE_LOOP, UPDATE_LOOP, GET_LOOP, RECREATE_LOOP, BEFORE_UDATE_LOOP).contains(type)) {
+        if (!EnumSet.of(START_CHATROOM, CREATE_LOOP, UPDATE_LOOP, GET_LOOP, RECREATE_LOOP, BEFORE_UPDATE_LOOP).contains(type)) {
             throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
         }
     }
