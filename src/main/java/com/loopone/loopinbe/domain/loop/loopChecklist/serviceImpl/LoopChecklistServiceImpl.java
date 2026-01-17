@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loopChecklist.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
+import com.loopone.loopinbe.domain.loop.helper.LoopCacheEvictionHelper;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.dto.req.LoopChecklistCreateRequest;
@@ -32,6 +33,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
     private final LoopChecklistRepository LoopChecklistRepository;
     private final LoopRepository loopRepository;
     private final CacheManager cacheManager;
+    private final LoopCacheEvictionHelper loopCacheEvictionHelper;
 
     //체크리스트 생성
     @Override
@@ -55,7 +57,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         // 커밋 후 캐시 무효화
         LocalDate loopDate = loop.getLoopDate();
         YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
-        evictLoopCachesAfterCommit(
+        loopCacheEvictionHelper.evictAfterCommit(
                 currentUser.id(),
                 List.of(loop.getId()),
                 (loopDate != null) ? List.of(loopDate) : List.of(),
@@ -92,7 +94,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         LocalDate loopDate = loop.getLoopDate();
         YearMonth ym = (loopDate != null) ? YearMonth.from(loopDate) : null;
 
-        evictLoopCachesAfterCommit(
+        loopCacheEvictionHelper.evictAfterCommit(
                 currentUser.id(),
                 List.of(loop.getId()),
                 (loopDate != null) ? List.of(loopDate) : List.of(),
@@ -119,7 +121,7 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
         LoopChecklistRepository.delete(loopChecklist);
 
         // 커밋 후 캐시 무효화
-        evictLoopCachesAfterCommit(
+        loopCacheEvictionHelper.evictAfterCommit(
                 currentUser.id(),
                 List.of(loopId),
                 (loopDate != null) ? List.of(loopDate) : List.of(),
@@ -147,65 +149,6 @@ public class LoopChecklistServiceImpl implements LoopChecklistService {
     public static void validateLoopOwner(Loop loop, CurrentUserDto currentUser) {
         if (!loop.getMember().getId().equals(currentUser.id())) {
             throw new ServiceException(ReturnCode.LOOP_ACCESS_DENIED);
-        }
-    }
-
-    // ========== 캐시 무효화 메서드 ==========
-    // 트랜잭션 커밋 이후 관련 캐시 무효화 (롤백 시 유지)
-    private void evictLoopCachesAfterCommit(
-            Long memberId,
-            Collection<Long> loopIds,
-            Collection<LocalDate> dates,
-            Collection<YearMonth> yearMonths
-    ) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            evictLoopCaches(memberId, loopIds, dates, yearMonths);
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                evictLoopCaches(memberId, loopIds, dates, yearMonths);
-            }
-        });
-    }
-
-    // 실제 캐시 무효화 로직 (LoopServiceImpl과 동일)
-    private void evictLoopCaches(
-            Long memberId,
-            Collection<Long> loopIds,
-            Collection<LocalDate> dates,
-            Collection<YearMonth> yearMonths
-    ) {
-        // 1) loopReport
-        Cache reportCache = cacheManager.getCache("loopReport");
-        if (reportCache != null) {
-            reportCache.evictIfPresent(memberId);
-            log.debug("LoopReport cache evicted: {}", memberId);
-        }
-        // 2) loopDetail
-        Cache detailCache = cacheManager.getCache("loopDetail");
-        if (detailCache != null && loopIds != null) {
-            for (Long loopId : loopIds) {
-                if (loopId == null) continue;
-                detailCache.evictIfPresent(memberId + ":" + loopId);
-            }
-        }
-        // 3) dailyLoops
-        Cache dailyCache = cacheManager.getCache("dailyLoops");
-        if (dailyCache != null && dates != null) {
-            for (LocalDate d : dates) {
-                if (d == null) continue;
-                dailyCache.evictIfPresent(memberId + ":" + d);
-            }
-        }
-        // 4) loopCalendar
-        Cache calendarCache = cacheManager.getCache("loopCalendar");
-        if (calendarCache != null && yearMonths != null) {
-            for (YearMonth ym : yearMonths) {
-                if (ym == null) continue;
-                calendarCache.evictIfPresent(memberId + ":" + ym.getYear() + ":" + ym.getMonthValue());
-            }
         }
     }
 }

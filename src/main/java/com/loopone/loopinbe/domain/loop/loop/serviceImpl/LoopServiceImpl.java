@@ -8,6 +8,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
+import com.loopone.loopinbe.domain.loop.helper.LoopCacheEvictionHelper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
@@ -57,6 +58,7 @@ public class LoopServiceImpl implements LoopService {
     private final CacheManager cacheManager;
     private final ChatRoomStateService chatRoomStateService;
     private final LoopChecklistRepository loopChecklistRepository;
+    private final LoopCacheEvictionHelper loopCacheEvictionHelper;
 
     // 루프 생성
     @Override
@@ -121,7 +123,7 @@ public class LoopServiceImpl implements LoopService {
                 yms.add(YearMonth.from(d));
             }
         }
-        evictLoopCachesAfterCommit(currentUser.id(), loopIds, dates, yms);
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
 
         return loopId;
     }
@@ -194,7 +196,7 @@ public class LoopServiceImpl implements LoopService {
             );
         }
         // 커밋 후 캐시 무효화
-        evictLoopCachesAfterCommit(currentUser.id(), List.of(loopId), List.of(loopDate), List.of(ym));
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), List.of(loopDate), List.of(ym));
     }
 
     // 단일 루프 수정
@@ -235,7 +237,7 @@ public class LoopServiceImpl implements LoopService {
         if (oldDate != null) yms.add(YearMonth.from(oldDate));
         if (newDate != null) yms.add(YearMonth.from(newDate));
 
-        evictLoopCachesAfterCommit(currentUser.id(), List.of(loopId), dates, yms);
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), dates, yms);
     }
 
     // 루프 그룹 전체 수정
@@ -294,7 +296,7 @@ public class LoopServiceImpl implements LoopService {
             chatRoomStateService.setCallUpdateLoop(chatRoom.getId(), false);
         }
         // 커밋 후 캐시 무효화
-        evictLoopCachesAfterCommit(currentUser.id(), loopIds, dates, yms);
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
     }
 
     // 단일 루프 삭제
@@ -315,7 +317,7 @@ public class LoopServiceImpl implements LoopService {
         loopRepository.delete(loop);
 
         // 커밋 후 캐시 무효화
-        evictLoopCachesAfterCommit(currentUser.id(), List.of(loopId), date == null ? List.of() : List.of(date), ym == null ? List.of() : List.of(ym));
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), date == null ? List.of() : List.of(date), ym == null ? List.of() : List.of(ym));
     }
 
     // 루프 그룹 전체 삭제
@@ -336,7 +338,7 @@ public class LoopServiceImpl implements LoopService {
             chatRoomRepository.unlinkLoop(selectedLoop.getId());
             loopRepository.delete(selectedLoop);
 
-            evictLoopCachesAfterCommit(
+            loopCacheEvictionHelper.evictAfterCommit(
                     currentUser.id(),
                     List.of(selectedLoop.getId()),
                     d == null ? List.of() : List.of(d),
@@ -386,7 +388,7 @@ public class LoopServiceImpl implements LoopService {
         loopRuleRepository.delete(loopRule);
 
         // 커밋 후 loopReport 캐시 무효화
-        evictLoopCachesAfterCommit(currentUser.id(), loopIds, dates, yms);
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
     }
 
     // 사용자가 생성한 루프 전체 삭제
@@ -414,7 +416,7 @@ public class LoopServiceImpl implements LoopService {
         loopRuleRepository.deletePersonalRulesNotUsedAnywhere(memberId);
 
         // 커밋 후 loopReport 캐시 무효화
-        evictLoopCachesAfterCommit(memberId, loopIds, dates, yms);
+        loopCacheEvictionHelper.evictAfterCommit(memberId, loopIds, dates, yms);
     }
 
     //루프 캘린더 조회
@@ -670,64 +672,5 @@ public class LoopServiceImpl implements LoopService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
         chatRoom.selectLoop(loop);
         return chatRoom;
-    }
-
-    // ========== 캐시 무효화 메서드 ==========
-    // 트랜잭션 커밋 이후 관련 캐시 무효화 (롤백 시 유지)
-    private void evictLoopCachesAfterCommit(
-            Long memberId,
-            Collection<Long> loopIds,
-            Collection<LocalDate> dates,
-            Collection<YearMonth> yearMonths
-    ) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            evictLoopCaches(memberId, loopIds, dates, yearMonths);
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                evictLoopCaches(memberId, loopIds, dates, yearMonths);
-            }
-        });
-    }
-
-    // 실제 캐시 무효화 로직
-    private void evictLoopCaches(
-            Long memberId,
-            Collection<Long> loopIds,
-            Collection<LocalDate> dates,
-            Collection<YearMonth> yearMonths
-    ) {
-        // 1) loopReport
-        Cache reportCache = cacheManager.getCache("loopReport");
-        if (reportCache != null) {
-            reportCache.evictIfPresent(memberId);
-            log.debug("LoopReport cache evicted: {}", memberId);
-        }
-        // 2) loopDetail
-        Cache detailCache = cacheManager.getCache("loopDetail");
-        if (detailCache != null && loopIds != null) {
-            for (Long loopId : loopIds) {
-                if (loopId == null) continue;
-                detailCache.evictIfPresent(memberId + ":" + loopId);
-            }
-        }
-        // 3) dailyLoops
-        Cache dailyCache = cacheManager.getCache("dailyLoops");
-        if (dailyCache != null && dates != null) {
-            for (LocalDate d : dates) {
-                if (d == null) continue;
-                dailyCache.evictIfPresent(memberId + ":" + d);
-            }
-        }
-        // 4) loopCalendar
-        Cache calendarCache = cacheManager.getCache("loopCalendar");
-        if (calendarCache != null && yearMonths != null) {
-            for (YearMonth ym : yearMonths) {
-                if (ym == null) continue;
-                calendarCache.evictIfPresent(memberId + ":" + ym.getYear() + ":" + ym.getMonthValue());
-            }
-        }
     }
 }
