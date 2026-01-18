@@ -60,12 +60,9 @@ import static org.mockito.Mockito.mockStatic;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class MemberServiceTest {
     // ===== Real Repositories =====
-    @Autowired
-    MemberRepository memberRepository;
-    @Autowired
-    MemberFollowReqRepository memberFollowReqRepository;
-    @Autowired
-    MemberFollowRepository memberFollowRepository;
+    @Autowired MemberRepository memberRepository;
+    @Autowired MemberFollowReqRepository memberFollowReqRepository;
+    @Autowired MemberFollowRepository memberFollowRepository;
 
     // ===== SUT =====
     @Autowired MemberServiceImpl memberService;
@@ -127,7 +124,6 @@ class MemberServiceTest {
         @DisplayName("성공: 저장되고 필드가 채워진다")
         void success() {
             var req = new MemberCreateRequest("new@loop.in", "newNick", Member.OAuthProvider.GOOGLE, "pid-x");
-
             var saved = memberService.regularSignUp(req);
 
             assertThat(saved.getId()).isNotNull();
@@ -135,7 +131,6 @@ class MemberServiceTest {
             assertThat(saved.getNickname()).isEqualTo("newNick");
             assertThat(saved.getOAuthProvider()).isEqualTo(Member.OAuthProvider.GOOGLE);
             assertThat(saved.getProviderId()).isEqualTo("pid-x");
-
             assertThat(memberRepository.findById(saved.getId())).isPresent();
         }
 
@@ -143,7 +138,6 @@ class MemberServiceTest {
         @DisplayName("이메일 중복 -> EMAIL_ALREADY_USED")
         void emailDuplicate() {
             persistMember("dup@loop.in", "a", null);
-
             var req = new MemberCreateRequest("dup@loop.in", "b", Member.OAuthProvider.GOOGLE, "pid");
 
             assertThatThrownBy(() -> memberService.regularSignUp(req))
@@ -155,7 +149,6 @@ class MemberServiceTest {
         @DisplayName("닉네임 중복 -> NICKNAME_ALREADY_USED")
         void nicknameDuplicate() {
             persistMember("a@loop.in", "dupNick", null);
-
             var req = new MemberCreateRequest("b@loop.in", "dupNick", Member.OAuthProvider.GOOGLE, "pid");
 
             assertThatThrownBy(() -> memberService.regularSignUp(req))
