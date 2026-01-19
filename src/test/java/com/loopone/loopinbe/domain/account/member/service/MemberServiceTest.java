@@ -36,6 +36,7 @@ import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -69,6 +70,7 @@ class MemberServiceTest {
 
     // ===== External boundaries (mock) =====
     @MockitoBean S3Service s3Service;
+    @MockitoBean CacheManager cacheManager;
     @MockitoBean ChatRoomService chatRoomService;
     @MockitoBean TeamService teamService;
     @MockitoBean LoopService loopService;
