@@ -1,8 +1,6 @@
 package com.loopone.loopinbe.domain.chat.chatMessage.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
