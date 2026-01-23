@@ -319,6 +319,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         if (remainingTeamIds != null && !remainingTeamIds.isEmpty()) {
             teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
             teamLoopMemberProgressRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
+            teamLoopActivityRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
         }
     }
 
