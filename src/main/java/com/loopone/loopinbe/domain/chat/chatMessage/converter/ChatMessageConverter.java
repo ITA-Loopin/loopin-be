@@ -4,8 +4,9 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatAttachmentResponse;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.global.s3.S3Service;
 import org.mapstruct.Context;
@@ -25,38 +26,66 @@ public abstract class ChatMessageConverter {
     private static final String BOT_NICKNAME = "loopin";
     private static final String BOT_PROFILE = null;
 
-    // ---------------- ChatMessage -> ChatMessageResponse ----------------
+    // ---------------- ChatMessage -> AiChatMessageResponse ----------------
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "memberId", source = "memberId")
+    @Mapping(target = "nickname", expression = "java(resolveNickname(chatMessage, memberMap))")
+    @Mapping(target = "profileImageUrl", expression = "java(resolveProfile(chatMessage, memberMap))")
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "recommendations", source = "recommendations")
+    @Mapping(target = "loopRuleId", source = "loopRuleId")
+    @Mapping(target = "deleteMessageId", source = "deleteMessageId")
+    @Mapping(target = "authorType", source = "authorType")
+    @Mapping(target = "createdAt", source = "createdAt")
+    public abstract AiChatMessageResponse toAiChatMessageResponse(
+            ChatMessage chatMessage,
+            @Context Map<Long, Member> memberMap
+    );
+
+    // ---------------- ChatMessagePayload -> AiChatMessageResponse ----------------
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "memberId", source = "memberId")
+    @Mapping(target = "nickname", expression = "java(resolveNickname(payload, memberMap))")
+    @Mapping(target = "profileImageUrl", expression = "java(resolveProfile(payload, memberMap))")
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "recommendations", source = "recommendations")
+    @Mapping(target = "loopRuleId", source = "loopRuleId")
+    @Mapping(target = "deleteMessageId", source = "deleteMessageId")
+    @Mapping(target = "authorType", source = "authorType")
+    @Mapping(target = "createdAt", source = "createdAt")
+    public abstract AiChatMessageResponse toAiChatMessageResponse(
+            ChatMessagePayload payload,
+            @Context Map<Long, Member> memberMap
+    );
+
+    // ---------------- ChatMessage -> TeamChatMessageResponse ----------------
     @Mapping(target = "id", source = "id")
     @Mapping(target = "memberId", source = "memberId")
     @Mapping(target = "nickname", expression = "java(resolveNickname(chatMessage, memberMap))")
     @Mapping(target = "profileImageUrl", expression = "java(resolveProfile(chatMessage, memberMap))")
     @Mapping(target = "content", source = "content")
     @Mapping(target = "attachments", expression = "java(toAttachmentResponses(chatMessage.getAttachments()))")
-    @Mapping(target = "recommendations", source = "recommendations")
-    @Mapping(target = "loopRuleId", source = "loopRuleId")
-    @Mapping(target = "deleteMessageId", source = "deleteMessageId")
-    @Mapping(target = "authorType", source = "authorType")
+    @Mapping(target = "isMine", expression = "java(isMine(chatMessage.getMemberId(), myMemberId, chatMessage.getAuthorType()))")
     @Mapping(target = "createdAt", source = "createdAt")
-    public abstract ChatMessageResponse toChatMessageResponse(
+    public abstract TeamChatMessageResponse toTeamChatMessageResponse(
             ChatMessage chatMessage,
-            @Context Map<Long, Member> memberMap
+            @Context Map<Long, Member> memberMap,
+            @Context Long myMemberId
     );
 
-    // ---------------- ChatMessagePayload -> ChatMessageResponse ----------------
+    // ---------------- ChatMessagePayload -> TeamChatMessageResponse ----------------
     @Mapping(target = "id", source = "id")
     @Mapping(target = "memberId", source = "memberId")
     @Mapping(target = "nickname", expression = "java(resolveNickname(payload, memberMap))")
     @Mapping(target = "profileImageUrl", expression = "java(resolveProfile(payload, memberMap))")
     @Mapping(target = "content", source = "content")
     @Mapping(target = "attachments", expression = "java(toAttachmentResponses(payload.attachments()))")
-    @Mapping(target = "recommendations", source = "recommendations")
-    @Mapping(target = "loopRuleId", source = "loopRuleId")
-    @Mapping(target = "deleteMessageId", source = "deleteMessageId")
-    @Mapping(target = "authorType", source = "authorType")
+    @Mapping(target = "isMine", expression = "java(isMine(payload.memberId(), myMemberId, payload.authorType()))")
     @Mapping(target = "createdAt", source = "createdAt")
-    public abstract ChatMessageResponse toChatMessageResponse(
+    public abstract TeamChatMessageResponse toTeamChatMessageResponse(
             ChatMessagePayload payload,
-            @Context Map<Long, Member> memberMap
+            @Context Map<Long, Member> memberMap,
+            @Context Long myMemberId
     );
 
     // ---------------- bulk load (ChatMessage) ----------------
@@ -137,5 +166,12 @@ public abstract class ChatMessageConverter {
 
     protected boolean isBot(ChatMessagePayload payload) {
         return payload.authorType() == ChatMessage.AuthorType.BOT || payload.memberId() == null;
+    }
+
+    protected Boolean isMine(Long messageMemberId, Long myMemberId, ChatMessage.AuthorType authorType) {
+        // BOT은 내 메시지로 치지 않는 게 보통 안전
+        if (authorType == ChatMessage.AuthorType.BOT) return false;
+        if (messageMemberId == null || myMemberId == null) return false;
+        return messageMemberId.equals(myMemberId);
     }
 }

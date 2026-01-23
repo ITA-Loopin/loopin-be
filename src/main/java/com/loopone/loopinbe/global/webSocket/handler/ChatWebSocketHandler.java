@@ -1,15 +1,12 @@
 package com.loopone.loopinbe.global.webSocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
-import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomMemberService;
-import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
@@ -25,8 +22,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -117,8 +112,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         sendWsError(session, "BAD_REQUEST", "clientMessageId is required");
                         return;
                     }
-                    String content = (in.getChatMessageResponse() != null)
-                            ? in.getChatMessageResponse().getContent()
+                    String content = (in.getTeamChatMessageResponse() != null)
+                            ? in.getTeamChatMessageResponse().getContent()
                             : null;
                     if (content == null || content.isBlank()) {
                         sendWsError(session, "BAD_REQUEST", "content is required");
@@ -130,7 +125,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             .chatRoomId(chatRoomId)
                             .memberId(memberId)
                             .clientMessageId(clientMessageId)
-                            .chatMessageResponse(ChatMessageResponse.builder()
+                            .teamChatMessageResponse(TeamChatMessageResponse.builder()
                                     .content(content)
                                     .build())
                             .build();
