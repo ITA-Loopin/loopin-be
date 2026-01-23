@@ -55,7 +55,6 @@ public class LoopServiceImpl implements LoopService {
     private final MemberConverter memberConverter;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
-    private final CacheManager cacheManager;
     private final ChatRoomStateService chatRoomStateService;
     private final LoopChecklistRepository loopChecklistRepository;
     private final LoopCacheEvictionHelper loopCacheEvictionHelper;
