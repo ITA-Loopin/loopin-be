@@ -1,15 +1,11 @@
 package com.loopone.loopinbe.global.webSocket.payload;
 
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -24,7 +20,7 @@ public class ChatWebSocketPayload {
 
     // MESSAGE일 때만 존재
     private UUID clientMessageId;     // UUID (멱등키, UNIQUE)
-    private ChatMessageResponse chatMessageResponse;
+    private TeamChatMessageResponse teamChatMessageResponse;
 
     // READ_UP_TO일 때만 존재
     private Long memberId;

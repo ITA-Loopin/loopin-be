@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -52,8 +53,8 @@ public class ChatMessageEventConsumer {
                     // 1) validate
                     Long memberId = event.getMemberId();
                     UUID clientMessageId = event.getClientMessageId();
-                    String content = (event.getChatMessageResponse() != null)
-                            ? event.getChatMessageResponse().getContent()
+                    String content = (event.getTeamChatMessageResponse() != null)
+                            ? event.getTeamChatMessageResponse().getContent()
                             : null;
                     if (memberId == null || clientMessageId == null || content == null || content.isBlank()) {
                         log.warn("Invalid MESSAGE event. roomId={}, memberId={}, clientMessageId={}, hasContent={}",
@@ -82,13 +83,13 @@ public class ChatMessageEventConsumer {
                     ChatMessagePayload saved = chatMessageService.processInbound(inbound);
                     // 4) WS 응답 DTO로 매핑 (저장된 결과 기준)
                     Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-                    ChatMessageResponse savedResp = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+                    TeamChatMessageResponse savedResp = chatMessageConverter.toTeamChatMessageResponse(saved, memberMap, memberId);
                     ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                             .messageType(MessageType.MESSAGE)
                             .chatRoomId(chatRoomId)
                             .memberId(memberId)
                             .clientMessageId(saved.clientMessageId())
-                            .chatMessageResponse(savedResp)
+                            .teamChatMessageResponse(savedResp)
                             .build();
                     String payloadJson = objectMapper.writeValueAsString(out);
                     chatWebSocketHandler.broadcastToRoom(chatRoomId, payloadJson);
