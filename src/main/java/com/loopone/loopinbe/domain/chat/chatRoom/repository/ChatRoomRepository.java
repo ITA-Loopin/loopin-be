@@ -140,4 +140,9 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     // 채팅방 타입 검증 (bot room 여부)
     boolean existsByIdAndIsBotRoom(Long chatRoomId, boolean isBotRoom);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update ChatRoom cr set cr.noticeMessageContent = :noticeMessageContent where cr.id = :chatRoomId")
+    int updateNoticeMessageContent(@Param("chatRoomId") Long chatRoomId,
+                            @Param("noticeMessageContent") String noticeMessageContent);
 }

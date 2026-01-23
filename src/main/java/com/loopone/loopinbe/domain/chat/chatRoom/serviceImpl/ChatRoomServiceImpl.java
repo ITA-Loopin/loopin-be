@@ -266,6 +266,18 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         chatRoomMemberRepository.save(crm);
     }
 
+    // 채팅방 공지 메시지 내용 업데이트
+    @Override
+    @Transactional
+    public boolean updateNoticeMessageContent(Long chatRoomId, String noticeMessageContent) {
+        if (chatRoomId == null) {
+            log.warn("updateNoticeMessageContent called with null chatRoomId");
+            return false;
+        }
+        int updated = chatRoomRepository.updateNoticeMessageContent(chatRoomId, noticeMessageContent);
+        return updated > 0;
+    }
+
     private ChatRoomListResponse getAllChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
         return chatRoomConverter.toChatRoomListResponse(chatRoomList);
