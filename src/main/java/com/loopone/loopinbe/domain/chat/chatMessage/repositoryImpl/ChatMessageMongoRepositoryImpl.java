@@ -15,7 +15,9 @@ import org.springframework.data.mongodb.core.query.*;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Repository
 @RequiredArgsConstructor
@@ -62,22 +64,34 @@ public class ChatMessageMongoRepositoryImpl implements ChatMessageMongoRepositor
     // 채팅방 내 내용 검색 (Mongo 텍스트 인덱스 사용)
     @Override
     public Page<ChatMessage> searchByKeyword(Long chatRoomId, String keyword, Pageable pageable) {
-        // $text 검색 + chatRoomId 필터
-        TextCriteria text = TextCriteria.forDefaultLanguage().matching(keyword);
-
-        Query q = TextQuery.queryText(text)
-                .addCriteria(Criteria.where("chatRoomId").is(chatRoomId))
-                .with(pageable);
-        // 정렬이 없다면 기본 최신순
-        if (!pageable.getSort().isSorted()) {
-            q.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (chatRoomId == null) throw new IllegalArgumentException("chatRoomId is null");
+        if (keyword == null || keyword.isBlank()) {
+            return Page.empty(pageable);
         }
-        List<ChatMessage> results = mongoTemplate.find(q, ChatMessage.class);
 
-        // count는 textQuery에서 pageable을 제거하고 수행
-        Query countQuery = TextQuery.queryText(text)
-                .addCriteria(Criteria.where("chatRoomId").is(chatRoomId));
+        // keyword의 "문자 하나라도 포함" -> (문자1|문자2|...) OR 정규식
+        List<String> chars = new ArrayList<>();
+        keyword.codePoints().forEach(cp -> chars.add(new String(Character.toChars(cp))));
+
+        // 각 문자를 regex 안전하게 escape - 예: "." 같은 문자가 들어와도 리터럴로 취급
+        String alternation = chars.stream()
+                .map(Pattern::quote)
+                .reduce((a, b) -> a + "|" + b)
+                .orElseThrow();
+
+        Pattern pattern = Pattern.compile(alternation); // 대소문자 무시 필요하면 Pattern.CASE_INSENSITIVE 추가
+
+        Criteria criteria = Criteria.where("chatRoomId").is(chatRoomId)
+                .and("content").regex(pattern);
+
+        Query query = new Query(criteria).with(pageable);
+
+        List<ChatMessage> content = mongoTemplate.find(query, ChatMessage.class);
+
+        // count는 pageable 제외하고 계산해야 함
+        Query countQuery = Query.of(query).limit(-1).skip(-1);
         long total = mongoTemplate.count(countQuery, ChatMessage.class);
-        return new PageImpl<>(results, pageable, total);
+
+        return new PageImpl<>(content, pageable, total);
     }
 }

@@ -137,4 +137,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     void unlinkLoops(@Param("loopIds") List<Long> loopIds);
 
     Optional<ChatRoom> findByTeamIdAndIsBotRoomFalse(Long teamId);
+
+    // 채팅방 타입 검증 (bot room 여부)
+    boolean existsByIdAndIsBotRoom(Long chatRoomId, boolean isBotRoom);
 }
