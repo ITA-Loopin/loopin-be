@@ -25,4 +25,13 @@ public interface TeamLoopActivityRepository extends JpaRepository<TeamLoopActivi
         where a.team.id in :teamIds
     """)
     int deleteByTeamIds(@Param("teamIds") List<Long> teamIds);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from TeamLoopActivity a
+        where a.member.id = :memberId
+          and a.team.id in :teamIds
+    """)
+    int deleteByMemberAndTeamIds(@Param("memberId") Long memberId,
+                                 @Param("teamIds") List<Long> teamIds);
 }
