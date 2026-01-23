@@ -7,7 +7,8 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.MessageContext;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -63,17 +64,14 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatMessageEventPublisher chatMessageEventPublisher;
     private final ChatRoomStateService chatRoomStateService;
 
-    // 채팅방 과거 메시지 조회 [참여자 권한]
+    // AI 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
-    @Transactional
-    public PageResponse<ChatMessageResponse> findByChatRoomId(
-            Long chatRoomId, Pageable pageable, CurrentUserDto currentUser
-    ) {
+    @Transactional(readOnly = true)
+    public PageResponse<AiChatMessageResponse> getAiChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser) {
         try {
             checkPageSize(pageable.getPageSize());
-            // 참여자 검증
-            boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-            if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+            // 참여자 + 채팅방 타입 검증
+            validateChatRoomAccess(chatRoomId, currentUser.id(), true);
             Pageable sortedPageable = PageRequest.of(
                     pageable.getPageNumber(),
                     pageable.getPageSize(),
@@ -83,7 +81,35 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
             Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
             return PageResponse.of(
-                    page.map(cm -> chatMessageConverter.toChatMessageResponse(cm, memberMap))
+                    page.map(cm -> chatMessageConverter.toAiChatMessageResponse(cm, memberMap))
+            );
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error in findByChatRoomId - chatRoomId: {}, loginUserId: {}, error: {}",
+                    chatRoomId, currentUser.id(), e.getMessage(), e);
+            throw new ServiceException(ReturnCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 팀 채팅방 과거 메시지 조회 [참여자 권한]
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<TeamChatMessageResponse> getTeamChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser){
+        try {
+            checkPageSize(pageable.getPageSize());
+            // 참여자 + 채팅방 타입 검증
+            validateChatRoomAccess(chatRoomId, currentUser.id(), false);
+            Pageable sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Direction.DESC, "createdAt")
+            );
+            Page<ChatMessage> page = chatMessageMongoRepository.findByChatRoomId(chatRoomId, sortedPageable);
+
+            Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+            return PageResponse.of(
+                    page.map(cm -> chatMessageConverter.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
             );
         } catch (ServiceException e) {
             throw e;
@@ -97,7 +123,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 채팅방 메시지 검색(내용) [참여자 권한]
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ChatMessageResponse> searchByKeyword(
+    public PageResponse<TeamChatMessageResponse> searchByKeyword(
             Long chatRoomId, String keyword, Pageable pageable, CurrentUserDto currentUser
     ) {
         checkPageSize(pageable.getPageSize());
@@ -113,7 +139,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
         return PageResponse.of(
-                page.map(cm -> chatMessageConverter.toChatMessageResponse(cm, memberMap))
+                page.map(cm -> chatMessageConverter.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
         );
     }
 
@@ -225,7 +251,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessagePayload saved = processInbound(payload);
 
         Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-        ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+        AiChatMessageResponse response = chatMessageConverter.toAiChatMessageResponse(saved, memberMap);
         response.setCallUpdateLoop(false);
 
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
@@ -279,7 +305,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             ChatMessagePayload saved = processInbound(payload);
             // 5) Response 변환
             Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-            ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+            TeamChatMessageResponse response = chatMessageConverter.toTeamChatMessageResponse(saved, memberMap, currentUser.id());
             // 6) 이벤트 발행
             publishAttachmentMessage(chatRoomId, saved.clientMessageId(), response);
         } catch (RuntimeException | IOException e) {
@@ -336,6 +362,20 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
     }
 
+    private void validateChatRoomAccess(Long chatRoomId, Long memberId, boolean requireBotRoom) {
+        // 1) 참여자 검증
+        boolean memberExists = chatRoomRepository.existsMember(chatRoomId, memberId);
+        if (!memberExists) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+        // 2) 채팅방 타입 검증 (AI=botRoom=true, 팀=botRoom=false)
+        boolean roomTypeOk = chatRoomRepository.existsByIdAndIsBotRoom(chatRoomId, requireBotRoom);
+        if (!roomTypeOk) {
+            // 채팅방은 존재하지만 타입이 다르거나, 혹은 존재 자체가 없을 수도 있음
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+    }
+
     // 요청 페이지 수 제한
     private void checkPageSize(int pageSize) {
         int maxPageSize = ChatMessagePage.getMaxPageSize();
@@ -380,12 +420,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         aiEventPublisher.publishAiRequest(req, topic);
     }
 
-    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
+    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, TeamChatMessageResponse response) {
         ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                 .messageType(MessageType.MESSAGE)
                 .chatRoomId(chatRoomId)
                 .clientMessageId(clientMessageId)
-                .chatMessageResponse(response)
+                .teamChatMessageResponse(response)
                 .build();
         chatMessageEventPublisher.publishWsEvent(out);
     }
