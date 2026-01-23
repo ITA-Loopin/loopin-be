@@ -43,6 +43,8 @@ public class ChatRoom extends BaseEntity {
 
     private Long teamId;
 
+    private String noticeMessageContent;
+
     private Instant lastMessageAt;
 
     public void selectLoop(Loop loop) {

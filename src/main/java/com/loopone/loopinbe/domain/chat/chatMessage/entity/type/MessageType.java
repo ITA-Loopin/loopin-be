@@ -10,5 +10,6 @@ public enum MessageType {
     BEFORE_UPDATE_LOOP,
     GET_LOOP,
     READ_UP_TO,
+    SET_NOTICE,
     DELETE
 }

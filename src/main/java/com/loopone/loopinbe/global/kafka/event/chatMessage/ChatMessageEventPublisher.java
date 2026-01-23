@@ -33,6 +33,7 @@ public class ChatMessageEventPublisher {
         return switch (type) {
             case MESSAGE -> CHAT_MESSAGE_TOPIC;
             case READ_UP_TO -> CHAT_READ_UP_TO_TOPIC;
+            case SET_NOTICE -> CHAT_SET_NOTICE_TOPIC;
             case DELETE -> CHAT_DELETE_TOPIC;
             default -> throw new IllegalArgumentException("Unsupported WS messageType: " + type);
         };

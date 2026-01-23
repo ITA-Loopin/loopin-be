@@ -144,6 +144,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             .build();
                     chatMessageEventPublisher.publishWsEvent(event);
                 }
+                case SET_NOTICE -> {
+                    if (in.getNoticeMessageId() == null) {
+                        sendWsError(session, "BAD_REQUEST", "messageId is required");
+                        return;
+                    }
+                    ChatWebSocketPayload event = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.SET_NOTICE)
+                            .chatRoomId(chatRoomId)
+                            .memberId(memberId)
+                            .noticeMessageId(in.getNoticeMessageId())
+                            .noticeMessageContent(in.getNoticeMessageContent())
+                            .build();
+                    chatMessageEventPublisher.publishWsEvent(event);
+                }
                 case DELETE -> {
                     if (in.getDeleteId() == null) {
                         sendWsError(session, "BAD_REQUEST", "messageId is required");
