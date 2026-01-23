@@ -2,6 +2,7 @@ package com.loopone.loopinbe.domain.team.teamLoop.repository;
 
 import com.loopone.loopinbe.domain.team.teamLoop.entity.TeamLoopActivity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,4 +18,11 @@ public interface TeamLoopActivityRepository extends JpaRepository<TeamLoopActivi
     @Query("SELECT a FROM TeamLoopActivity a WHERE a.team.id = :teamId ORDER BY a.createdAt DESC")
     List<TeamLoopActivity> findRecentActivitiesByTeamId(@Param("teamId") Long teamId,
             org.springframework.data.domain.Pageable pageable);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from TeamLoopActivity a
+        where a.team.id in :teamIds
+    """)
+    int deleteByTeamIds(@Param("teamIds") List<Long> teamIds);
 }
