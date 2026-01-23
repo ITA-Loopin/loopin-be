@@ -154,6 +154,12 @@ public class TeamInvitationServiceImpl implements TeamInvitationService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public void deleteAllInvitationsRelatedToMember(Long memberId) {
+        teamInvitationRepository.deleteAllByMemberInvolved(memberId);
+    }
+
     // ========== 조회 메서드 ==========
     // 팀 조회
     private Team getTeamOrThrow(Long teamId) {
