@@ -26,6 +26,10 @@ public class ChatWebSocketPayload {
     private Long memberId;
     private Instant lastReadAt;
 
+    // SET_NOTICE일 때만 존재
+    private String noticeMessageId;
+    private String noticeMessageContent;
+
     // DELETE일 때만 존재
     private String deleteId;
 }

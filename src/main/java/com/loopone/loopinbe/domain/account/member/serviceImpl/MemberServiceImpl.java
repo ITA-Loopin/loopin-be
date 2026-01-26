@@ -20,6 +20,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
+import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
@@ -59,6 +60,7 @@ public class MemberServiceImpl implements MemberService {
     private final ChatRoomService chatRoomService;
     private final TeamService teamService;
     private final LoopService loopService;
+    private final TeamInvitationService teamInvitationService;
     private final CacheManager cacheManager;
     private final NotificationEventPublisher notificationEventPublisher;
     private final AuthEventPublisher authEventPublisher;
@@ -199,6 +201,7 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 연관된 데이터 삭제
         chatRoomService.leaveAllChatRooms(currentUser.id());
+        teamInvitationService.deleteAllInvitationsRelatedToMember(currentUser.id());
         teamService.deleteMyTeams(member);
         loopService.deleteMyLoops(currentUser.id());
         // 회원삭제

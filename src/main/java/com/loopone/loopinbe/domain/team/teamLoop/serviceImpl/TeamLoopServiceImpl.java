@@ -307,6 +307,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
             teamLoopMemberCheckRepository.deleteByTeamIds(teamsToDelete);
             teamLoopMemberProgressRepository.deleteByTeamIds(teamsToDelete);
             teamLoopChecklistRepository.deleteByTeamIds(teamsToDelete);
+            teamLoopActivityRepository.deleteByTeamIds(teamsToDelete);
             teamLoopRepository.deleteByTeamIds(teamsToDelete);
 
             // 2) 이제 TeamLoop가 삭제됐으니, 연결됐던 LoopRule 중 "어디에서도 참조되지 않는 것"만 삭제
@@ -318,6 +319,7 @@ public class TeamLoopServiceImpl implements TeamLoopService {
         if (remainingTeamIds != null && !remainingTeamIds.isEmpty()) {
             teamLoopMemberCheckRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
             teamLoopMemberProgressRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
+            teamLoopActivityRepository.deleteByMemberAndTeamIds(memberId, remainingTeamIds);
         }
     }
 

@@ -41,4 +41,7 @@ public interface ChatRoomService {
 
     // 초대 수락 시 채팅방에 참여
     void participateChatRoom(Long teamId, Long currentUserId);
+
+    // 채팅방 공지 메시지 내용 업데이트
+    boolean updateNoticeMessageContent(Long chatRoomId, String noticeMessageContent);
 }

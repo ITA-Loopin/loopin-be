@@ -8,7 +8,9 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageRespo
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
+import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomMemberService;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.webSocket.handler.ChatWebSocketHandler;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
@@ -30,12 +32,13 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 public class ChatMessageEventConsumer {
     private final ObjectMapper objectMapper;
     private final ChatWebSocketHandler chatWebSocketHandler;
+    private final ChatRoomService chatRoomService;
     private final ChatRoomMemberService chatRoomMemberService;
     private final ChatMessageService chatMessageService;
     private final ChatMessageMapper chatMessageMapper;
 
     @KafkaListener(
-            topics = {CHAT_MESSAGE_TOPIC, CHAT_READ_UP_TO_TOPIC, CHAT_DELETE_TOPIC},
+            topics = {CHAT_MESSAGE_TOPIC, CHAT_READ_UP_TO_TOPIC, CHAT_SET_NOTICE_TOPIC, CHAT_DELETE_TOPIC},
             groupId = CHAT_GROUP_ID,
             containerFactory = KAFKA_LISTENER_CONTAINER
     )
@@ -108,6 +111,32 @@ public class ChatMessageEventConsumer {
                             .chatRoomId(chatRoomId)
                             .memberId(memberId)
                             .lastReadAt(updated)
+                            .build();
+                    String payloadJson = objectMapper.writeValueAsString(out);
+                    chatWebSocketHandler.broadcastToRoom(chatRoomId, payloadJson);
+                }
+                case SET_NOTICE -> {
+                    Long memberId = event.getMemberId();
+                    String noticeMessageId = event.getNoticeMessageId();
+                    String noticeMessageContent = event.getNoticeMessageContent();
+                    if (memberId == null || noticeMessageId == null || noticeMessageId.isBlank()) {
+                        log.warn("Invalid SET_NOTICE event. roomId={}, memberId={}, noticeMessageId={}",
+                                chatRoomId, memberId, noticeMessageId);
+                        return;
+                    }
+                    // ChatRoom.noticeMessage 업데이트
+                    boolean updated = chatRoomService.updateNoticeMessageContent(chatRoomId, noticeMessageContent);
+                    if (!updated) {
+                        log.warn("SET_NOTICE chatroom not found. roomId={}", chatRoomId);
+                        return;
+                    }
+                    // 브로드캐스트
+                    ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.SET_NOTICE)
+                            .chatRoomId(chatRoomId)
+                            .memberId(memberId)
+                            .noticeMessageId(noticeMessageId)
+                            .noticeMessageContent(noticeMessageContent)
                             .build();
                     String payloadJson = objectMapper.writeValueAsString(out);
                     chatWebSocketHandler.broadcastToRoom(chatRoomId, payloadJson);

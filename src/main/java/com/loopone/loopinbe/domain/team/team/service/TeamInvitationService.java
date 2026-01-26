@@ -18,4 +18,6 @@ public interface TeamInvitationService {
     List<TeamInvitationResponse> getTeamInvitations(Long teamId, CurrentUserDto currentUser);
 
     List<TeamInvitationResponse> getMyInvitations(CurrentUserDto currentUser);
+
+    void deleteAllInvitationsRelatedToMember(Long memberId);
 }
