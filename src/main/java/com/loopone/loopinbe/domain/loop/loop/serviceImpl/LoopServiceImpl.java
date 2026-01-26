@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -30,13 +30,9 @@ import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -52,10 +48,9 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
-    private final CacheManager cacheManager;
     private final ChatRoomStateService chatRoomStateService;
     private final LoopChecklistRepository loopChecklistRepository;
     private final LoopCacheEvictionHelper loopCacheEvictionHelper;
@@ -553,7 +548,7 @@ public class LoopServiceImpl implements LoopService {
         LocalDate end = (requestDTO.endDate() == null) ? start.plusYears(5) : requestDTO.endDate();
 
         LoopRule loopRule = LoopRule.builder()
-                .member(memberConverter.toMember(currentUser))
+                .member(memberMapper.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
                 .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
                         ? toDayOfWeekSet(requestDTO.daysOfWeek())
@@ -570,7 +565,7 @@ public class LoopServiceImpl implements LoopService {
     private Loop buildLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LocalDate date,
                            LoopRule loopRule) {
         Loop loop = Loop.builder()
-                .member(memberConverter.toMember(currentUser))
+                .member(memberMapper.toMember(currentUser))
                 .title(requestDTO.title())
                 .content(requestDTO.content())
                 .loopDate(date)

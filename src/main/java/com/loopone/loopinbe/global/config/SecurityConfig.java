@@ -6,20 +6,16 @@ import com.loopone.loopinbe.global.oauth.handler.WebOAuth2FailureHandler;
 import com.loopone.loopinbe.global.oauth.handler.WebOAuth2SuccessHandler;
 import com.loopone.loopinbe.global.oauth.user.CustomOAuth2UserService;
 import com.loopone.loopinbe.global.security.JwtAuthenticationFilter;
-import com.loopone.loopinbe.domain.account.auth.serviceImpl.CustomUserDetailsServiceImpl;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -33,13 +29,11 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final CustomUserDetailsServiceImpl customUserDetailsServiceImpl;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthRequestRepo;
     private final CustomOAuth2AuthorizationRequestResolver customAuthRequestResolver;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final WebOAuth2SuccessHandler webOAuth2SuccessHandler;
     private final WebOAuth2FailureHandler webOAuth2FailureHandler;
-    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -80,15 +74,6 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authenticationManagerBuilder
-                .userDetailsService(customUserDetailsServiceImpl)
-                .passwordEncoder(passwordEncoder);
-        return authenticationManagerBuilder.build();
     }
 
     @Bean

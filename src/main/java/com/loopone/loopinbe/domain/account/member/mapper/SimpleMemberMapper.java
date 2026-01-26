@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.member.converter;
+package com.loopone.loopinbe.domain.account.member.mapper;
 
 import com.loopone.loopinbe.domain.account.member.dto.res.SimpleMemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
@@ -12,7 +12,7 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface SimpleMemberConverter {
+public interface SimpleMemberMapper {
     // ---------- ChatRoomMember -> SimpleMemberResponse ----------
     @Mapping(target = "userId", source = "member.id")
     @Mapping(target = "userNickname", source = "member.nickname")

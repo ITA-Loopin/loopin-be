@@ -1,62 +1,51 @@
 package com.loopone.loopinbe.global.redis.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopCalendarResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loopReport.dto.res.LoopReportResponse;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.serializer.*;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.time.Duration;
 import java.util.Map;
+
+import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
 
 @Configuration
 @EnableCaching
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
-
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(new RedisStandaloneConfiguration(redisHost, redisPort));
-    }
-
     @Bean(name = "baseObjectMapper")
     @Primary
-    public ObjectMapper baseObjectMapper(org.springframework.http.converter.json.Jackson2ObjectMapperBuilder builder) {
-        return builder.build();
+    public ObjectMapper baseObjectMapper(ObjectProvider<Jackson2ObjectMapperBuilder> builderProvider) {
+        Jackson2ObjectMapperBuilder builder = builderProvider.getIfAvailable(Jackson2ObjectMapperBuilder::new);
+        ObjectMapper om = builder.build();
+        om.registerModule(new JavaTimeModule());
+        om.disable(WRITE_DATES_AS_TIMESTAMPS);
+        return om;
     }
 
     // 캐시 전용 ObjectMapper (타입 정보 활성화)
     @Bean(name = "redisObjectMapper")
     public ObjectMapper redisObjectMapper(@Qualifier("baseObjectMapper") ObjectMapper baseOm) {
         ObjectMapper om = baseOm.copy();
-        om.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        om.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        om.registerModule(new JavaTimeModule());
+        om.disable(WRITE_DATES_AS_TIMESTAMPS);
         return om;
     }
 
@@ -91,9 +80,7 @@ public class RedisConfig {
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory,
                                                        @Qualifier("redisObjectMapper") ObjectMapper redisOm) {
-        GenericJackson2JsonRedisSerializer serializer =
-                new GenericJackson2JsonRedisSerializer(redisOm);
-
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(redisOm);
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
@@ -111,9 +98,9 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         // 정수 값 직렬화: 숫자에 최적화된 ToString 또는 Jackson 사용 가능
-        template.setValueSerializer(new org.springframework.data.redis.serializer.GenericToStringSerializer<>(Integer.class));
+        template.setValueSerializer(new GenericToStringSerializer<>(Integer.class));
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new org.springframework.data.redis.serializer.GenericToStringSerializer<>(Integer.class));
+        template.setHashValueSerializer(new GenericToStringSerializer<>(Integer.class));
         template.afterPropertiesSet();
         return template;
     }
@@ -128,12 +115,8 @@ public class RedisConfig {
             ObjectMapper baseOm,
             Class<T> type
     ) {
-        ObjectMapper om = baseOm.copy()
-                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
-                .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        ObjectMapper om = baseOm.copy().registerModule(new JavaTimeModule()).disable(WRITE_DATES_AS_TIMESTAMPS);
         Jackson2JsonRedisSerializer<T> ser = new Jackson2JsonRedisSerializer<>(om, type);
-        return base.serializeValuesWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(ser)
-        );
+        return base.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(ser));
     }
 }

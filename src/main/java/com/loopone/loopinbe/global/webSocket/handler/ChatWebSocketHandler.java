@@ -1,8 +1,7 @@
 package com.loopone.loopinbe.global.webSocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
@@ -33,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatRoomMemberService chatRoomMemberService;
     private final ChatMessageService chatMessageService;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
     private final ObjectMapper objectMapper;
     private final ChatMessageEventPublisher chatMessageEventPublisher;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();

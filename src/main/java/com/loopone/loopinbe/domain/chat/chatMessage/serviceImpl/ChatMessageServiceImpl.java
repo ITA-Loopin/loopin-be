@@ -2,7 +2,7 @@ package com.loopone.loopinbe.domain.chat.chatMessage.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.MessageContext;
@@ -56,7 +56,7 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPI
 public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageMongoRepository chatMessageMongoRepository;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
     private final AiEventPublisher aiEventPublisher;
     private final LoopMapper loopMapper;
     private final SseEmitterService sseEmitterService;
@@ -79,9 +79,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             Page<ChatMessage> page = chatMessageMongoRepository.findByChatRoomId(chatRoomId, sortedPageable);
 
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
             return PageResponse.of(
-                    page.map(cm -> chatMessageConverter.toAiChatMessageResponse(cm, memberMap))
+                    page.map(cm -> chatMessageMapper.toAiChatMessageResponse(cm, memberMap))
             );
         } catch (ServiceException e) {
             throw e;
@@ -107,9 +107,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             Page<ChatMessage> page = chatMessageMongoRepository.findByChatRoomId(chatRoomId, sortedPageable);
 
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
             return PageResponse.of(
-                    page.map(cm -> chatMessageConverter.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
+                    page.map(cm -> chatMessageMapper.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
             );
         } catch (ServiceException e) {
             throw e;
@@ -137,9 +137,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
         Page<ChatMessage> page = chatMessageMongoRepository.searchByKeyword(chatRoomId, keyword, sortedPageable);
 
-        Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+        Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
         return PageResponse.of(
-                page.map(cm -> chatMessageConverter.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
+                page.map(cm -> chatMessageMapper.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
         );
     }
 
@@ -250,8 +250,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         ChatMessagePayload saved = processInbound(payload);
 
-        Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-        AiChatMessageResponse response = chatMessageConverter.toAiChatMessageResponse(saved, memberMap);
+        Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(saved));
+        AiChatMessageResponse response = chatMessageMapper.toAiChatMessageResponse(saved, memberMap);
         response.setCallUpdateLoop(false);
 
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
@@ -304,8 +304,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             ChatMessagePayload saved = processInbound(payload);
             // 5) Response 변환
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-            TeamChatMessageResponse response = chatMessageConverter.toTeamChatMessageResponse(saved, memberMap, currentUser.id());
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(saved));
+            TeamChatMessageResponse response = chatMessageMapper.toTeamChatMessageResponse(saved, memberMap, currentUser.id());
             // 6) 이벤트 발행
             publishAttachmentMessage(chatRoomId, saved.clientMessageId(), response);
         } catch (RuntimeException | IOException e) {

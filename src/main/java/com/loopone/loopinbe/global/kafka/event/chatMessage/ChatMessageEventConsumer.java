@@ -2,9 +2,8 @@ package com.loopone.loopinbe.global.kafka.event.chatMessage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -36,7 +35,7 @@ public class ChatMessageEventConsumer {
     private final ChatRoomService chatRoomService;
     private final ChatRoomMemberService chatRoomMemberService;
     private final ChatMessageService chatMessageService;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
 
     @KafkaListener(
             topics = {CHAT_MESSAGE_TOPIC, CHAT_READ_UP_TO_TOPIC, CHAT_SET_NOTICE_TOPIC, CHAT_DELETE_TOPIC},
@@ -85,8 +84,8 @@ public class ChatMessageEventConsumer {
                     // 3) Mongo upsert (멱등 저장)
                     ChatMessagePayload saved = chatMessageService.processInbound(inbound);
                     // 4) WS 응답 DTO로 매핑 (저장된 결과 기준)
-                    Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-                    TeamChatMessageResponse savedResp = chatMessageConverter.toTeamChatMessageResponse(saved, memberMap, memberId);
+                    Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(saved));
+                    TeamChatMessageResponse savedResp = chatMessageMapper.toTeamChatMessageResponse(saved, memberMap, memberId);
                     ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                             .messageType(MessageType.MESSAGE)
                             .chatRoomId(chatRoomId)
