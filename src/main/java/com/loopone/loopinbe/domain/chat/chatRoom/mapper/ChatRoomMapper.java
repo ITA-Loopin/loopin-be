@@ -12,7 +12,7 @@ import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ChatRoomMapper {
-    // ---------- ChatRoom -> ChatRoomResponse ----------
+    // ---------- ChatRoomMember -> ChatRoomMemberResponse ----------
     @Mapping(target = "id", source = "chatRoom.id")
     @Mapping(target = "ownerId", source = "chatRoom.member.id")
     @Mapping(target = "title", source = "chatRoom.title")
