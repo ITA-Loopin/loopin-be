@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.chat.chatRoom.converter;
+package com.loopone.loopinbe.domain.chat.chatRoom.mapper;
 
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
@@ -11,7 +11,7 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ChatRoomConverter {
+public interface ChatRoomMapper {
     // ---------- ChatRoom -> ChatRoomResponse ----------
     @Mapping(target = "id", source = "chatRoom.id")
     @Mapping(target = "ownerId", source = "chatRoom.member.id")

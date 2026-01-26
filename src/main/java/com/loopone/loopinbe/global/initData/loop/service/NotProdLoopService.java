@@ -1,7 +1,7 @@
 package com.loopone.loopinbe.global.initData.loop.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
@@ -29,7 +29,7 @@ public class NotProdLoopService {
     private final LoopService loopService;
     private final LoopRepository loopRepository;
     private final MemberRepository memberRepository;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private static final String USER1_EMAIL = "user1@example.com";
     private static final String USER_EMAIL_FORMAT = "user%d@example.com";
     private static final String LOOP_TRAVEL = "강릉 당일치기";
@@ -344,13 +344,13 @@ public class NotProdLoopService {
         String email = userEmail(userNo);
         Member user = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("user not found: " + email));
-        return memberConverter.toCurrentUserDto(user);
+        return memberMapper.toCurrentUserDto(user);
     }
 
     private CurrentUserDto user1CurrentUser() {
         Member user1 = memberRepository.findByEmail(USER1_EMAIL)
                 .orElseThrow(() -> new IllegalStateException("user1 not found: " + USER1_EMAIL));
-        return memberConverter.toCurrentUserDto(user1);
+        return memberMapper.toCurrentUserDto(user1);
     }
 
     private Long user1Id() {

@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.notification.converter;
+package com.loopone.loopinbe.domain.notification.mapper;
 
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface NotificationConverter {
+public interface NotificationMapper {
     // ---------- Notification -> NotificationResponse ----------
     @Mapping(target = "id", source = "id")
     @Mapping(target = "senderId", source = "senderId")

@@ -2,8 +2,8 @@ package com.loopone.loopinbe.domain.account.member.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.auth.dto.AuthPayload;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverterImpl;
-import com.loopone.loopinbe.domain.account.member.converter.SimpleMemberConverterImpl;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapperImpl;
+import com.loopone.loopinbe.domain.account.member.mapper.SimpleMemberMapperImpl;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberUpdateRequest;
 import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
@@ -57,7 +57,7 @@ import static org.mockito.Mockito.mockStatic;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({TestContainersConfig.class, MemberServiceImpl.class, MemberConverterImpl.class, SimpleMemberConverterImpl.class})
+@Import({TestContainersConfig.class, MemberServiceImpl.class, MemberMapperImpl.class, SimpleMemberMapperImpl.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class MemberServiceTest {
     // ===== Real Repositories =====

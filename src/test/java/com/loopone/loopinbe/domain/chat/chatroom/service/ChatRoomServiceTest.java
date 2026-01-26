@@ -1,13 +1,12 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
-import com.loopone.loopinbe.domain.chat.chatRoom.converter.ChatRoomConverter;
+import com.loopone.loopinbe.domain.chat.chatRoom.mapper.ChatRoomMapper;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
-import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoomMember;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
@@ -24,12 +23,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
@@ -40,8 +37,8 @@ public class ChatRoomServiceTest {
     @Mock private ChatMessageService chatMessageService;
     @Mock private MemberRepository memberRepository;
     @Mock private ChatRoomMemberRepository chatRoomMemberRepository;
-    @Mock private MemberConverter memberConverter;
-    @Mock private ChatRoomConverter chatRoomConverter;
+    @Mock private MemberMapper memberMapper;
+    @Mock private ChatRoomMapper chatRoomMapper;
 
     @InjectMocks
     private ChatRoomServiceImpl chatRoomService;

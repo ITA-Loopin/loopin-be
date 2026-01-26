@@ -10,7 +10,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
 import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.enums.ProfileImageState;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowRepository;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepository;
@@ -55,7 +55,7 @@ public class MemberServiceImpl implements MemberService {
     private final MemberFollowReqRepository memberFollowReqRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final S3Service s3Service;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private final ChatRoomService chatRoomService;
     private final TeamService teamService;
     private final LoopService loopService;
@@ -94,7 +94,7 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse getMyInfo(CurrentUserDto currentUser) {
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toMemberResponse(member);
+        return memberMapper.toMemberResponse(member);
     }
 
     // 본인 상세회원정보 조회
@@ -103,7 +103,7 @@ public class MemberServiceImpl implements MemberService {
     public DetailMemberResponse getMyDetailInfo(CurrentUserDto currentUser){
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toDetailMemberResponse(member);
+        return memberMapper.toDetailMemberResponse(member);
     }
 
     // 다른 멤버의 회원정보 조회
@@ -112,7 +112,7 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse getMemberInfo(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toMemberResponse(member);
+        return memberMapper.toMemberResponse(member);
     }
 
     // 다른 멤버의 상세회원정보 조회
@@ -121,7 +121,7 @@ public class MemberServiceImpl implements MemberService {
     public DetailMemberResponse getDetailMemberInfo(Long memberId){
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toDetailMemberResponse(member);
+        return memberMapper.toDetailMemberResponse(member);
     }
 
     // 닉네임 중복 확인
@@ -231,7 +231,7 @@ public class MemberServiceImpl implements MemberService {
         if (Objects.equals(memberId, currentUser.id())) {
             throw new ServiceException(ReturnCode.CANNOT_FOLLOW_SELF);
         }
-        Member followReq = memberConverter.toMember(currentUser);
+        Member followReq = memberMapper.toMember(currentUser);
         Member followRec = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 기존 팔로우 여부 확인
@@ -264,7 +264,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void cancelFollowReq(Long memberId, CurrentUserDto currentUser){
-        Member followReq = memberConverter.toMember(currentUser);
+        Member followReq = memberMapper.toMember(currentUser);
         Member followRec = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         MemberFollowReq memberFollowReq = memberFollowReqRepository.findByFollowReqAndFollowRec(followReq, followRec)
@@ -278,7 +278,7 @@ public class MemberServiceImpl implements MemberService {
     public void acceptFollowReq(Long memberId, CurrentUserDto currentUser){
         Member requester = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member receiver = memberConverter.toMember(currentUser);
+        Member receiver = memberMapper.toMember(currentUser);
         MemberFollowReq followReq = memberFollowReqRepository.findByFollowReqAndFollowRec(requester, receiver)
                 .orElseThrow(() -> new ServiceException(ReturnCode.REQUEST_NOT_FOUND));
         memberFollowReqRepository.delete(followReq);
@@ -304,7 +304,7 @@ public class MemberServiceImpl implements MemberService {
     public void refuseFollowReq(Long memberId, CurrentUserDto currentUser){
         Member requester = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member receiver = memberConverter.toMember(currentUser);
+        Member receiver = memberMapper.toMember(currentUser);
         MemberFollowReq memberFollowReq = memberFollowReqRepository.findByFollowReqAndFollowRec(requester, receiver)
                 .orElseThrow(() -> new ServiceException(ReturnCode.REQUEST_NOT_FOUND));
         memberFollowReqRepository.delete(memberFollowReq);
@@ -314,7 +314,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void cancelFollow(Long memberId, CurrentUserDto currentUser){
-        Member follow = memberConverter.toMember(currentUser);
+        Member follow = memberMapper.toMember(currentUser);
         Member followed = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
@@ -328,7 +328,7 @@ public class MemberServiceImpl implements MemberService {
     public void removeFollowed(Long memberId, CurrentUserDto currentUser){
         Member follow = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member followed = memberConverter.toMember(currentUser);
+        Member followed = memberMapper.toMember(currentUser);
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
                 .orElseThrow(() -> new ServiceException(ReturnCode.FOLLOWER_NOT_FOUND));
         memberFollowRepository.delete(memberFollow);

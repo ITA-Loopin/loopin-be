@@ -1,6 +1,6 @@
 package com.loopone.loopinbe.global.initData.member.service;
 
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.dto.req.MemberCreateRequest;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.service.MemberService;
@@ -18,7 +18,7 @@ import java.util.*;
 public class NotProdMemberService {
     private final MemberService memberService;
     private final ChatRoomService chatRoomService;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
 
     // 유저 1 ~ 5 생성
     @Transactional
@@ -30,7 +30,7 @@ public class NotProdMemberService {
                     .email("user" + (i + 1) + "@example.com")
                     .build();
             Member member = memberService.regularSignUp(memberCreateRequest);
-            chatRoomService.createAiChatRoom(memberConverter.toCurrentUserDto(member));
+            chatRoomService.createAiChatRoom(memberMapper.toCurrentUserDto(member));
             memberEmails.add(member.getEmail());
         }
     }
@@ -46,7 +46,7 @@ public class NotProdMemberService {
                     .email(email)
                     .build();
             Member member = memberService.regularSignUp(req);
-            chatRoomService.createAiChatRoom(memberConverter.toCurrentUserDto(member));
+            chatRoomService.createAiChatRoom(memberMapper.toCurrentUserDto(member));
             memberEmails.add(member.getEmail());
         }
     }
