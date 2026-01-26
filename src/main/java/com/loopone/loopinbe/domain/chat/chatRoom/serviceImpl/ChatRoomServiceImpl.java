@@ -1,13 +1,13 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
-import com.loopone.loopinbe.domain.chat.chatRoom.converter.ChatRoomConverter;
+import com.loopone.loopinbe.domain.chat.chatRoom.mapper.ChatRoomMapper;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.req.ChatRoomRequest;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomListResponse;
 import com.loopone.loopinbe.domain.chat.chatRoom.dto.res.ChatRoomResponse;
@@ -17,8 +17,6 @@ import com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomType;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomMemberRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
-import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
-import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.team.team.entity.Team;
 import com.loopone.loopinbe.domain.team.team.repository.TeamRepository;
 import com.loopone.loopinbe.domain.team.team.repository.TeamMemberRepository;
@@ -41,8 +39,8 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatMessageService chatMessageService;
     private final MemberRepository memberRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
-    private final MemberConverter memberConverter;
-    private final ChatRoomConverter chatRoomConverter;
+    private final MemberMapper memberMapper;
+    private final ChatRoomMapper chatRoomMapper;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
@@ -68,13 +66,13 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         // 새로운 채팅방 생성
         ChatRoom chatRoom = ChatRoom.builder()
                 .title(chatRoomRequest.getTitle())
-                .member(memberConverter.toMember(currentUser)) // 방장 지정
+                .member(memberMapper.toMember(currentUser)) // 방장 지정
                 .build();
 
         // 본인을 맨 앞에 추가
         List<ChatRoomMember> chatRoomMembers = new ArrayList<>();
         ChatRoomMember enterChatRoomMyself = ChatRoomMember.builder()
-                .member(memberConverter.toMember(currentUser))
+                .member(memberMapper.toMember(currentUser))
                 .chatRoom(chatRoom)
                 .build();
         chatRoomMembers.add(enterChatRoomMyself);
@@ -94,7 +92,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
         chatRoom.setChatRoomMembers(chatRoomMembers);
         chatRoomRepository.save(chatRoom);
-        return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
+        return chatRoomMapper.toChatRoomResponse(enterChatRoomMyself);
     }
 
     // AI 채팅방 생성
@@ -127,7 +125,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 ),
                 currentUser
         );
-        return chatRoomConverter.toChatRoomResponse(enterChatRoomMyself);
+        return chatRoomMapper.toChatRoomResponse(enterChatRoomMyself);
     }
 
     @Override
@@ -237,7 +235,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         ChatRoom chatRoom = chatRoomRepository.findByTeamId(teamId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
-        return chatRoomConverter.toChatRoomResponse(chatRoom);
+        return chatRoomMapper.toChatRoomResponse(chatRoom);
     }
 
     // 초대 수락 시 채팅방에 참여
@@ -280,16 +278,16 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     private ChatRoomListResponse getAllChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findMyChatRooms(memberId);
-        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+        return chatRoomMapper.toChatRoomListResponse(chatRoomList);
     }
 
     private ChatRoomListResponse getAiChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findAiChatRooms(memberId);
-        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+        return chatRoomMapper.toChatRoomListResponse(chatRoomList);
     }
 
     private ChatRoomListResponse getTeamChatRooms(Long memberId) {
         List<ChatRoomMember> chatRoomList = chatRoomRepository.findTeamChatRooms(memberId);
-        return chatRoomConverter.toChatRoomListResponse(chatRoomList);
+        return chatRoomMapper.toChatRoomListResponse(chatRoomList);
     }
 }

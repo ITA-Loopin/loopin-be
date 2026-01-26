@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.account.member.converter;
+package com.loopone.loopinbe.domain.account.member.mapper;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.dto.res.DetailMemberResponse;
@@ -6,8 +6,8 @@ import com.loopone.loopinbe.domain.account.member.dto.res.MemberResponse;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = SimpleMemberConverter.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface MemberConverter {
+@Mapper(componentModel = "spring", uses = SimpleMemberMapper.class, unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface MemberMapper {
     // ---------- Member -> MemberResponse ----------
     MemberResponse toMemberResponse(Member source);
 

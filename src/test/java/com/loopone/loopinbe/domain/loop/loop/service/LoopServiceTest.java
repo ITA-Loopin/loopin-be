@@ -2,16 +2,15 @@ package com.loopone.loopinbe.domain.loop.loop.service;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapperImpl;
+import com.loopone.loopinbe.domain.account.member.mapper.SimpleMemberMapperImpl;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapperImpl;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverterImpl;
-import com.loopone.loopinbe.domain.account.member.converter.SimpleMemberConverterImpl;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
-import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.DailyLoopsResponse;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopCalendarResponse;
@@ -19,7 +18,6 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.entity.LoopRule;
 import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
-import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.loop.loop.serviceImpl.LoopServiceImpl;
@@ -35,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -48,8 +45,8 @@ import static org.assertj.core.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ TestContainersConfig.class, LoopServiceImpl.class, LoopMapperImpl.class, MemberConverterImpl.class,
-        SimpleMemberConverterImpl.class })
+@Import({ TestContainersConfig.class, LoopServiceImpl.class, LoopMapperImpl.class, MemberMapperImpl.class,
+        SimpleMemberMapperImpl.class })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class LoopServiceTest {
     // ===== Real Repositories =====

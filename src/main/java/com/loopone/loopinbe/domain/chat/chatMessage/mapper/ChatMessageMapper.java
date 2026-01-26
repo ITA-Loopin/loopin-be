@@ -1,4 +1,4 @@
-package com.loopone.loopinbe.domain.chat.chatMessage.converter;
+package com.loopone.loopinbe.domain.chat.chatMessage.mapper;
 
 import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public abstract class ChatMessageConverter {
+public abstract class ChatMessageMapper {
     @Autowired protected MemberRepository memberRepository;
     @Autowired protected S3Service s3Service;
     private static final String BOT_NICKNAME = "loopin";

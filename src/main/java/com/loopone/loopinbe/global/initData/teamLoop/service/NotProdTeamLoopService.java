@@ -1,15 +1,12 @@
 package com.loopone.loopinbe.global.initData.teamLoop.service;
 
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.account.member.repository.MemberRepository;
 import com.loopone.loopinbe.domain.loop.loop.enums.RepeatType;
 import com.loopone.loopinbe.domain.team.teamLoop.dto.req.TeamLoopCreateRequest;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopImportance;
 import com.loopone.loopinbe.domain.team.teamLoop.enums.TeamLoopType;
 import com.loopone.loopinbe.domain.team.teamLoop.service.TeamLoopService;
-import com.loopone.loopinbe.global.exception.ReturnCode;
-import com.loopone.loopinbe.global.exception.ServiceException;
 import com.loopone.loopinbe.global.initData.util.NotProdUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NotProdTeamLoopService {
     private final TeamLoopService teamLoopService;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private final NotProdUtils notProdUtils;
 
     // 1번 팀에 1번 팀 루프 ("스터디 자료 준비") + 체크리스트 ("자료 조사")
@@ -56,7 +53,7 @@ public class NotProdTeamLoopService {
                         TeamLoopImportance.MEDIUM,
                         null           // targetMemberIds (INDIVIDUAL일 때만 의미)
                 ),
-                memberConverter.toCurrentUserDto(user1)
+                memberMapper.toCurrentUserDto(user1)
         );
         // 2번 팀 루프: user2가 생성
         teamLoopService.createTeamLoop(
@@ -74,7 +71,7 @@ public class NotProdTeamLoopService {
                         TeamLoopImportance.MEDIUM,
                         null
                 ),
-                memberConverter.toCurrentUserDto(user2)
+                memberMapper.toCurrentUserDto(user2)
         );
         log.info("[NOT_PROD] TeamLoops created. team1Id={}, team2Id={}", team1Id, team2Id);
     }
@@ -114,7 +111,7 @@ public class NotProdTeamLoopService {
                             TeamLoopImportance.MEDIUM,
                             null
                     ),
-                    memberConverter.toCurrentUserDto(leader)
+                    memberMapper.toCurrentUserDto(leader)
             );
         }
         log.info("[NOT_PROD] createTestTeamLoops done. createdLoops={}", TEAM_COUNT);
