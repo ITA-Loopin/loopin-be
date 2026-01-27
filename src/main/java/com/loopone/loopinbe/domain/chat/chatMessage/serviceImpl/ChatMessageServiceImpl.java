@@ -2,7 +2,6 @@ package com.loopone.loopinbe.domain.chat.chatMessage.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.MessageContext;
@@ -12,12 +11,12 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageRespo
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.repository.ChatMessageMongoRepository;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatMessage.validator.AttachmentValidator;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
@@ -46,6 +45,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
+import static com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomStatus.*;
 import static com.loopone.loopinbe.global.constants.Constant.*;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
@@ -62,7 +62,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final SseEmitterService sseEmitterService;
     private final S3Service s3Service;
     private final ChatMessageEventPublisher chatMessageEventPublisher;
-    private final ChatRoomStateService chatRoomStateService;
 
     // AI 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
@@ -95,7 +94,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 팀 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<TeamChatMessageResponse> getTeamChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser){
+    public PageResponse<TeamChatMessageResponse> getTeamChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser) {
         try {
             checkPageSize(pageable.getPageSize());
             // 참여자 + 채팅방 타입 검증
@@ -217,6 +216,16 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
         ChatRoom chatRoom = chatRoomRepository.findByIdWithLoopAndChecklists(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
+
+        if (request.messageType() == CREATE_LOOP) {
+            chatRoom.updateChatRoomStatus(AFTER_CREATE_LOOP);
+        } else if (request.messageType() == BEFORE_UPDATE_LOOP) {
+            chatRoom.updateChatRoomStatus(AFTER_CLICK_UPDATE_LOOP);
+        } else if (request.messageType() == UPDATE_LOOP) {
+            chatRoom.updateChatRoomStatus(AFTER_CREATE_UPDATE_LOOP);
+        } else if (request.messageType() == RECREATE_LOOP) {
+            chatRoom.updateChatRoomStatus(DEFAULT);
+        }
 
         Loop loop = chatRoom.getLoop();
         initializeLoopRule(loop);
@@ -498,7 +507,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
         } else if (type == UPDATE_LOOP) {
             publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
-            chatRoomStateService.setCallUpdateLoop(chatRoomId, true);
         }
     }
 }

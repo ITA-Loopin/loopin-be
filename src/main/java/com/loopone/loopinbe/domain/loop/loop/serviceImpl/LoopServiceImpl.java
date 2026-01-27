@@ -6,8 +6,8 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
+import com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomStatus;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
-import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
 import com.loopone.loopinbe.domain.loop.helper.LoopCacheEvictionHelper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
@@ -51,7 +51,6 @@ public class LoopServiceImpl implements LoopService {
     private final MemberMapper memberMapper;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageService chatMessageService;
-    private final ChatRoomStateService chatRoomStateService;
     private final LoopChecklistRepository loopChecklistRepository;
     private final LoopCacheEvictionHelper loopCacheEvictionHelper;
 
@@ -90,6 +89,7 @@ public class LoopServiceImpl implements LoopService {
             Loop loop = loopRepository.findById(loopId)
                     .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
             ChatRoom chatRoom = linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+            chatRoom.updateChatRoomStatus(ChatRoomStatus.BEFORE_CLICK_UPDATE_LOOP);
 
             if (chatRoom.isBotRoom()) {
                 chatMessageService.sendChatMessage(
@@ -279,6 +279,7 @@ public class LoopServiceImpl implements LoopService {
 
         if (chatRoom != null && !newLoops.isEmpty()) {
             chatRoom.setLoop(newLoops.get(0));
+            chatRoom.updateChatRoomStatus(ChatRoomStatus.BEFORE_CLICK_UPDATE_LOOP);
             chatMessageService.sendChatMessage(
                     chatRoom.getId(),
                     new ChatMessageRequest(
@@ -288,7 +289,6 @@ public class LoopServiceImpl implements LoopService {
                     ),
                     currentUser
             );
-            chatRoomStateService.setCallUpdateLoop(chatRoom.getId(), false);
         }
         // 커밋 후 캐시 무효화
         loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
