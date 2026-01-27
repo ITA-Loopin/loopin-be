@@ -111,29 +111,12 @@ public class TeamLoopChecklistServiceImpl implements TeamLoopChecklistService {
         TeamLoopMemberCheck myCheck = getMyCheckOrThrow(currentUser.id(), checklistId);
         myCheck.toggleChecked();
 
-        TeamLoopChecklist checklist = myCheck.getChecklist();
-        TeamLoop teamLoop = checklist.getTeamLoop();
-        Member member = getMemberOrThrow(currentUser.id());
-        TeamLoopMemberProgress myProgress = getMyProgressOrThrow(teamLoop, member);
-
-        // 체크리스트 상태에 따라 status 자동 업데이트
-        int totalChecklistCount = teamLoop.getTeamLoopChecklists().size();
-        if (totalChecklistCount > 0) {
-            long checkedCount = myProgress.getChecks().stream()
-                    .filter(TeamLoopMemberCheck::isChecked)
-                    .count();
-
-            if (checkedCount == totalChecklistCount) {
-                myProgress.setStatus(TeamLoopStatus.COMPLETED);
-            } else if (checkedCount > 0) {
-                myProgress.setStatus(TeamLoopStatus.IN_PROGRESS);
-            } else {
-                myProgress.setStatus(TeamLoopStatus.NOT_STARTED);
-            }
-        }
-
         // 체크리스트 완료 시 활동 로그 기록
         if (myCheck.isChecked()) {
+            TeamLoopChecklist checklist = myCheck.getChecklist();
+            TeamLoop teamLoop = checklist.getTeamLoop();
+            Member member = getMemberOrThrow(currentUser.id());
+
             // 체크리스트 완료 로그
             TeamLoopActivity activity = TeamLoopActivity.builder()
                     .member(member)
