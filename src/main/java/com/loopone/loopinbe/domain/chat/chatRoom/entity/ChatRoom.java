@@ -1,6 +1,7 @@
 package com.loopone.loopinbe.domain.chat.chatRoom.entity;
 
 import com.loopone.loopinbe.domain.account.member.entity.Member;
+import com.loopone.loopinbe.domain.chat.chatRoom.enums.ChatRoomStatus;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.global.jpa.BaseEntity;
 import jakarta.persistence.*;
@@ -38,8 +39,10 @@ public class ChatRoom extends BaseEntity {
     @Builder.Default
     private boolean isBotRoom = true;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private boolean callUpdateLoop = false;
+    private ChatRoomStatus chatRoomStatus = ChatRoomStatus.DEFAULT;
 
     private Long teamId;
 
@@ -53,5 +56,9 @@ public class ChatRoom extends BaseEntity {
 
     public void updateTitle(String title) {
         this.title = title;
+    }
+
+    public void updateChatRoomStatus(ChatRoomStatus chatRoomStatus) {
+        this.chatRoomStatus = chatRoomStatus;
     }
 }
