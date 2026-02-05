@@ -8,15 +8,18 @@ import org.springframework.util.StringUtils;
 
 @Component
 public class TokenResolver {
+    public static final String AUTHORIZATION_HEADER = "Authorization";
+    public static final String BEARER_PREFIX = "Bearer ";
+
     public String resolveAccess(HttpServletRequest req) {
         // 1) 쿠키 우선
         String byCookie = cookie(req, "access_token");
         if (StringUtils.hasText(byCookie)) return byCookie;
 
         // 2) Authorization: Bearer
-        String auth = req.getHeader(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) {
-            return auth.substring(7);
+        String bearerToken = req.getHeader(AUTHORIZATION_HEADER);
+        if (bearerToken != null && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
     }

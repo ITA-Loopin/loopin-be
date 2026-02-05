@@ -66,8 +66,7 @@ public class WebAuthController {
     // 로그아웃
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "현재 로그인된 사용자가 로그아웃합니다.")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request,
-                                                    @CurrentUser CurrentUserDto currentUser) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, @CurrentUser CurrentUserDto currentUser) {
         String accessToken = tokenResolver.resolveAccess(request);
         authService.logout(currentUser, accessToken);
 
