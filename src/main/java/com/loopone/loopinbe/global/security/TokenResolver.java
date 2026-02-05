@@ -25,10 +25,7 @@ public class TokenResolver {
         // 1) 쿠키 우선
         String byCookie = cookie(req, "refresh_token");
         if (StringUtils.hasText(byCookie)) return byCookie;
-
-        // 2) (하위호환) Authorization-Refresh 헤더
-        String h = req.getHeader("Authorization-Refresh");
-        return (StringUtils.hasText(h) ? h : null);
+        return null;
     }
 
     private String cookie(HttpServletRequest req, String name) {
