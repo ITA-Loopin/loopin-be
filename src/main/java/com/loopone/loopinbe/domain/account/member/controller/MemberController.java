@@ -93,8 +93,7 @@ public class MemberController {
     // 회원탈퇴
     @DeleteMapping
     @Operation(summary = "회원탈퇴", description = "현재 로그인된 사용자가 회원탈퇴합니다.")
-    public ResponseEntity<ApiResponse<Void>> deleteMember(HttpServletRequest request,
-                                          @CurrentUser CurrentUserDto currentUser) {
+    public ResponseEntity<ApiResponse<Void>> deleteMember(HttpServletRequest request, @CurrentUser CurrentUserDto currentUser) {
         String accessToken = tokenResolver.resolveAccess(request);
         memberService.deleteMember(currentUser, accessToken);
 
