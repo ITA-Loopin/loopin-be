@@ -38,7 +38,12 @@ public class ChatRoom extends BaseEntity {
     @Builder.Default
     private boolean isBotRoom = true;
 
+    @Builder.Default
+    private boolean callUpdateLoop = false;
+
     private Long teamId;
+
+    private String noticeMessageContent;
 
     private Instant lastMessageAt;
 

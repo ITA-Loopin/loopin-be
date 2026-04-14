@@ -10,7 +10,7 @@ import com.loopone.loopinbe.domain.account.member.entity.Member;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollow;
 import com.loopone.loopinbe.domain.account.member.entity.MemberFollowReq;
 import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
 import com.loopone.loopinbe.domain.account.member.enums.ProfileImageState;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowRepository;
 import com.loopone.loopinbe.domain.account.member.repository.MemberFollowReqRepository;
@@ -20,7 +20,11 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
-import com.loopone.loopinbe.domain.notification.entity.Notification;
+import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
+import com.loopone.loopinbe.domain.notification.factory.NotificationPayloadFactory;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -32,16 +36,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static com.loopone.loopinbe.global.constants.KafkaKey.FOLLOW_NOTIFICATION_TOPIC;
@@ -55,10 +56,12 @@ public class MemberServiceImpl implements MemberService {
     private final MemberFollowReqRepository memberFollowReqRepository;
     private final MemberFollowRepository memberFollowRepository;
     private final S3Service s3Service;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private final ChatRoomService chatRoomService;
     private final TeamService teamService;
     private final LoopService loopService;
+    private final TeamInvitationService teamInvitationService;
+    private final CacheManager cacheManager;
     private final NotificationEventPublisher notificationEventPublisher;
     private final AuthEventPublisher authEventPublisher;
 
@@ -89,10 +92,11 @@ public class MemberServiceImpl implements MemberService {
     // 본인 회원정보 조회
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "myInfo", key = "#currentUser.id()")
     public MemberResponse getMyInfo(CurrentUserDto currentUser) {
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toMemberResponse(member);
+        return memberMapper.toMemberResponse(member);
     }
 
     // 본인 상세회원정보 조회
@@ -101,7 +105,7 @@ public class MemberServiceImpl implements MemberService {
     public DetailMemberResponse getMyDetailInfo(CurrentUserDto currentUser){
         Member member = memberRepository.findById(currentUser.id())
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toDetailMemberResponse(member);
+        return memberMapper.toDetailMemberResponse(member);
     }
 
     // 다른 멤버의 회원정보 조회
@@ -110,7 +114,7 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse getMemberInfo(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toMemberResponse(member);
+        return memberMapper.toMemberResponse(member);
     }
 
     // 다른 멤버의 상세회원정보 조회
@@ -119,7 +123,7 @@ public class MemberServiceImpl implements MemberService {
     public DetailMemberResponse getDetailMemberInfo(Long memberId){
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        return memberConverter.toDetailMemberResponse(member);
+        return memberMapper.toDetailMemberResponse(member);
     }
 
     // 닉네임 중복 확인
@@ -184,6 +188,8 @@ public class MemberServiceImpl implements MemberService {
             }
         }
         member.update(memberUpdateRequest, finalImageUrl, null);
+        // 커밋 이후 캐시 무효화
+        evictMyInfoCacheAfterCommit(currentUser.id());
     }
 
     // 회원탈퇴
@@ -195,10 +201,13 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 연관된 데이터 삭제
         chatRoomService.leaveAllChatRooms(currentUser.id());
+        teamInvitationService.deleteAllInvitationsRelatedToMember(currentUser.id());
         teamService.deleteMyTeams(member);
         loopService.deleteMyLoops(currentUser.id());
         // 회원삭제
         memberRepository.delete(member);
+        // 커밋 이후 캐시 무효화
+        evictMyInfoCacheAfterCommit(currentUser.id());
         // 로그아웃
         AuthPayload payload = new AuthPayload(
                 java.util.UUID.randomUUID().toString(),
@@ -225,7 +234,7 @@ public class MemberServiceImpl implements MemberService {
         if (Objects.equals(memberId, currentUser.id())) {
             throw new ServiceException(ReturnCode.CANNOT_FOLLOW_SELF);
         }
-        Member followReq = memberConverter.toMember(currentUser);
+        Member followReq = memberMapper.toMember(currentUser);
         Member followRec = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         // 기존 팔로우 여부 확인
@@ -243,15 +252,8 @@ public class MemberServiceImpl implements MemberService {
                 .followRec(followRec)
                 .build();
         memberFollowReqRepository.save(memberFollowReq);
-        NotificationPayload payload = new NotificationPayload(
-                followReq.getId(),
-                followReq.getNickname(),
-                followReq.getProfileImageUrl(),
-                followRec.getId(),
-                memberFollowReq.getId(),
-                "님이 팔로우를 요청하였습니다.",
-                Notification.TargetObject.Follow
-        );
+        NotificationPayload payload = NotificationPayloadFactory.memberFollowRequest(followReq, followRec, memberFollowReq);
+
         // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -265,7 +267,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void cancelFollowReq(Long memberId, CurrentUserDto currentUser){
-        Member followReq = memberConverter.toMember(currentUser);
+        Member followReq = memberMapper.toMember(currentUser);
         Member followRec = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         MemberFollowReq memberFollowReq = memberFollowReqRepository.findByFollowReqAndFollowRec(followReq, followRec)
@@ -279,7 +281,7 @@ public class MemberServiceImpl implements MemberService {
     public void acceptFollowReq(Long memberId, CurrentUserDto currentUser){
         Member requester = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member receiver = memberConverter.toMember(currentUser);
+        Member receiver = memberMapper.toMember(currentUser);
         MemberFollowReq followReq = memberFollowReqRepository.findByFollowReqAndFollowRec(requester, receiver)
                 .orElseThrow(() -> new ServiceException(ReturnCode.REQUEST_NOT_FOUND));
         memberFollowReqRepository.delete(followReq);
@@ -288,15 +290,8 @@ public class MemberServiceImpl implements MemberService {
                 .followed(receiver)
                 .build();
         memberFollowRepository.save(memberFollow);
-        NotificationPayload payload = new NotificationPayload(
-                currentUser.id(),              // 수락한 사람(=receiver)이 sender
-                currentUser.nickname(),
-                currentUser.profileImageUrl(),
-                memberId,                      // requester에게 알림
-                memberFollow.getId(),
-                "님이 팔로우 요청을 수락하였습니다.",
-                Notification.TargetObject.Follow
-        );
+        NotificationPayload payload = NotificationPayloadFactory.memberFollowAccepted(receiver, requester, memberFollow);
+
         // 커밋 이후에만 발행 (롤백 시 이벤트 발행 방지)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -312,7 +307,7 @@ public class MemberServiceImpl implements MemberService {
     public void refuseFollowReq(Long memberId, CurrentUserDto currentUser){
         Member requester = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member receiver = memberConverter.toMember(currentUser);
+        Member receiver = memberMapper.toMember(currentUser);
         MemberFollowReq memberFollowReq = memberFollowReqRepository.findByFollowReqAndFollowRec(requester, receiver)
                 .orElseThrow(() -> new ServiceException(ReturnCode.REQUEST_NOT_FOUND));
         memberFollowReqRepository.delete(memberFollowReq);
@@ -322,7 +317,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void cancelFollow(Long memberId, CurrentUserDto currentUser){
-        Member follow = memberConverter.toMember(currentUser);
+        Member follow = memberMapper.toMember(currentUser);
         Member followed = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
@@ -336,7 +331,7 @@ public class MemberServiceImpl implements MemberService {
     public void removeFollowed(Long memberId, CurrentUserDto currentUser){
         Member follow = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.USER_NOT_FOUND));
-        Member followed = memberConverter.toMember(currentUser);
+        Member followed = memberMapper.toMember(currentUser);
         MemberFollow memberFollow = memberFollowRepository.findByFollowAndFollowed(follow, followed)
                 .orElseThrow(() -> new ServiceException(ReturnCode.FOLLOWER_NOT_FOUND));
         memberFollowRepository.delete(memberFollow);
@@ -361,6 +356,30 @@ public class MemberServiceImpl implements MemberService {
         } catch (IllegalArgumentException e) {
             // URL 형태가 깨져있으면 내부오류로 보는 게 맞음(가정 위반)
             throw new ServiceException(ReturnCode.INTERNAL_ERROR);
+        }
+    }
+
+    // 트랜잭션 커밋 이후에 캐시 무효화 (롤백 시 캐시 유지)
+    private void evictMyInfoCacheAfterCommit(Long memberId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            // 트랜잭션이 없으면 즉시 evict
+            evictMyInfoCache(memberId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                evictMyInfoCache(memberId);
+            }
+        });
+    }
+
+    // 캐시 무효화
+    private void evictMyInfoCache(Long memberId) {
+        Cache cache = cacheManager.getCache("myInfo");
+        if (cache != null) {
+            cache.evictIfPresent(memberId);
+            log.debug("MyInfo cache evicted: {}", memberId);
         }
     }
 }

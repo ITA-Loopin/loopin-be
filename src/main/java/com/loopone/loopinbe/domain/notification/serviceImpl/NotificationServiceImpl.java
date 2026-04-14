@@ -2,11 +2,9 @@ package com.loopone.loopinbe.domain.notification.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.entity.MemberPage;
 import com.loopone.loopinbe.domain.fcm.dto.res.FcmMessageResponse;
-import com.loopone.loopinbe.domain.fcm.service.FcmService;
 import com.loopone.loopinbe.domain.fcm.service.FcmTokenService;
-import com.loopone.loopinbe.domain.notification.converter.NotificationConverter;
+import com.loopone.loopinbe.domain.notification.mapper.NotificationMapper;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
 import com.loopone.loopinbe.domain.notification.dto.req.NotificationRequest;
 import com.loopone.loopinbe.domain.notification.dto.res.NotificationResponse;
@@ -34,7 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
-    private final NotificationConverter notificationConverter;
+    private final NotificationMapper notificationMapper;
     private final ObjectMapper objectMapper;
     private final FcmTokenService fcmTokenService;
     private final FcmEventPublisher fcmEventPublisher;
@@ -46,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification;
         try {
             NotificationPayload payload = objectMapper.readValue(message, NotificationPayload.class);
-            notification = notificationConverter.toNotification(payload, title);
+            notification = notificationMapper.toNotification(payload, title);
         } catch (Exception e) {
             // 역직렬화 실패는 재시도해도 의미 없음 → 비재시도 예외로 래핑해도 좋음
             log.error("Failed to deserialize notification message: {}", message, e);
@@ -65,7 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
                         log.warn("FCM token not found for receiverId: {}", notification.getReceiverId());
                         return;
                     }
-                    NotificationResponse notificationResponse = notificationConverter.toNotificationResponse(notification);
+                    NotificationResponse notificationResponse = notificationMapper.toNotificationResponse(notification);
                     String bodyJson = objectMapper.writeValueAsString(notificationResponse);
                     String eventId = "notif:" + notification.getId();
                     FcmMessageResponse fcmMessageResponse = FcmMessageResponse.builder()
@@ -88,7 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
     public PageResponse<NotificationResponse> getNotifications(Pageable pageable, CurrentUserDto currentUser) {
         checkPageSize(pageable.getPageSize());
         Page<Notification> notificationPage = notificationRepository.findByReceiverIdOrderByCreatedAtDesc(currentUser.id(), pageable);
-        return PageResponse.of(notificationPage.map(notificationConverter::toNotificationResponse));
+        return PageResponse.of(notificationPage.map(notificationMapper::toNotificationResponse));
     }
 
     // 알림 읽음 처리

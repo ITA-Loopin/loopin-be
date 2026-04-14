@@ -9,28 +9,21 @@ import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
 import static com.loopone.loopinbe.global.constants.Constant.CREATE_LOOP_PROMPT;
 import static com.loopone.loopinbe.global.constants.Constant.UPDATE_LOOP_PROMPT;
-import static com.loopone.loopinbe.global.constants.RedisKey.OPEN_AI_RESULT_KEY;
 
 @Slf4j
 public abstract class AbstractAiProvider implements AiProvider {
-
-    protected final RedisTemplate<String, Object> redisTemplate;
     protected final ObjectMapper objectMapper;
 
     protected AbstractAiProvider(
-            RedisTemplate<String, Object> redisTemplate,
             ObjectMapper objectMapper
     ) {
-        this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
 
@@ -47,14 +40,11 @@ public abstract class AbstractAiProvider implements AiProvider {
             loopRuleId = payload.loopDetailResponse().loopRule().ruleId();
         }
 
-        RecommendationsLoop resultWithRuleId = new RecommendationsLoop(
+        return new RecommendationsLoop(
                 parsed.title(),
                 loopRuleId,
                 parsed.recommendations()
         );
-
-        cache(payload.clientMessageId().toString(), resultWithRuleId);
-        return resultWithRuleId;
     }
 
     protected String buildPrompt(AiPayload payload) {
@@ -66,20 +56,34 @@ public abstract class AbstractAiProvider implements AiProvider {
 
     protected RecommendationsLoop parse(String result) {
         try {
-            objectMapper.readTree(result);
-            return objectMapper.readValue(result, RecommendationsLoop.class);
+            String cleaned = extractJson(result);
+            objectMapper.readTree(cleaned);
+            return objectMapper.readValue(cleaned, RecommendationsLoop.class);
         } catch (JsonProcessingException e) {
             log.warn("AI 응답 JSON 파싱 실패", e);
             return new RecommendationsLoop(null, null, Collections.emptyList());
         }
     }
 
-    protected void cache(String requestId, RecommendationsLoop result) {
-        redisTemplate.opsForValue().set(
-                OPEN_AI_RESULT_KEY + requestId,
-                result,
-                Duration.ofMinutes(10)
-        );
+    private String extractJson(String raw) {
+        // ```json ... ``` 제거
+        raw = raw.trim();
+
+        if (raw.startsWith("```")) {
+            raw = raw.replaceAll("^```[a-zA-Z]*", "")
+                    .replaceAll("```$", "")
+                    .trim();
+        }
+
+        // 앞뒤 쓰레기 제거 (가장 첫 { 부터 마지막 } 까지)
+        int start = raw.indexOf("{");
+        int end = raw.lastIndexOf("}");
+
+        if (start >= 0 && end >= 0 && start < end) {
+            return raw.substring(start, end + 1);
+        }
+
+        return raw;
     }
 
     private String createPrompt(String message) {

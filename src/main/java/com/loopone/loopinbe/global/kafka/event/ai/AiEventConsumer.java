@@ -3,8 +3,8 @@ package com.loopone.loopinbe.global.kafka.event.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.loopone.loopinbe.global.constants.Constant.AI_CREATE_MESSAGE;
-import static com.loopone.loopinbe.global.constants.Constant.AI_UPDATE_MESSAGE;
+import static com.loopone.loopinbe.global.constants.Constant.AI_UPDATE_SUCCESS_MESSAGE;
 import static com.loopone.loopinbe.global.constants.KafkaKey.*;
 
 @Slf4j
@@ -36,7 +36,7 @@ public class AiEventConsumer {
     private final LoopAIService loopAIService;
     private final SseEmitterService sseEmitterService;
     private final ChatMessageService chatMessageService;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
     private final ChatRoomService chatRoomService;
 
     @KafkaListener(topics = OPEN_AI_CREATE_TOPIC, groupId = OPEN_AI_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
@@ -46,7 +46,7 @@ public class AiEventConsumer {
 
     @KafkaListener(topics = OPEN_AI_UPDATE_TOPIC, groupId = OPEN_AI_GROUP_ID, containerFactory = KAFKA_LISTENER_CONTAINER)
     public void consumeAiUpdateLoop(ConsumerRecord<String, String> rec) {
-        handleAiEvent(rec, AI_UPDATE_MESSAGE);
+        handleAiEvent(rec, AI_UPDATE_SUCCESS_MESSAGE);
     }
 
     private void handleAiEvent(ConsumerRecord<String, String> rec, String defaultMessage) {
@@ -69,7 +69,12 @@ public class AiEventConsumer {
 
     private void processAiResponse(AiPayload req, RecommendationsLoop recommendations, String message) {
         // 1) AI 결과 기반 Inbound 메시지 생성
-        ChatMessagePayload inbound = createBotPayload(req, recommendations, message);
+        ChatMessagePayload inbound;
+        if(req.loopDetailResponse() != null) {
+            inbound = createBotPayload(req, recommendations, message, true);
+        } else {
+            inbound = createBotPayload(req, recommendations, message, false);
+        }
 
         // 2) SSE 전송 (클라이언트에게 먼저 보여줌)
         sendSseEvent(inbound);
@@ -81,7 +86,7 @@ public class AiEventConsumer {
         chatRoomService.updateChatRoomTitle(req.chatRoomId(), recommendations.title());
     }
 
-    private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message) {
+    private ChatMessagePayload createBotPayload(AiPayload req, RecommendationsLoop recommendationsLoop, String message, boolean callUpdateLoop) {
         return new ChatMessagePayload(
                 generateDeterministicKey(req),
                 req.clientMessageId(),
@@ -91,8 +96,10 @@ public class AiEventConsumer {
                 null,
                 recommendationsLoop.recommendations(),
                 recommendationsLoop.loopRuleId(),
+                null,
                 ChatMessage.AuthorType.BOT,
                 true,
+                callUpdateLoop,
                 Instant.now(),
                 Instant.now()
         );
@@ -100,8 +107,8 @@ public class AiEventConsumer {
 
     private void sendSseEvent(ChatMessagePayload inbound) {
         try {
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(inbound));
-            ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(inbound, memberMap);
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(inbound));
+            AiChatMessageResponse response = chatMessageMapper.toAiChatMessageResponse(inbound, memberMap);
             sseEmitterService.sendToClient(inbound.chatRoomId(), MessageType.MESSAGE, response);
         } catch (Exception e) {
             // SSE 전송 실패가 로직 전체 실패로 이어지지 않도록 로그만 기록

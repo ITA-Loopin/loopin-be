@@ -1,15 +1,11 @@
 package com.loopone.loopinbe.global.webSocket.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
-import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
 import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomMemberService;
-import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.global.kafka.event.chatMessage.ChatMessageEventPublisher;
 import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import com.loopone.loopinbe.global.webSocket.util.WsSessionRegistry;
@@ -25,8 +21,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatRoomMemberService chatRoomMemberService;
     private final ChatMessageService chatMessageService;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
     private final ObjectMapper objectMapper;
     private final ChatMessageEventPublisher chatMessageEventPublisher;
     private final Map<Long, CopyOnWriteArrayList<WebSocketSession>> chatRoomSessions = new ConcurrentHashMap<>();
@@ -105,7 +99,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return memberId;
     }
 
-    @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             Long chatRoomId = requireChatRoomId(session);
@@ -113,80 +106,69 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             ChatWebSocketPayload in = objectMapper.readValue(message.getPayload(), ChatWebSocketPayload.class);
             switch (in.getMessageType()) {
                 case MESSAGE -> {
-                    // 1) validation
                     UUID clientMessageId = in.getClientMessageId();
                     if (clientMessageId == null) {
                         sendWsError(session, "BAD_REQUEST", "clientMessageId is required");
                         return;
                     }
-                    String content = (in.getChatMessageResponse() != null)
-                            ? in.getChatMessageResponse().getContent()
+                    String content = (in.getTeamChatMessageResponse() != null)
+                            ? in.getTeamChatMessageResponse().getContent()
                             : null;
                     if (content == null || content.isBlank()) {
                         sendWsError(session, "BAD_REQUEST", "content is required");
                         return;
                     }
-                    // 2) inbound payload 생성 (idempotent key)
-                    Instant now = Instant.now();
-                    ChatMessagePayload inbound = new ChatMessagePayload(
-                            "u:" + clientMessageId,
-                            clientMessageId,
-                            chatRoomId,
-                            memberId,
-                            content,
-                            null,
-                            null,
-                            null,
-                            ChatMessage.AuthorType.USER,
-                            false,
-                            now,
-                            now
-                    );
-                    // 3) Mongo upsert (멱등 저장)
-                    ChatMessagePayload saved = chatMessageService.processInbound(inbound);
-                    // 4) WS 응답 DTO로 매핑
-                    Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-                    ChatMessageResponse savedResp = chatMessageConverter.toChatMessageResponse(saved, memberMap);
-                    ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                    // 저장은 컨슈머가 함. 여기서는 이벤트만 발행.
+                    ChatWebSocketPayload event = ChatWebSocketPayload.builder()
                             .messageType(MessageType.MESSAGE)
                             .chatRoomId(chatRoomId)
-                            .chatMessageResponse(savedResp)
-                            .clientMessageId(saved.clientMessageId())
+                            .memberId(memberId)
+                            .clientMessageId(clientMessageId)
+                            .teamChatMessageResponse(TeamChatMessageResponse.builder()
+                                    .content(content)
+                                    .build())
                             .build();
-                    chatMessageEventPublisher.publishWsEvent(out);
+                    chatMessageEventPublisher.publishWsEvent(event);
                 }
                 case READ_UP_TO -> {
                     if (in.getLastReadAt() == null) {
                         sendWsError(session, "BAD_REQUEST", "lastReadAt is required");
                         return;
                     }
-                    Instant updated = chatRoomMemberService.updateLastReadAt(chatRoomId, memberId, in.getLastReadAt());
-                    ChatWebSocketPayload out = ChatWebSocketPayload.builder()
+                    ChatWebSocketPayload event = ChatWebSocketPayload.builder()
                             .messageType(MessageType.READ_UP_TO)
                             .chatRoomId(chatRoomId)
                             .memberId(memberId)
-                            .lastReadAt(updated)
+                            .lastReadAt(in.getLastReadAt())
                             .build();
-                    chatMessageEventPublisher.publishWsEvent(out);
+                    chatMessageEventPublisher.publishWsEvent(event);
+                }
+                case SET_NOTICE -> {
+                    if (in.getNoticeMessageId() == null) {
+                        sendWsError(session, "BAD_REQUEST", "messageId is required");
+                        return;
+                    }
+                    ChatWebSocketPayload event = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.SET_NOTICE)
+                            .chatRoomId(chatRoomId)
+                            .memberId(memberId)
+                            .noticeMessageId(in.getNoticeMessageId())
+                            .noticeMessageContent(in.getNoticeMessageContent())
+                            .build();
+                    chatMessageEventPublisher.publishWsEvent(event);
                 }
                 case DELETE -> {
                     if (in.getDeleteId() == null) {
                         sendWsError(session, "BAD_REQUEST", "messageId is required");
                         return;
                     }
-                    String messageId = String.valueOf(in.getDeleteId());
-                    try {
-                        chatMessageService.deleteChatMessage(messageId, memberId);
-                        ChatWebSocketPayload out = ChatWebSocketPayload.builder()
-                                .messageType(MessageType.DELETE)
-                                .chatRoomId(chatRoomId)
-                                .deleteId(in.getDeleteId())
-                                .build();
-                        chatMessageEventPublisher.publishWsEvent(out);
-                    } catch (Exception e) {
-                        log.error("Failed to delete message: {}", messageId, e);
-                        sendWsError(session, "DELETE_FAILED", "Failed to delete message");
-                    }
+                    ChatWebSocketPayload event = ChatWebSocketPayload.builder()
+                            .messageType(MessageType.DELETE)
+                            .chatRoomId(chatRoomId)
+                            .memberId(memberId)
+                            .deleteId(in.getDeleteId())
+                            .build();
+                    chatMessageEventPublisher.publishWsEvent(event);
                 }
                 default -> log.warn("Unknown/Unhandled messageType: {}", in.getMessageType());
             }

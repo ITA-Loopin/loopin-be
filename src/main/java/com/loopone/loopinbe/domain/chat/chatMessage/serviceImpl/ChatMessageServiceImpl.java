@@ -2,11 +2,13 @@ package com.loopone.loopinbe.domain.chat.chatMessage.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
 import com.loopone.loopinbe.domain.account.member.entity.Member;
-import com.loopone.loopinbe.domain.chat.chatMessage.converter.ChatMessageConverter;
+import com.loopone.loopinbe.domain.chat.chatMessage.mapper.ChatMessageMapper;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
-import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.ChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatMessagePayload;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.MessageContext;
 import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.AiChatMessageResponse;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.res.TeamChatMessageResponse;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.ChatMessagePage;
 import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
@@ -15,7 +17,9 @@ import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatMessage.validator.AttachmentValidator;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
 import com.loopone.loopinbe.domain.loop.ai.dto.AiPayload;
+import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.res.LoopDetailResponse;
 import com.loopone.loopinbe.domain.loop.loop.entity.Loop;
 import com.loopone.loopinbe.domain.loop.loop.mapper.LoopMapper;
@@ -30,7 +34,10 @@ import com.loopone.loopinbe.global.webSocket.payload.ChatWebSocketPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +46,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType.*;
+import static com.loopone.loopinbe.global.constants.Constant.*;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_CREATE_TOPIC;
 import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPIC;
 
@@ -48,24 +56,22 @@ import static com.loopone.loopinbe.global.constants.KafkaKey.OPEN_AI_UPDATE_TOPI
 public class ChatMessageServiceImpl implements ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageMongoRepository chatMessageMongoRepository;
-    private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageMapper chatMessageMapper;
     private final AiEventPublisher aiEventPublisher;
     private final LoopMapper loopMapper;
     private final SseEmitterService sseEmitterService;
     private final S3Service s3Service;
     private final ChatMessageEventPublisher chatMessageEventPublisher;
+    private final ChatRoomStateService chatRoomStateService;
 
-    // 채팅방 과거 메시지 조회 [참여자 권한]
+    // AI 채팅방 과거 메시지 조회 [참여자 권한]
     @Override
-    @Transactional
-    public PageResponse<ChatMessageResponse> findByChatRoomId(
-            Long chatRoomId, Pageable pageable, CurrentUserDto currentUser
-    ) {
+    @Transactional(readOnly = true)
+    public PageResponse<AiChatMessageResponse> getAiChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser) {
         try {
             checkPageSize(pageable.getPageSize());
-            // 참여자 검증
-            boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-            if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+            // 참여자 + 채팅방 타입 검증
+            validateChatRoomAccess(chatRoomId, currentUser.id(), true);
             Pageable sortedPageable = PageRequest.of(
                     pageable.getPageNumber(),
                     pageable.getPageSize(),
@@ -73,9 +79,37 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             );
             Page<ChatMessage> page = chatMessageMongoRepository.findByChatRoomId(chatRoomId, sortedPageable);
 
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
             return PageResponse.of(
-                    page.map(cm -> chatMessageConverter.toChatMessageResponse(cm, memberMap))
+                    page.map(cm -> chatMessageMapper.toAiChatMessageResponse(cm, memberMap))
+            );
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error in findByChatRoomId - chatRoomId: {}, loginUserId: {}, error: {}",
+                    chatRoomId, currentUser.id(), e.getMessage(), e);
+            throw new ServiceException(ReturnCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 팀 채팅방 과거 메시지 조회 [참여자 권한]
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<TeamChatMessageResponse> getTeamChatMessage(Long chatRoomId, Pageable pageable, CurrentUserDto currentUser){
+        try {
+            checkPageSize(pageable.getPageSize());
+            // 참여자 + 채팅방 타입 검증
+            validateChatRoomAccess(chatRoomId, currentUser.id(), false);
+            Pageable sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Direction.DESC, "createdAt")
+            );
+            Page<ChatMessage> page = chatMessageMongoRepository.findByChatRoomId(chatRoomId, sortedPageable);
+
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
+            return PageResponse.of(
+                    page.map(cm -> chatMessageMapper.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
             );
         } catch (ServiceException e) {
             throw e;
@@ -89,7 +123,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     // 채팅방 메시지 검색(내용) [참여자 권한]
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ChatMessageResponse> searchByKeyword(
+    public PageResponse<TeamChatMessageResponse> searchByKeyword(
             Long chatRoomId, String keyword, Pageable pageable, CurrentUserDto currentUser
     ) {
         checkPageSize(pageable.getPageSize());
@@ -103,9 +137,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         );
         Page<ChatMessage> page = chatMessageMongoRepository.searchByKeyword(chatRoomId, keyword, sortedPageable);
 
-        Map<Long, Member> memberMap = chatMessageConverter.loadMembers(page.getContent());
+        Map<Long, Member> memberMap = chatMessageMapper.loadMembers(page.getContent());
         return PageResponse.of(
-                page.map(cm -> chatMessageConverter.toChatMessageResponse(cm, memberMap))
+                page.map(cm -> chatMessageMapper.toTeamChatMessageResponse(cm, memberMap, currentUser.id()))
         );
     }
 
@@ -128,6 +162,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 in.attachments(),
                 in.recommendations(),
                 in.loopRuleId(),
+                in.deleteMessageId(),
                 in.authorType(),
                 in.createdAt(),
                 in.modifiedAt()
@@ -143,8 +178,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 saved.getAttachments(),
                 saved.getRecommendations(),
                 saved.getLoopRuleId(),
+                saved.getDeleteMessageId(),
                 saved.getAuthorType(),
                 isBotRoom,
+                in.callUpdateLoop(),
                 saved.getCreatedAt(),
                 saved.getModifiedAt()
         );
@@ -174,38 +211,52 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Override
     @Transactional
     public void sendChatMessage(Long chatRoomId, ChatMessageRequest request, CurrentUserDto currentUser) {
-        // 참여자 검증
-        boolean memberExists = chatRoomRepository.existsMember(chatRoomId, currentUser.id());
-        if (!memberExists) throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
 
-        if (request.messageType() != CREATE_LOOP && request.messageType() != UPDATE_LOOP) {
-            throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
-        }
+        validateParticipant(chatRoomId, currentUser.id());
+        validateMessageType(request.messageType());
 
         ChatRoom chatRoom = chatRoomRepository.findByIdWithLoopAndChecklists(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
 
         Loop loop = chatRoom.getLoop();
-        if (loop != null && loop.getLoopRule() != null) {
-            Hibernate.initialize(loop.getLoopRule().getDaysOfWeek());
-        }
+        initializeLoopRule(loop);
 
-        ChatMessagePayload payload = toChatMessagePayload(request.clientMessageId(), chatRoomId, currentUser.id(), request.content(), null);
+        LoopDetailResponse loopDetailResponse =
+                (loop != null) ? loopMapper.toDetailResponse(loop) : null;
+
+        MessageContext ctx = switch (request.messageType()) {
+            case START_CHATROOM -> handleStartChatRoom(chatRoomId);
+            case GET_LOOP -> handleGetLoop(loop, loopDetailResponse, chatRoomId);
+            case BEFORE_UPDATE_LOOP -> handleBeforeUpdateLoop(loop, loopDetailResponse, chatRoomId);
+            case RECREATE_LOOP -> handleRecreateLoop(chatRoomId);
+            default -> MessageContext.builder()
+                    .msgId(request.clientMessageId())
+                    .content(request.content())
+                    .author(ChatMessage.AuthorType.USER)
+                    .build();
+        };
+
+        ChatMessagePayload payload = toChatMessagePayload(
+                ctx.msgId(),
+                chatRoomId,
+                currentUser.id(),
+                ctx.content(),
+                null,
+                ctx.recommendations(),
+                ctx.deleteMessageId(),
+                ctx.author(),
+                ctx.loopRuleId()
+        );
+
         ChatMessagePayload saved = processInbound(payload);
 
-        // ChatMessagePayload -> ChatMessageResponse
-        Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-        ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+        Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(saved));
+        AiChatMessageResponse response = chatMessageMapper.toAiChatMessageResponse(saved, memberMap);
+        response.setCallUpdateLoop(false);
 
         sseEmitterService.sendToClient(chatRoomId, MESSAGE, response);
 
-
-        if (request.messageType() == CREATE_LOOP) {
-            publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
-        } else {
-            LoopDetailResponse loopDetailResponse = (loop != null) ? loopMapper.toDetailResponse(loop) : null;
-            publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
-        }
+        publishAiIfNeeded(chatRoom.getId(), request.messageType(), saved, loopDetailResponse);
     }
 
     // 해당 채팅방에서 파일 메시지 전송 [참여자 권한]
@@ -219,7 +270,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         AttachmentValidator.validateImages(images);
         AttachmentValidator.validateFiles(files);
         boolean hasAny = (images != null && images.stream().anyMatch(f -> f != null && !f.isEmpty()))
-                        || (files != null && files.stream().anyMatch(f -> f != null && !f.isEmpty()));
+                || (files != null && files.stream().anyMatch(f -> f != null && !f.isEmpty()));
         if (!hasAny) throw new ServiceException(ReturnCode.FILE_UPLOAD_ERROR);
         // 3) S3 업로드
         List<ChatAttachment> uploaded = new ArrayList<>();
@@ -245,12 +296,16 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     chatRoomId,
                     currentUser.id(),
                     null,
-                    uploaded
+                    uploaded,
+                    null,
+                    null,
+                    ChatMessage.AuthorType.USER,
+                    null
             );
             ChatMessagePayload saved = processInbound(payload);
             // 5) Response 변환
-            Map<Long, Member> memberMap = chatMessageConverter.loadMembersFromPayload(List.of(saved));
-            ChatMessageResponse response = chatMessageConverter.toChatMessageResponse(saved, memberMap);
+            Map<Long, Member> memberMap = chatMessageMapper.loadMembersFromPayload(List.of(saved));
+            TeamChatMessageResponse response = chatMessageMapper.toTeamChatMessageResponse(saved, memberMap, currentUser.id());
             // 6) 이벤트 발행
             publishAttachmentMessage(chatRoomId, saved.clientMessageId(), response);
         } catch (RuntimeException | IOException e) {
@@ -262,7 +317,64 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
+    @Override
+    @Transactional
+    public String deleteRecommendationMessage(Long chatRoomId) {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ChatMessage> recentMessages = chatMessageMongoRepository.findByChatRoomId(chatRoomId, pageable);
+
+        Optional<ChatMessage> target = recentMessages.getContent().stream()
+                .filter(msg -> msg.getAuthorType() == ChatMessage.AuthorType.BOT
+                        && msg.getRecommendations() != null
+                        && !msg.getRecommendations().isEmpty())
+                .findFirst();
+
+        if (target.isPresent()) {
+            ChatMessage msg = target.get();
+            String id = msg.getId();
+            chatMessageMongoRepository.delete(msg);
+            return id;
+        }
+        return null;
+    }
+
     // ----------------- 헬퍼 메서드 -----------------
+
+    private LoopCreateRequest convertToCreateRequest(LoopDetailResponse detail, Long chatRoomId) {
+        // LoopDetailResponse -> LoopCreateRequest 변환
+        // 주의: ID나 진행률 정보는 유실됨
+        List<String> checklists = (detail.checklists() != null)
+                ? detail.checklists().stream().map(com.loopone.loopinbe.domain.loop.loopChecklist.dto.res.LoopChecklistResponse::content).toList()
+                : Collections.emptyList();
+
+        var rule = detail.loopRule();
+
+        return new LoopCreateRequest(
+                detail.title(),
+                detail.content(),
+                (rule != null) ? rule.scheduleType() : com.loopone.loopinbe.domain.loop.loop.enums.RepeatType.NONE,
+                (rule == null) ? detail.loopDate() : null, // 규칙 없으면 단일 날짜 사용
+                (rule != null) ? rule.daysOfWeek() : null,
+                (rule != null) ? rule.startDate() : null,
+                (rule != null) ? rule.endDate() : null,
+                checklists,
+                chatRoomId
+        );
+    }
+
+    private void validateChatRoomAccess(Long chatRoomId, Long memberId, boolean requireBotRoom) {
+        // 1) 참여자 검증
+        boolean memberExists = chatRoomRepository.existsMember(chatRoomId, memberId);
+        if (!memberExists) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+        // 2) 채팅방 타입 검증 (AI=botRoom=true, 팀=botRoom=false)
+        boolean roomTypeOk = chatRoomRepository.existsByIdAndIsBotRoom(chatRoomId, requireBotRoom);
+        if (!roomTypeOk) {
+            // 채팅방은 존재하지만 타입이 다르거나, 혹은 존재 자체가 없을 수도 있음
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+    }
 
     // 요청 페이지 수 제한
     private void checkPageSize(int pageSize) {
@@ -272,8 +384,13 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
     }
 
-    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<ChatAttachment> attachments) {
-        String id = "u:" + clientMessageId;
+    private ChatMessagePayload toChatMessagePayload(UUID clientMessageId, Long chatRoomId, Long userId, String content, List<ChatAttachment> attachments, List<LoopCreateRequest> recommendations, String deleteMessageId, ChatMessage.AuthorType authorType, Long loopRuleId) {
+        String id;
+        if (authorType.equals(ChatMessage.AuthorType.BOT)) {
+            id = "ai:" + clientMessageId;
+        } else {
+            id = "u:" + clientMessageId;
+        }
         return new ChatMessagePayload(
                 id,
                 clientMessageId,
@@ -281,10 +398,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                 userId,
                 content,
                 attachments,
-                null,
-                null,
-                ChatMessage.AuthorType.USER,
+                recommendations,
+                loopRuleId,
+                deleteMessageId,
+                authorType,
                 true,
+                false,
                 java.time.Instant.now(),
                 java.time.Instant.now());
     }
@@ -301,13 +420,85 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         aiEventPublisher.publishAiRequest(req, topic);
     }
 
-    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, ChatMessageResponse response) {
+    private void publishAttachmentMessage(Long chatRoomId, UUID clientMessageId, TeamChatMessageResponse response) {
         ChatWebSocketPayload out = ChatWebSocketPayload.builder()
                 .messageType(MessageType.MESSAGE)
                 .chatRoomId(chatRoomId)
                 .clientMessageId(clientMessageId)
-                .chatMessageResponse(response)
+                .teamChatMessageResponse(response)
                 .build();
         chatMessageEventPublisher.publishWsEvent(out);
+    }
+
+    private MessageContext handleStartChatRoom(Long chatRoomId) {
+        return MessageContext.builder()
+                .msgId(UUID.randomUUID())
+                .content(AI_START_MESSAGE)
+                .author(ChatMessage.AuthorType.BOT)
+                .build();
+    }
+
+    private MessageContext handleGetLoop(Loop loop, LoopDetailResponse loopDetailResponse, Long chatRoomId) {
+        return MessageContext.builder()
+                .msgId(UUID.randomUUID())
+                .content(AI_AFTER_SELECT_LOOP_MESSAGE)
+                .author(ChatMessage.AuthorType.BOT)
+                .recommendations(loopDetailResponse != null
+                        ? List.of(convertToCreateRequest(loopDetailResponse, chatRoomId))
+                        : null)
+                .loopRuleId(loop != null && loop.getLoopRule() != null
+                        ? loop.getLoopRule().getId()
+                        : null)
+                .build();
+    }
+
+    private MessageContext handleBeforeUpdateLoop(Loop loop, LoopDetailResponse loopDetailResponse, Long chatRoomId) {
+        return MessageContext.builder()
+                .msgId(UUID.randomUUID())
+                .content(AI_UPDATE_MESSAGE)
+                .author(ChatMessage.AuthorType.BOT)
+                .recommendations(loopDetailResponse != null
+                        ? List.of(convertToCreateRequest(loopDetailResponse, chatRoomId))
+                        : null)
+                .loopRuleId(loop != null && loop.getLoopRule() != null
+                        ? loop.getLoopRule().getId()
+                        : null)
+                .build();
+    }
+
+    private MessageContext handleRecreateLoop(Long chatRoomId) {
+        return MessageContext.builder()
+                .msgId(UUID.randomUUID())
+                .content(AI_RECREATE_MESSAGE)
+                .author(ChatMessage.AuthorType.BOT)
+                .deleteMessageId(deleteRecommendationMessage(chatRoomId))
+                .build();
+    }
+
+    private void validateParticipant(Long chatRoomId, Long memberId) {
+        if (!chatRoomRepository.existsMember(chatRoomId, memberId)) {
+            throw new ServiceException(ReturnCode.NOT_AUTHORIZED);
+        }
+    }
+
+    private void validateMessageType(MessageType type) {
+        if (!EnumSet.of(START_CHATROOM, CREATE_LOOP, UPDATE_LOOP, GET_LOOP, RECREATE_LOOP, BEFORE_UPDATE_LOOP).contains(type)) {
+            throw new ServiceException(ReturnCode.CHATMESSAGE_INVALID_TYPE);
+        }
+    }
+
+    private void initializeLoopRule(Loop loop) {
+        if (loop != null && loop.getLoopRule() != null) {
+            Hibernate.initialize(loop.getLoopRule().getDaysOfWeek());
+        }
+    }
+
+    private void publishAiIfNeeded(Long chatRoomId, MessageType type, ChatMessagePayload saved, LoopDetailResponse loopDetailResponse) {
+        if (type == CREATE_LOOP) {
+            publishAI(saved, null, OPEN_AI_CREATE_TOPIC);
+        } else if (type == UPDATE_LOOP) {
+            publishAI(saved, loopDetailResponse, OPEN_AI_UPDATE_TOPIC);
+            chatRoomStateService.setCallUpdateLoop(chatRoomId, true);
+        }
     }
 }

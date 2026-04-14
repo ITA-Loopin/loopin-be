@@ -1,9 +1,14 @@
 package com.loopone.loopinbe.domain.loop.loop.serviceImpl;
 
 import com.loopone.loopinbe.domain.account.auth.currentUser.CurrentUserDto;
-import com.loopone.loopinbe.domain.account.member.converter.MemberConverter;
+import com.loopone.loopinbe.domain.account.member.mapper.MemberMapper;
+import com.loopone.loopinbe.domain.chat.chatMessage.dto.req.ChatMessageRequest;
+import com.loopone.loopinbe.domain.chat.chatMessage.entity.type.MessageType;
+import com.loopone.loopinbe.domain.chat.chatMessage.service.ChatMessageService;
 import com.loopone.loopinbe.domain.chat.chatRoom.entity.ChatRoom;
 import com.loopone.loopinbe.domain.chat.chatRoom.repository.ChatRoomRepository;
+import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomStateService;
+import com.loopone.loopinbe.domain.loop.helper.LoopCacheEvictionHelper;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCompletionUpdateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopCreateRequest;
 import com.loopone.loopinbe.domain.loop.loop.dto.req.LoopGroupUpdateRequest;
@@ -20,10 +25,12 @@ import com.loopone.loopinbe.domain.loop.loop.repository.LoopRepository;
 import com.loopone.loopinbe.domain.loop.loop.repository.LoopRuleRepository;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.loop.loopChecklist.entity.LoopChecklist;
+import com.loopone.loopinbe.domain.loop.loopChecklist.repository.LoopChecklistRepository;
 import com.loopone.loopinbe.global.exception.ReturnCode;
 import com.loopone.loopinbe.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +39,8 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
 
+import static com.loopone.loopinbe.global.constants.Constant.AI_AFTER_SELECT_LOOP_MESSAGE;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,45 +48,85 @@ public class LoopServiceImpl implements LoopService {
     private final LoopRepository loopRepository;
     private final LoopRuleRepository loopRuleRepository;
     private final LoopMapper loopMapper;
-    private final MemberConverter memberConverter;
+    private final MemberMapper memberMapper;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageService chatMessageService;
+    private final ChatRoomStateService chatRoomStateService;
+    private final LoopChecklistRepository loopChecklistRepository;
+    private final LoopCacheEvictionHelper loopCacheEvictionHelper;
 
     // 루프 생성
     @Override
     @Transactional
     public Long createLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
-        Long loopId;
-        LoopRule loopRule;
+
+        List<Loop> createdLoops;
+        LoopRule loopRule = null;
+
         switch (requestDTO.scheduleType()) {
-            case NONE -> {
-                loopId = createSingleLoop(requestDTO, currentUser);
-            }
+            case NONE -> createdLoops = List.of(createSingleLoop(requestDTO, currentUser));
+
             case WEEKLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                loopId = createWeeklyLoops(requestDTO, currentUser, loopRule);
+                createdLoops = createWeeklyLoops(requestDTO, currentUser, loopRule);
             }
+
             case MONTHLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                loopId = createMonthlyLoops(requestDTO, currentUser, loopRule);
+                createdLoops = createMonthlyLoops(requestDTO, currentUser, loopRule);
             }
+
             case YEARLY -> {
                 loopRule = createLoopRule(requestDTO, currentUser);
-                loopId = createYearlyLoops(requestDTO, currentUser, loopRule);
+                createdLoops = createYearlyLoops(requestDTO, currentUser, loopRule);
             }
+
             default -> throw new ServiceException(ReturnCode.UNKNOWN_SCHEDULE_TYPE);
         }
+
+        Long loopId = createdLoops.isEmpty() ? null : createdLoops.get(0).getId();
 
         if (requestDTO.chatRoomId() != null && loopId != null) {
             Loop loop = loopRepository.findById(loopId)
                     .orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
-            linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+            ChatRoom chatRoom = linkLoopToChatRoom(requestDTO.chatRoomId(), loop);
+
+            if (chatRoom.isBotRoom()) {
+                chatMessageService.sendChatMessage(
+                        chatRoom.getId(),
+                        new ChatMessageRequest(
+                                AI_AFTER_SELECT_LOOP_MESSAGE,
+                                UUID.randomUUID(),
+                                MessageType.GET_LOOP
+                        ),
+                        currentUser
+                );
+            }
         }
+
+        // 커밋 후 캐시 무효화
+        Set<Long> loopIds = new HashSet<>();
+        Set<LocalDate> dates = new HashSet<>();
+        Set<YearMonth> yms = new HashSet<>();
+
+        for (Loop l : createdLoops) {
+            if (l == null) continue;
+            if (l.getId() != null) loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            if (d != null) {
+                dates.add(d);
+                yms.add(YearMonth.from(d));
+            }
+        }
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
 
         return loopId;
     }
 
     // 루프 상세 조회
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "loopDetail", key = "#currentUser.id() + ':' + #loopId")
     public LoopDetailResponse getDetailLoop(Long loopId, CurrentUserDto currentUser) {
         // 루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
@@ -90,6 +139,8 @@ public class LoopServiceImpl implements LoopService {
 
     // 날짜별 루프 리스트 조회
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "dailyLoops", key = "#currentUser.id() + ':' + #date")
     public DailyLoopsResponse getDailyLoops(LocalDate date, CurrentUserDto currentUser) {
         // 루프 리스트 조회
         List<Loop> DailyLoops = loopRepository.findByMemberIdAndLoopDate(currentUser.id(), date);
@@ -127,6 +178,8 @@ public class LoopServiceImpl implements LoopService {
 
         // 루프 검증
         validateLoopOwner(loop, currentUser);
+        LocalDate loopDate = loop.getLoopDate();
+        YearMonth ym = YearMonth.from(loopDate);
 
         // 루프 완료 상태 변경
         loop.setCompleted(requestDTO.completed());
@@ -137,6 +190,8 @@ public class LoopServiceImpl implements LoopService {
                     loopChecklist.setCompleted(requestDTO.completed())
             );
         }
+        // 커밋 후 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), List.of(loopDate), List.of(ym));
     }
 
     // 단일 루프 수정
@@ -145,6 +200,7 @@ public class LoopServiceImpl implements LoopService {
     public void updateLoop(Long loopId, LoopUpdateRequest requestDTO, CurrentUserDto currentUser) {
         // 루프 조회
         Loop loop = loopRepository.findById(loopId).orElseThrow(() -> new ServiceException(ReturnCode.LOOP_NOT_FOUND));
+        LocalDate oldDate = loop.getLoopDate();
 
         // 루프 검증
         validateLoopOwner(loop, currentUser);
@@ -166,10 +222,22 @@ public class LoopServiceImpl implements LoopService {
                 }
             }
         }
+        // 커밋 후 캐시 무효화
+        LocalDate newDate = loop.getLoopDate();
+        Set<LocalDate> dates = new HashSet<>();
+        dates.add(oldDate);
+        dates.add(newDate);
+
+        Set<YearMonth> yms = new HashSet<>();
+        if (oldDate != null) yms.add(YearMonth.from(oldDate));
+        if (newDate != null) yms.add(YearMonth.from(newDate));
+
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), dates, yms);
     }
 
     // 루프 그룹 전체 수정
     @Override
+    @Transactional
     public void updateLoopGroup(Long loopRuleId, LoopGroupUpdateRequest requestDTO, CurrentUserDto currentUser) {
         // 루프 조회
         LoopRule loopRule = loopRuleRepository.findById(loopRuleId)
@@ -178,14 +246,52 @@ public class LoopServiceImpl implements LoopService {
         // loopRule 검증
         validateLoopRuleOwner(loopRule, currentUser);
 
-        // LoopRule의 루프 리스트를 조회 (오늘 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopRule(loopRule, LocalDate.now());
-        // 해당 루프 리스트를 삭제
-        loopRepository.deleteAll(LoopList);
+        ChatRoom chatRoom = chatRoomRepository.findByLoopRuleId(loopRule.getId());
+        if (chatRoom != null) {
+            chatRoom.setLoop(null);
+        }
+
+        List<Loop> oldLoops = findAllByLoopRule(loopRule, LocalDate.now());
+
+        // 무효화 대상 수집 (old)
+        Set<Long> loopIds = new HashSet<>();
+        Set<LocalDate> dates = new HashSet<>();
+        Set<YearMonth> yms = new HashSet<>();
+        for (Loop l : oldLoops) {
+            loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            dates.add(d);
+            if (d != null) yms.add(YearMonth.from(d));
+        }
+        loopRepository.deleteAll(oldLoops);
 
         // 새로운 규칙으로 생성
         LoopCreateRequest createRequestDTO = loopMapper.toLoopCreateRequest(requestDTO);
-        createUpdateLoop(createRequestDTO, loopRule, currentUser);
+        List<Loop> newLoops = createUpdateLoop(createRequestDTO, loopRule, currentUser);
+
+        // 무효화 대상 수집 (new)
+        for (Loop l : newLoops) {
+            loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            dates.add(d);
+            if (d != null) yms.add(YearMonth.from(d));
+        }
+
+        if (chatRoom != null && !newLoops.isEmpty()) {
+            chatRoom.setLoop(newLoops.get(0));
+            chatMessageService.sendChatMessage(
+                    chatRoom.getId(),
+                    new ChatMessageRequest(
+                            AI_AFTER_SELECT_LOOP_MESSAGE,
+                            UUID.randomUUID(),
+                            MessageType.GET_LOOP
+                    ),
+                    currentUser
+            );
+            chatRoomStateService.setCallUpdateLoop(chatRoom.getId(), false);
+        }
+        // 커밋 후 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
     }
 
     // 단일 루프 삭제
@@ -198,7 +304,15 @@ public class LoopServiceImpl implements LoopService {
         // 루프 검증
         validateLoopOwner(loop, currentUser);
 
+        LocalDate date = loop.getLoopDate();
+        YearMonth ym = (date == null) ? null : YearMonth.from(date);
+
+        // 채팅방 연결 해제
+        chatRoomRepository.unlinkLoop(loopId);
         loopRepository.delete(loop);
+
+        // 커밋 후 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), List.of(loopId), date == null ? List.of() : List.of(date), ym == null ? List.of() : List.of(ym));
     }
 
     // 루프 그룹 전체 삭제
@@ -212,7 +326,19 @@ public class LoopServiceImpl implements LoopService {
 
         // 그룹 루프가 아닌 경우 예외 처리
         if (loopRule == null) {
+            LocalDate d = selectedLoop.getLoopDate();
+            YearMonth ym = (d == null) ? null : YearMonth.from(d);
+
+            // 채팅방 연결 해제
+            chatRoomRepository.unlinkLoop(selectedLoop.getId());
             loopRepository.delete(selectedLoop);
+
+            loopCacheEvictionHelper.evictAfterCommit(
+                    currentUser.id(),
+                    List.of(selectedLoop.getId()),
+                    d == null ? List.of() : List.of(d),
+                    ym == null ? List.of() : List.of(ym)
+            );
             return;
         }
 
@@ -220,17 +346,44 @@ public class LoopServiceImpl implements LoopService {
         validateLoopRuleOwner(loopRule, currentUser);
         LocalDate targetDate = selectedLoop.getLoopDate();
 
-        // loopRule의 루프 리스트를 조회 (선택된 날짜 포함 미래만 조회)
-        List<Loop> LoopList = findAllByLoopRule(loopRule, targetDate);
-        // 해당 루프 리스트 삭제
-        loopRepository.deleteAll(LoopList);
+        // 무효화 대상 수집
+        Set<Long> loopIds = new HashSet<>();
+        Set<LocalDate> dates = new HashSet<>();
+        Set<YearMonth> yms = new HashSet<>();
 
-        // 과거 루프는 연결 끊기
-        List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, targetDate);
-        pastLoopList.forEach(loop -> loop.setLoopRule(null));
+        // 미래(선택일 포함) 삭제 대상
+        List<Loop> futureLoops = findAllByLoopRule(loopRule, targetDate);
+        for (Loop l : futureLoops) {
+            loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            dates.add(d);
+            if (d != null) yms.add(YearMonth.from(d));
+        }
+
+        // 과거 루프는 loopRule 끊기므로 DTO/상세/일자 캐시도 갱신 필요
+        List<Loop> pastLoops = findAllByLoopRulePast(loopRule, targetDate);
+        for (Loop l : pastLoops) {
+            loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            dates.add(d);
+            if (d != null) yms.add(YearMonth.from(d));
+        }
+
+        // 채팅방 연결 해제
+        List<Long> futureLoopIds = futureLoops.stream().map(Loop::getId).toList();
+        if (!futureLoopIds.isEmpty()) {
+            chatRoomRepository.unlinkLoops(futureLoopIds);
+        }
+        loopChecklistRepository.deleteFutureChecklists(loopRule.getId(), targetDate);
+        loopRepository.deleteFuture(loopRule.getId(), targetDate);
+        loopRepository.detachPast(loopRule.getId(), targetDate);
+        loopRepository.detachNullDate(loopRule.getId()); // loopDate nullable면 거의 필수
 
         // loopRule 삭제 (자식이 없기에 삭제 가능)
         loopRuleRepository.delete(loopRule);
+
+        // 커밋 후 loopReport 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(currentUser.id(), loopIds, dates, yms);
     }
 
     // 사용자가 생성한 루프 전체 삭제
@@ -239,16 +392,32 @@ public class LoopServiceImpl implements LoopService {
     public void deleteMyLoops(Long memberId) {
         // 1) Loop 먼저 전부 삭제 (LoopChecklist는 cascade로 같이 삭제됨)
         List<Loop> loops = loopRepository.findAllByMemberId(memberId);
+        // 무효화 대상 수집 (삭제 전)
+        Set<Long> loopIds = new HashSet<>();
+        Set<LocalDate> dates = new HashSet<>();
+        Set<YearMonth> yms = new HashSet<>();
+        for (Loop l : loops) {
+            loopIds.add(l.getId());
+            LocalDate d = l.getLoopDate();
+            dates.add(d);
+            if (d != null) yms.add(YearMonth.from(d));
+        }
         if (!loops.isEmpty()) {
+            List<Long> ids = loops.stream().map(Loop::getId).toList();
+            chatRoomRepository.unlinkLoops(ids);
             loopRepository.deleteAll(loops);
         }
         // 2) TeamLoop가 참조하지 않는 개인 LoopRule만 삭제
         loopRuleRepository.deletePersonalRulesNotUsedAnywhere(memberId);
+
+        // 커밋 후 loopReport 캐시 무효화
+        loopCacheEvictionHelper.evictAfterCommit(memberId, loopIds, dates, yms);
     }
 
     //루프 캘린더 조회
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "loopCalendar", key = "#currentUser.id() + ':' + #year + ':' + #month")
     public LoopCalendarResponse getLoopCalendar(int year, int month, CurrentUserDto currentUser) {
         YearMonth targetYearMonth = YearMonth.of(year, month);
 
@@ -279,79 +448,98 @@ public class LoopServiceImpl implements LoopService {
 
     // ========== 비즈니스 로직 메서드 ==========
     // 단일 루프 (반복x)
-    private Long createSingleLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
-        LocalDate date = (requestDTO.specificDate() == null) ? LocalDate.now() : requestDTO.specificDate(); // null이면
-        // 당일로 설정
+    private Loop createSingleLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser) {
+        LocalDate date = (requestDTO.specificDate() == null)
+                ? LocalDate.now()
+                : requestDTO.specificDate();
+
         Loop loop = buildLoop(requestDTO, currentUser, date, null);
-        loopRepository.save(loop);
-        return loop.getId();
+        return loopRepository.save(loop);
     }
 
     // 매주 반복 루프
-    private Long createWeeklyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LoopRule loopRule) {
+    private List<Loop> createWeeklyLoops(
+            LoopCreateRequest requestDTO,
+            CurrentUserDto currentUser,
+            LoopRule loopRule
+    ) {
         List<Loop> loopsToCreate = new ArrayList<>();
-        for (LocalDate currentDate = loopRule.getStartDate(); !currentDate
-                .isAfter(loopRule.getEndDate()); currentDate = currentDate.plusDays(1)) {
+
+        for (LocalDate currentDate = loopRule.getStartDate();
+             !currentDate.isAfter(loopRule.getEndDate());
+             currentDate = currentDate.plusDays(1)) {
+
             if (loopRule.getDaysOfWeek().contains(currentDate.getDayOfWeek())) {
-                loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, loopRule));
+                loopsToCreate.add(
+                        buildLoop(requestDTO, currentUser, currentDate, loopRule)
+                );
             }
         }
 
-        // 만들어진 루프 DB에 저장
         if (!loopsToCreate.isEmpty()) {
             loopRepository.saveAll(loopsToCreate);
-            return loopsToCreate.get(0).getId();
         }
-        return null;
+
+        return loopsToCreate;
     }
 
     // 매월 반복 루프
-    private Long createMonthlyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LoopRule loopRule) {
+    private List<Loop> createMonthlyLoops(
+            LoopCreateRequest requestDTO,
+            CurrentUserDto currentUser,
+            LoopRule loopRule
+    ) {
         List<Loop> loopsToCreate = new ArrayList<>();
         LocalDate currentDate = loopRule.getStartDate();
-        int monthsToAdd = 0; // plusMonths에 넣어줄 값을 저장할 변수
+        int monthsToAdd = 0;
 
-        // 선택한 시작일이 오늘 날짜보다 과거라면 오늘 이후로 만들어주기
+        // 시작일이 과거라면 오늘 이후로 이동
         while (currentDate.isBefore(LocalDate.now())) {
             currentDate = loopRule.getStartDate().plusMonths(++monthsToAdd);
         }
 
         while (!currentDate.isAfter(loopRule.getEndDate())) {
-            loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, loopRule));
+            loopsToCreate.add(
+                    buildLoop(requestDTO, currentUser, currentDate, loopRule)
+            );
             monthsToAdd++;
-            // plusMonths로 인해 생기는 보정 문제: 윤년 또는 말일이 유효한 날짜가 아닌 경우, 자동으로 보정을 해주는데 그 다음 계산에서
-            // 원복을 하지 않음.
-            // ex)3월31일->4월30일(보정)->5월30일(문제발생)
-            currentDate = loopRule.getStartDate().plusMonths(monthsToAdd); // 시작일을 기준으로 증가하도록 구현하여 보정으로 인해 생기는 문제를 해결
+            currentDate = loopRule.getStartDate().plusMonths(monthsToAdd);
         }
+
         if (!loopsToCreate.isEmpty()) {
             loopRepository.saveAll(loopsToCreate);
-            return loopsToCreate.get(0).getId();
         }
-        return null;
+
+        return loopsToCreate;
     }
 
     // 매년 반복 루프
-    private Long createYearlyLoops(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LoopRule loopRule) {
+    private List<Loop> createYearlyLoops(
+            LoopCreateRequest requestDTO,
+            CurrentUserDto currentUser,
+            LoopRule loopRule
+    ) {
         List<Loop> loopsToCreate = new ArrayList<>();
         LocalDate currentDate = loopRule.getStartDate();
         int yearsToAdd = 0;
 
-        // 선택한 시작일이 오늘 날짜보다 과거라면 오늘 이후로 만들어주기
         while (currentDate.isBefore(LocalDate.now())) {
             currentDate = loopRule.getStartDate().plusYears(++yearsToAdd);
         }
 
         while (!currentDate.isAfter(loopRule.getEndDate())) {
-            loopsToCreate.add(buildLoop(requestDTO, currentUser, currentDate, loopRule));
+            loopsToCreate.add(
+                    buildLoop(requestDTO, currentUser, currentDate, loopRule)
+            );
             yearsToAdd++;
             currentDate = loopRule.getStartDate().plusYears(yearsToAdd);
         }
+
         if (!loopsToCreate.isEmpty()) {
             loopRepository.saveAll(loopsToCreate);
-            return loopsToCreate.get(0).getId();
         }
-        return null;
+
+        return loopsToCreate;
     }
 
     // loopRule(그룹) 생성
@@ -360,11 +548,11 @@ public class LoopServiceImpl implements LoopService {
         LocalDate end = (requestDTO.endDate() == null) ? start.plusYears(5) : requestDTO.endDate();
 
         LoopRule loopRule = LoopRule.builder()
-                .member(memberConverter.toMember(currentUser))
+                .member(memberMapper.toMember(currentUser))
                 .scheduleType(requestDTO.scheduleType())
                 .daysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
-                                ? toDayOfWeekSet(requestDTO.daysOfWeek())
-                                : null) // WEEKLY가 아니면 null이 저장됨
+                        ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                        : null) // WEEKLY가 아니면 null이 저장됨
                 .startDate(start)
                 .endDate(end)
                 .build();
@@ -377,7 +565,7 @@ public class LoopServiceImpl implements LoopService {
     private Loop buildLoop(LoopCreateRequest requestDTO, CurrentUserDto currentUser, LocalDate date,
                            LoopRule loopRule) {
         Loop loop = Loop.builder()
-                .member(memberConverter.toMember(currentUser))
+                .member(memberMapper.toMember(currentUser))
                 .title(requestDTO.title())
                 .content(requestDTO.content())
                 .loopDate(date)
@@ -395,44 +583,41 @@ public class LoopServiceImpl implements LoopService {
 
     // 전체 수정 시, 추가 루프 생성
     @Transactional
-    public void createUpdateLoop(LoopCreateRequest requestDTO, LoopRule loopRule, CurrentUserDto currentUser) {
+    public List<Loop> createUpdateLoop(
+            LoopCreateRequest requestDTO,
+            LoopRule loopRule,
+            CurrentUserDto currentUser
+    ) {
+        List<Loop> createdLoops = new ArrayList<>();
 
         if (requestDTO.scheduleType() == RepeatType.NONE) {
-            // 과거 루프는 연결 끊기
-            List<Loop> pastLoopList = findAllByLoopRulePast(loopRule, LocalDate.now());
-            pastLoopList.forEach(loop -> loop.setLoopRule(null));
-
-            // loopRule 삭제
-            loopRuleRepository.delete(loopRule);
-
-            // 단일 루프 생성
-            createSingleLoop(requestDTO, currentUser);
-
-            return;
+            Loop loop = createSingleLoop(requestDTO, currentUser);
+            createdLoops.add(loop);
+            return createdLoops;
         }
 
-        // 입력값으로 loopRule 업데이트
         loopRule.setScheduleType(requestDTO.scheduleType());
-        loopRule.setDaysOfWeek(requestDTO.scheduleType() == RepeatType.WEEKLY
-                ? toDayOfWeekSet(requestDTO.daysOfWeek())
-                : null);
+        loopRule.setDaysOfWeek(
+                requestDTO.scheduleType() == RepeatType.WEEKLY
+                        ? toDayOfWeekSet(requestDTO.daysOfWeek())
+                        : null
+        );
         loopRule.setStartDate(requestDTO.startDate());
         loopRule.setEndDate(requestDTO.endDate());
 
         switch (requestDTO.scheduleType()) {
-            case NONE:
-                createSingleLoop(requestDTO, currentUser);
-                break;
             case WEEKLY:
-                createWeeklyLoops(requestDTO, currentUser, loopRule);
+                createdLoops.addAll(createWeeklyLoops(requestDTO, currentUser, loopRule));
                 break;
             case MONTHLY:
-                createMonthlyLoops(requestDTO, currentUser, loopRule);
+                createdLoops.addAll(createMonthlyLoops(requestDTO, currentUser, loopRule));
                 break;
             case YEARLY:
-                createYearlyLoops(requestDTO, currentUser, loopRule);
+                createdLoops.addAll(createYearlyLoops(requestDTO, currentUser, loopRule));
                 break;
         }
+
+        return createdLoops;
     }
 
     // ========== 조회 메서드 ==========
@@ -477,9 +662,10 @@ public class LoopServiceImpl implements LoopService {
         }
     }
 
-    private void linkLoopToChatRoom(Long chatRoomId, Loop loop) {
+    private ChatRoom linkLoopToChatRoom(Long chatRoomId, Loop loop) {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new ServiceException(ReturnCode.CHATROOM_NOT_FOUND));
         chatRoom.selectLoop(loop);
+        return chatRoom;
     }
 }

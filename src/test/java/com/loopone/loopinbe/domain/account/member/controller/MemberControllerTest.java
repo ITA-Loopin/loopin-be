@@ -84,7 +84,7 @@ class MemberControllerTest {
     @MockitoBean WebAuthCookieFactory webAuthCookieFactory;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         given(currentUserArgumentResolver.supportsParameter(any()))
                 .willReturn(true);
         given(currentUserArgumentResolver.resolveArgument(any(), any(), any(), any()))
