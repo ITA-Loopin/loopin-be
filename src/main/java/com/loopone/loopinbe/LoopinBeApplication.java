@@ -25,8 +25,13 @@ public class LoopinBeApplication {
                 .ignoreIfMalformed() // 에러 방지 옵션
                 .ignoreIfMissing()   // 파일 없을 경우 무시
                 .load();
-        System.setProperty("AWS_ACCESS_KEY_ID", dotenv.get("AWS_ACCESS_KEY_ID"));
-        System.setProperty("AWS_SECRET_ACCESS_KEY", dotenv.get("AWS_SECRET_ACCESS_KEY"));
+        System.setProperty("AWS_ACCESS_KEY", dotenv.get("AWS_ACCESS_KEY"));
+        System.setProperty("AWS_SECRET_KEY", dotenv.get("AWS_SECRET_KEY"));
+        System.setProperty("AWS_BUCKET_NAME", dotenv.get("AWS_BUCKET_NAME"));
+        System.setProperty("OCI_ACCESS_KEY", dotenv.get("OCI_ACCESS_KEY"));
+        System.setProperty("OCI_SECRET_KEY", dotenv.get("OCI_SECRET_KEY"));
+        System.setProperty("OCI_BUCKET_NAME", dotenv.get("OCI_BUCKET_NAME"));
+        System.setProperty("OCI_S3_ENDPOINT", dotenv.get("OCI_S3_ENDPOINT"));
         System.setProperty("JWT_SECRET_KEY", dotenv.get("JWT_SECRET_KEY"));
         System.setProperty("POSTGRES_HOST", dotenv.get("POSTGRES_HOST"));
         System.setProperty("POSTGRES_USERNAME", dotenv.get("POSTGRES_USERNAME"));
