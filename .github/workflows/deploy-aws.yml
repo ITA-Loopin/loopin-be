@@ -1,8 +1,7 @@
 name: CD - AWS Deploy
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch: # OCI로만 자동 배포
 
 jobs:
   deploy-aws:
@@ -30,6 +29,7 @@ jobs:
       GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
       OAUTH_STATE_SECRET: ${{ secrets.OAUTH_STATE_SECRET }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
       FIREBASE_ADMIN_SDK_B64: ${{ secrets.FIREBASE_ADMIN_SDK_B64 }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
       GHCR_USER: ${{ secrets.GHCR_USER }}
@@ -53,7 +53,7 @@ jobs:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          envs: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, FIREBASE_ADMIN_SDK_B64, GHCR_PAT, GHCR_USER
+          envs: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, REDIS_PASSWORD, FIREBASE_ADMIN_SDK_B64, GHCR_PAT, GHCR_USER
           script: |
             set -e
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
@@ -65,6 +65,3 @@ jobs:
               | base64 --decode --ignore-garbage \
               > firebase-adminsdk.json
             ./deploy.sh
-            echo "Cleaning up old Docker images..."
-            docker rmi -f $(docker images ghcr.io/ita-loopin/loopin-app -q) || true
-            docker image prune -f || true

@@ -61,6 +61,12 @@ chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
 grep -q '^/swapfile ' /etc/fstab || echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
+# OS 방화벽 설정
+firewall-cmd --permanent --add-port=22/tcp
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
 END_OF_FILE
 }
 
@@ -69,7 +75,7 @@ resource "oci_core_vcn" "vcn_1" {
   compartment_id = var.compartment_ocid
   cidr_blocks    = ["10.0.0.0/16"]
   display_name   = "${var.prefix}-vcn-1"
-  dns_label      = "loopinvcn"
+  dns_label      = substr(lower(replace(var.prefix, "-", "")), 0, 15)
 }
 
 resource "oci_core_internet_gateway" "igw_1" {
@@ -103,20 +109,6 @@ resource "oci_core_security_list" "sl_1" {
     tcp_options {
       min = 22
       max = 22
-    }
-  }
-
-  dynamic "ingress_security_rules" {
-    for_each = var.admin_allowed_cidrs
-
-    content {
-      protocol = "6"
-      source   = ingress_security_rules.value
-
-      tcp_options {
-        min = 81
-        max = 81
-      }
     }
   }
 
@@ -174,7 +166,7 @@ resource "oci_core_subnet" "subnet_1" {
   route_table_id             = oci_core_route_table.rt_1.id
   security_list_ids          = [oci_core_security_list.sl_1.id]
   prohibit_public_ip_on_vnic = false
-  dns_label                  = "subnetone"
+  dns_label                  = substr(lower(replace("${var.prefix}sub", "-", "")), 0, 15)
 }
 
 # Compute 설정 시작

@@ -7,7 +7,6 @@ variable "prefix" {
 variable "region" {
   description = "OCI region"
   type        = string
-  default     = "ap-chuncheon-1"
 }
 
 variable "tenancy_ocid" {
@@ -48,16 +47,11 @@ variable "availability_domain" {
   default     = ""
 }
 
-variable "admin_allowed_cidrs" {
-  type        = list(string)
-  description = "CIDRs allowed to access NPM admin (port 81)"
-  default     = []
-}
-
 variable "ssh_public_keys" {
   description = "Compute 인스턴스(opc 사용자)에 등록할 SSH 공개키(authorized_keys)"
   type        = list(string)
   default     = []
+  sensitive   = true
 }
 
 variable "instance_shape" {
@@ -87,7 +81,6 @@ variable "boot_volume_size_in_gbs" {
 variable "bucket_name" {
   description = "Object Storage bucket name"
   type        = string
-  default     = "loopin-bucket-v1"
 }
 
 variable "create_instance_principal_resources" {

@@ -1,14 +1,44 @@
 services:
+  postgres:
+    image: postgres:16.8
+    container_name: loopin-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: meta_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - loopin-backend
+
+  mongodb:
+    image: mongo:8.0
+    container_name: loopin-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+      MONGO_INITDB_DATABASE: meta_db
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - loopin-backend
+
   redis:
-    image: redis:latest
+    image: redis:7.4-alpine
     container_name: loopin-redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis-data:/data
     command: >
       redis-server --appendonly yes
                    --bind 0.0.0.0
+                   --requirepass ${REDIS_PASSWORD}
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -16,51 +46,17 @@ services:
     networks:
       - loopin-backend
 
-  mongodb:
-    image: mongo:latest
-    container_name: loopin-mongodb
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
-      MONGO_INITDB_DATABASE: meta_db
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - loopin-backend
-
-  postgres:
-    image: ankane/pgvector:latest
-    container_name: loopin-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USERNAME}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: meta_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - loopin-backend
-
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:latest
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     container_name: loopin-redpanda
     restart: unless-stopped
     command:
       - redpanda
       - start
-      - --mode
-      - dev-container
       - --smp
       - "1"
       - --memory
-      - 256M
-      - --reserve-memory
-      - 128M
+      - 2G
       - --default-log-level=warn
       - --kafka-addr
       - PLAINTEXT://0.0.0.0:9092
@@ -76,21 +72,15 @@ services:
       - 0.0.0.0:33145
       - --advertise-rpc-addr
       - loopin-redpanda:33145
-    ports:
-      - "9092:9092"     # Kafka API
-      - "8081:8081"     # Schema Registry
-      - "8082:8082"     # PandaProxy
-      - "9644:9644"     # Admin API
     volumes:
       - redpanda-data:/var/lib/redpanda/data
     networks:
       - loopin-backend
 
   app:
-    image: junhui9789/loopin-app:latest
+    image: ghcr.io/ita-loopin/loopin-app:latest
     container_name: loopin-app
-    ports:
-      - "8080:8080"
+    restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
@@ -115,36 +105,77 @@ services:
       GPT_API_KEY: ${GPT_API_KEY}
       OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - ./firebase-adminsdk.json:/app/firebase-adminsdk.json
     depends_on:
       redis:
-        condition: service_healthy  # Redis가 정상 작동할 때까지 대기
+        condition: service_healthy
       postgres:
-        condition: service_started  # Postgres가 정상 작동할 때까지 대기
+        condition: service_started
     networks:
       - loopin-backend
       - loopin-proxy
 
-  nginx-proxy-manager:
-    image: 'jc21/nginx-proxy-manager:latest'
-    container_name: loopin-npm
+  nginx:
+    image: nginx:alpine
+    container_name: loopin-nginx
     restart: unless-stopped
+    entrypoint: /docker-entrypoint-custom.sh
     ports:
-      - '80:80'    # HTTP 포트
-      - '443:443'  # HTTPS 포트
-      - '81:81'    # 관리자 웹 인터페이스 포트
+      - '80:80'
+      - '443:443'
     volumes:
-      - ./data:/data
+      - ./nginx/docker-entrypoint.sh:/docker-entrypoint-custom.sh:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./letsencrypt:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
     networks:
       - loopin-proxy
 
+  # 최초 인증서 발급 (한 번 실행 후 종료)
+  certbot-init:
+    image: certbot/certbot:v5.5.0
+    container_name: loopin-certbot-init
+    volumes:
+      - ./letsencrypt:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: /bin/sh -c >
+      "if [ ! -d /etc/letsencrypt/renewal ]; then
+        echo '[certbot-init] Requesting initial certificate...';
+        certbot certonly --webroot --webroot-path=/var/www/certbot
+          -d api.loopin.co.kr
+          --email ${CERTBOT_EMAIL}
+          --agree-tos --non-interactive
+          --force-renewal;
+      else
+        echo '[certbot-init] Certificates already exist. Skipping.';
+      fi"
+    depends_on:
+      - nginx
+    networks:
+      - loopin-proxy
+
+  # 12시간마다 인증서 갱신 시도 + 갱신 성공 시 nginx reload
+  certbot:
+    image: certbot/certbot:v5.5.0
+    container_name: loopin-certbot
+    restart: unless-stopped
+    volumes:
+      - ./letsencrypt:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
+    depends_on:
+      certbot-init:
+        condition: service_completed_successfully
+
 volumes:
-  redis-data:
-  redpanda-data:
   postgres-data:
   mongo_data:
+  redis-data:
+  redpanda-data:
 
 networks:
   loopin-backend:
