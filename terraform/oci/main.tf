@@ -178,27 +178,31 @@ resource "oci_core_subnet" "subnet_1" {
 }
 
 # Compute 설정 시작
-resource "oci_core_instance" "instance_1" {
+resource "oci_core_instance" "instance" {
+  count               = var.instance_count
   compartment_id      = var.compartment_ocid
   availability_domain = local.availability_domain
-  display_name        = "${var.prefix}-instance-1"
+  display_name        = "${var.prefix}-instance-${count.index + 1}"
   shape               = var.instance_shape
-
-  shape_config {
-    ocpus         = var.instance_ocpus
-    memory_in_gbs = var.instance_memory_in_gbs
-  }
 
   create_vnic_details {
     subnet_id        = oci_core_subnet.subnet_1.id
     assign_public_ip = true
-    display_name     = "${var.prefix}-vnic-1"
-    hostname_label   = "${var.prefix}vm1"
+    display_name     = "${var.prefix}-vnic-${count.index + 1}"
+    hostname_label   = "${var.prefix}vm${count.index + 1}"
   }
 
   metadata = {
     ssh_authorized_keys = join("\n", var.ssh_public_keys)
     user_data           = base64encode(local.instance_user_data)
+  }
+
+  dynamic "shape_config" {
+    for_each = var.instance_ocpus != null ? [1] : []
+    content {
+      ocpus         = var.instance_ocpus
+      memory_in_gbs = var.instance_memory_in_gbs
+    }
   }
 
   source_details {

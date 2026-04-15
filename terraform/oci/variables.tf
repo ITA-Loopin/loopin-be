@@ -64,19 +64,25 @@ variable "ssh_public_keys" {
 variable "instance_shape" {
   description = "OCI compute instance shape"
   type        = string
-  default     = "VM.Standard.A1.Flex"
+  default     = "VM.Standard.E2.1.Micro"
+}
+
+variable "instance_count" {
+  description = "Number of compute instances to create"
+  type        = number
+  default     = 2
 }
 
 variable "instance_ocpus" {
-  description = "Number of OCPUs for flexible shapes"
+  description = "Number of OCPUs for flexible shapes (e.g. VM.Standard.E4.Flex). Leave null for fixed shapes."
   type        = number
-  default     = 4
+  default     = null
 }
 
 variable "instance_memory_in_gbs" {
-  description = "Memory in GBs for flexible shapes"
+  description = "Memory in GBs for flexible shapes. Leave null for fixed shapes."
   type        = number
-  default     = 24
+  default     = null
 }
 
 variable "boot_volume_size_in_gbs" {
