@@ -48,13 +48,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.server1.yml & deploy.sh to OCI server1
+      - name: Copy compose.server1.yml & deploy.sh to OCI server1
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          source: "docker-compose.server1.yml,deploy.sh,nginx/"
+          source: "docker/compose.server1.yml,deploy.sh,nginx/"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
@@ -75,4 +75,4 @@ jobs:
               | tr -d '\r\n' \
               | base64 --decode --ignore-garbage \
               > firebase-adminsdk.json
-            COMPOSE_FILE=docker-compose.server1.yml DEPLOY_MODE=app ./deploy.sh
+            COMPOSE_FILE=docker/compose.server1.yml DEPLOY_MODE=app ./deploy.sh

@@ -15,13 +15,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.server2.yml & deploy.sh to OCI server2
+      - name: Copy compose.server2.yml & deploy.sh to OCI server2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.OCI_S2_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          source: "docker-compose.server2.yml,deploy.sh"
+          source: "docker/compose.server2.yml,deploy.sh"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
@@ -35,4 +35,4 @@ jobs:
             set -e
             cd ~/deploy
             chmod +x deploy.sh
-            COMPOSE_FILE=docker-compose.server2.yml DEPLOY_MODE=data ./deploy.sh
+            COMPOSE_FILE=docker/compose.server2.yml DEPLOY_MODE=data ./deploy.sh
