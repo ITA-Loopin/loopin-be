@@ -31,6 +31,9 @@ public class S3Service {
     @Value("${spring.aws.credentials.s3.bucket}")
     private String BUCKET_NAME;
 
+    @Value("${spring.aws.credentials.s3.endpoint:}")
+    private String endpoint;
+
     // 채팅 이미지 업로드
     public ChatAttachment uploadChatImage(MultipartFile file, String dirName) throws IOException {
         String key = buildKey(dirName, file.getOriginalFilename());
@@ -112,6 +115,11 @@ public class S3Service {
 
     // public url 형태가 필요하면 사용
     public String toPublicUrl(String key) {
+        if (!endpoint.isBlank()) {
+            // OCI: https://<namespace>.compat.objectstorage.<region>.oraclecloud.com/<bucket>/<key>
+            return endpoint + "/" + BUCKET_NAME + "/" + key;
+        }
+        // AWS: https://<bucket>.s3.ap-northeast-2.amazonaws.com/<key>
         return "https://" + BUCKET_NAME + "." + REGION_ENDPOINT + "/" + key;
     }
 
