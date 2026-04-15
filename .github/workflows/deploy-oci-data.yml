@@ -18,18 +18,25 @@ jobs:
       - name: Copy compose.server2.yml & deploy.sh to OCI server2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.OCI_S2_HOST }}
+          # Reach server2 through server1 instead of relying on direct public SSH to server2.
+          host: ${{ secrets.OCI_S2_PRIVATE_IP }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.OCI_HOST }}
+          proxy_username: ${{ secrets.OCI_USER }}
+          proxy_key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           source: "docker/compose.server2.yml,deploy.sh"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.OCI_S2_HOST }}
+          host: ${{ secrets.OCI_S2_PRIVATE_IP }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.OCI_HOST }}
+          proxy_username: ${{ secrets.OCI_USER }}
+          proxy_key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
           envs: MONGODB_USERNAME, MONGODB_PASSWORD, SERVER2_INTERNAL_IP
           script: |
             set -e
