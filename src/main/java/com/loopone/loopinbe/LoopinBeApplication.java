@@ -25,8 +25,8 @@ public class LoopinBeApplication {
                 .ignoreIfMalformed() // 에러 방지 옵션
                 .ignoreIfMissing()   // 파일 없을 경우 무시
                 .load();
-        System.setProperty("AWS_ACCESS_KEY", dotenv.get("AWS_ACCESS_KEY"));
-        System.setProperty("AWS_SECRET_KEY", dotenv.get("AWS_SECRET_KEY"));
+        System.setProperty("AWS_ACCESS_KEY_ID", dotenv.get("AWS_ACCESS_KEY_ID"));
+        System.setProperty("AWS_SECRET_ACCESS_KEY", dotenv.get("AWS_SECRET_ACCESS_KEY"));
         System.setProperty("AWS_BUCKET_NAME", dotenv.get("AWS_BUCKET_NAME"));
         System.setProperty("OCI_ACCESS_KEY", dotenv.get("OCI_ACCESS_KEY"));
         System.setProperty("OCI_SECRET_KEY", dotenv.get("OCI_SECRET_KEY"));

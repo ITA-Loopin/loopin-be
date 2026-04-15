@@ -24,9 +24,10 @@ variable "fingerprint" {
   type        = string
 }
 
-variable "private_key_path" {
-  description = "Path to the OCI API private key"
+variable "private_key" {
+  description = "OCI API private key content (PEM format)"
   type        = string
+  sensitive   = true
 }
 
 variable "private_key_password" {
@@ -42,9 +43,15 @@ variable "compartment_ocid" {
 }
 
 variable "availability_domain" {
-  description = "Availability domain name. Leave empty to use the first AD in the tenancy"
+  description = "Availability domain name. Leave empty to auto-select by availability_domain_index"
   type        = string
   default     = ""
+}
+
+variable "availability_domain_index" {
+  description = "Index of the availability domain to use (0-based) when availability_domain is not set. Change to 1 or 2 if the first AD has no capacity."
+  type        = number
+  default     = 0
 }
 
 variable "ssh_public_keys" {

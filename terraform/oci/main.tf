@@ -1,8 +1,16 @@
 terraform {
+  cloud {
+    organization = "loopone"
+
+    workspaces {
+      name = "loopin-oci"
+    }
+  }
+
   required_providers {
     oci = {
       source  = "oracle/oci"
-      version = "~> 6.0"
+      version = "~> 7.0"
     }
   }
 }
@@ -12,7 +20,7 @@ provider "oci" {
   tenancy_ocid         = var.tenancy_ocid
   user_ocid            = var.user_ocid
   fingerprint          = var.fingerprint
-  private_key_path     = var.private_key_path
+  private_key          = var.private_key
   private_key_password = var.private_key_password
   region               = var.region
 }
@@ -36,7 +44,7 @@ data "oci_core_images" "oracle_linux" {
 }
 
 locals {
-  availability_domain = var.availability_domain != "" ? var.availability_domain : data.oci_identity_availability_domains.ads.availability_domains[0].name
+  availability_domain = var.availability_domain != "" ? var.availability_domain : data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_index].name
 
   instance_user_data = <<-END_OF_FILE
 #!/bin/bash

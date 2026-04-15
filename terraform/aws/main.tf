@@ -1,9 +1,16 @@
 terraform {
-  // aws 라이브러리 불러옴
+  cloud {
+    organization = "loopone"
+
+    workspaces {
+      name = "loopin-aws"
+    }
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 }
