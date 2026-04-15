@@ -1,11 +1,11 @@
-name: CICD - DockerHub Build & Push
+name: CD - AWS Deploy
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  cd:
+  deploy-aws:
     runs-on: ubuntu-22.04
     env:
       AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
@@ -19,8 +19,8 @@ jobs:
       POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
       POSTGRES_USERNAME: ${{ secrets.POSTGRES_USERNAME }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      MONGODB_USERNAME: ${{secrets.MONGODB_USERNAME}}
-      MONGODB_PASSWORD: ${{secrets.MONGODB_PASSWORD}}
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
@@ -28,15 +28,17 @@ jobs:
       NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
       MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
       GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
-      OAUTH_STATE_SECRET: ${{secrets.OAUTH_STATE_SECRET}}
-      GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
-      FIREBASE_ADMIN_SDK_B64: ${{secrets.FIREBASE_ADMIN_SDK_B64}}
+      OAUTH_STATE_SECRET: ${{ secrets.OAUTH_STATE_SECRET }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      FIREBASE_ADMIN_SDK_B64: ${{ secrets.FIREBASE_ADMIN_SDK_B64 }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+      GHCR_USER: ${{ secrets.GHCR_USER }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Copy docker-compose.prod.yml & deploy.sh to server
+      - name: Copy docker-compose.prod.yml & deploy.sh to AWS server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.AWS_HOST }}
@@ -51,9 +53,10 @@ jobs:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          envs: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, FIREBASE_ADMIN_SDK_B64
+          envs: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, FIREBASE_ADMIN_SDK_B64, GHCR_PAT, GHCR_USER
           script: |
-            set -e  # 오류 발생 시 즉시 중단
+            set -e
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd ~/deploy
             chmod +x deploy.sh
             umask 077
@@ -63,5 +66,5 @@ jobs:
               > firebase-adminsdk.json
             ./deploy.sh
             echo "Cleaning up old Docker images..."
-            docker rmi -f $(docker images junhui9789/loopin-app -q) || true
+            docker rmi -f $(docker images ghcr.io/ita-loopin/loopin-app -q) || true
             docker image prune -f || true
