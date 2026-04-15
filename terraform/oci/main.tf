@@ -46,7 +46,7 @@ data "oci_core_images" "oracle_linux" {
 locals {
   availability_domain = var.availability_domain != "" ? var.availability_domain : data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_index].name
 
-  instance_user_data = <<-END_OF_FILE
+  base_user_data = <<-END_OF_BASE
 #!/bin/bash
 dnf update -y
 
@@ -69,13 +69,15 @@ chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
 grep -q '^/swapfile ' /etc/fstab || echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+END_OF_BASE
 
-# OS 방화벽 설정
-firewall-cmd --permanent --add-port=22/tcp
-firewall-cmd --permanent --add-service=http
-firewall-cmd --permanent --add-service=https
-firewall-cmd --reload
-END_OF_FILE
+  # Server 1: App + Nginx (80, 443 허용)
+  server1_user_data = "${local.base_user_data}\n# OS 방화벽 설정\nfirewall-cmd --permanent --add-port=22/tcp\nfirewall-cmd --permanent --add-service=http\nfirewall-cmd --permanent --add-service=https\nfirewall-cmd --reload\n"
+
+  # Server 2: MongoDB + Kafka (27017, 9092 허용 — 내부 통신 전용)
+  server2_user_data = "${local.base_user_data}\n# OS 방화벽 설정\nfirewall-cmd --permanent --add-port=22/tcp\nfirewall-cmd --permanent --add-port=27017/tcp\nfirewall-cmd --permanent --add-port=9092/tcp\nfirewall-cmd --reload\n"
+
+  user_data_by_index = [local.server1_user_data, local.server2_user_data]
 }
 
 # VCN 설정 시작
@@ -174,7 +176,83 @@ resource "oci_core_subnet" "subnet_1" {
   route_table_id             = oci_core_route_table.rt_1.id
   security_list_ids          = [oci_core_security_list.sl_1.id]
   prohibit_public_ip_on_vnic = false
-  dns_label                  = substr(lower(replace("${var.prefix}sub", "-", "")), 0, 15)
+  dns_label                  = substr(lower(replace("${var.prefix}sub1", "-", "")), 0, 15)
+}
+
+# Server 2 전용 Security List — MongoDB(27017), Kafka(9092)는 Server 1 subnet에서만 허용
+resource "oci_core_security_list" "sl_2" {
+  compartment_id = var.compartment_ocid
+  vcn_id         = oci_core_vcn.vcn_1.id
+  display_name   = "${var.prefix}-sl-2"
+
+  ingress_security_rules {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+
+    tcp_options {
+      min = 22
+      max = 22
+    }
+  }
+
+  # MongoDB — Server 1 subnet(10.0.1.0/24)에서만 허용
+  ingress_security_rules {
+    protocol = "6"
+    source   = "10.0.1.0/24"
+
+    tcp_options {
+      min = 27017
+      max = 27017
+    }
+  }
+
+  # Kafka — Server 1 subnet(10.0.1.0/24)에서만 허용
+  ingress_security_rules {
+    protocol = "6"
+    source   = "10.0.1.0/24"
+
+    tcp_options {
+      min = 9092
+      max = 9092
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "1" # ICMP
+    source   = "10.0.0.0/16"
+
+    icmp_options {
+      type = 3
+      code = 4
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "1" # ICMP
+    source   = "0.0.0.0/0"
+
+    icmp_options {
+      type = 3
+      code = 4
+    }
+  }
+
+  egress_security_rules {
+    protocol    = "all"
+    destination = "0.0.0.0/0"
+  }
+}
+
+# Server 2 전용 Subnet
+resource "oci_core_subnet" "subnet_2" {
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_vcn.vcn_1.id
+  cidr_block                 = "10.0.2.0/24"
+  display_name               = "${var.prefix}-subnet-2"
+  route_table_id             = oci_core_route_table.rt_1.id
+  security_list_ids          = [oci_core_security_list.sl_2.id]
+  prohibit_public_ip_on_vnic = false
+  dns_label                  = substr(lower(replace("${var.prefix}sub2", "-", "")), 0, 15)
 }
 
 # Compute 설정 시작
@@ -186,7 +264,8 @@ resource "oci_core_instance" "instance" {
   shape               = var.instance_shape
 
   create_vnic_details {
-    subnet_id        = oci_core_subnet.subnet_1.id
+    # index 0 → subnet_1 (Server 1: App/Nginx), index 1 → subnet_2 (Server 2: MongoDB/Kafka)
+    subnet_id        = count.index == 0 ? oci_core_subnet.subnet_1.id : oci_core_subnet.subnet_2.id
     assign_public_ip = true
     display_name     = "${var.prefix}-vnic-${count.index + 1}"
     hostname_label   = "${var.prefix}vm${count.index + 1}"
@@ -194,7 +273,7 @@ resource "oci_core_instance" "instance" {
 
   metadata = {
     ssh_authorized_keys = join("\n", var.ssh_public_keys)
-    user_data           = base64encode(local.instance_user_data)
+    user_data           = base64encode(local.user_data_by_index[count.index])
   }
 
   dynamic "shape_config" {

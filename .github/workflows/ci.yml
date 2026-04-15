@@ -28,11 +28,13 @@ jobs:
       - name: Build JAR
         run: |
           chmod +x ./gradlew
+          BUILD_OK=0
           for i in 1 2 3; do
-            ./gradlew --no-daemon clean bootJar && break
+            ./gradlew --no-daemon clean bootJar && BUILD_OK=1 && break
             echo "Gradle build failed (attempt $i). retry in 20s..."
             sleep 20
           done
+          [[ $BUILD_OK -eq 1 ]] || { echo "[ERROR] Gradle build failed after 3 attempts"; exit 1; }
 
       - name: GHCR 로그인
         uses: docker/login-action@v3
@@ -48,4 +50,5 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             -t $DOCKER_IMAGE:latest \
+            -t $DOCKER_IMAGE:${{ github.run_number }} \
             --push .

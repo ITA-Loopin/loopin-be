@@ -64,7 +64,7 @@ variable "ssh_public_keys" {
 variable "instance_shape" {
   description = "OCI compute instance shape"
   type        = string
-  default     = "VM.Standard.E2.1.Micro"
+  default     = "VM.Standard.E2.1.Micro"  # VM.Standard.A1.Flex, VM.Standard.E2.1.Micro
 }
 
 variable "instance_count" {
@@ -88,7 +88,7 @@ variable "instance_memory_in_gbs" {
 variable "boot_volume_size_in_gbs" {
   description = "Boot volume size for the compute instance"
   type        = number
-  default     = 200
+  default     = 100
 }
 
 variable "bucket_name" {

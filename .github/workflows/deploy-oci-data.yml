@@ -1,0 +1,38 @@
+name: CD - OCI Deploy (Data)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-server2:
+    runs-on: ubuntu-22.04
+    env:
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+      SERVER2_INTERNAL_IP: ${{ secrets.OCI_S2_PRIVATE_IP }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.server2.yml & deploy.sh to OCI server2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_S2_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          source: "docker-compose.server2.yml,deploy.sh"
+          target: "~/deploy/"
+
+      - name: SSH 접속 및 배포
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.OCI_S2_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          envs: MONGODB_USERNAME, MONGODB_PASSWORD, SERVER2_INTERNAL_IP
+          script: |
+            set -e
+            cd ~/deploy
+            chmod +x deploy.sh
+            COMPOSE_FILE=docker-compose.server2.yml DEPLOY_MODE=data ./deploy.sh

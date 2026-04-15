@@ -12,19 +12,6 @@ services:
     networks:
       - loopin-backend
 
-  mongodb:
-    image: mongo:8.0
-    container_name: loopin-mongodb
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
-      MONGO_INITDB_DATABASE: meta_db
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - loopin-backend
-
   redis:
     image: redis:7.4-alpine
     container_name: loopin-redis
@@ -46,37 +33,6 @@ services:
     networks:
       - loopin-backend
 
-  redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
-    container_name: loopin-redpanda
-    restart: unless-stopped
-    command:
-      - redpanda
-      - start
-      - --smp
-      - "1"
-      - --memory
-      - 256M
-      - --default-log-level=warn
-      - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr
-      - PLAINTEXT://loopin-redpanda:9092
-      - --pandaproxy-addr
-      - 0.0.0.0:8082
-      - --advertise-pandaproxy-addr
-      - loopin-redpanda:8082
-      - --schema-registry-addr
-      - 0.0.0.0:8081
-      - --rpc-addr
-      - 0.0.0.0:33145
-      - --advertise-rpc-addr
-      - loopin-redpanda:33145
-    volumes:
-      - redpanda-data:/var/lib/redpanda/data
-    networks:
-      - loopin-backend
-
   app:
     image: ghcr.io/ita-loopin/loopin-app:${APP_IMAGE_TAG:-latest}
     container_name: loopin-app
@@ -91,11 +47,13 @@ services:
       OCI_BUCKET_NAME: ${OCI_BUCKET_NAME}
       OCI_S3_ENDPOINT: ${OCI_S3_ENDPOINT}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_HOST: postgres
       POSTGRES_USERNAME: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGODB_HOST: ${MONGODB_HOST}
       MONGODB_USERNAME: ${MONGODB_USERNAME}
       MONGODB_PASSWORD: ${MONGODB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
@@ -173,9 +131,7 @@ services:
 
 volumes:
   postgres-data:
-  mongo_data:
   redis-data:
-  redpanda-data:
 
 networks:
   loopin-backend:

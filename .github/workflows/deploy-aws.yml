@@ -2,6 +2,11 @@ name: CD - AWS Deploy
 
 on:
   workflow_dispatch: # OCI로만 자동 배포
+    inputs:
+      image_tag:
+        description: '배포할 이미지 태그 (롤백 시 CI 실행 번호 입력, 기본값: latest)'
+        required: false
+        default: 'latest'
 
 jobs:
   deploy-aws:
@@ -33,6 +38,7 @@ jobs:
       FIREBASE_ADMIN_SDK_B64: ${{ secrets.FIREBASE_ADMIN_SDK_B64 }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
       GHCR_USER: ${{ secrets.GHCR_USER }}
+      APP_IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
 
     steps:
       - name: Checkout
@@ -44,7 +50,7 @@ jobs:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,deploy.sh"
+          source: "docker-compose.prod.yml,deploy.sh,nginx/"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
@@ -53,12 +59,13 @@ jobs:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, REDIS_PASSWORD, FIREBASE_ADMIN_SDK_B64, GHCR_PAT, GHCR_USER
+          envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, OCI_ACCESS_KEY, OCI_SECRET_KEY, OCI_BUCKET_NAME, OCI_S3_ENDPOINT, JWT_SECRET_KEY, POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, MONGODB_USERNAME, MONGODB_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_CLIENT_ID, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, MAIL_APP_PASSWORD, GPT_API_KEY, OAUTH_STATE_SECRET, GEMINI_API_KEY, REDIS_PASSWORD, FIREBASE_ADMIN_SDK_B64, GHCR_PAT, GHCR_USER, APP_IMAGE_TAG
           script: |
             set -e
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd ~/deploy
             chmod +x deploy.sh
+            export APP_IMAGE_TAG="${APP_IMAGE_TAG:-latest}"
             umask 077
             printf '%s' "$FIREBASE_ADMIN_SDK_B64" \
               | tr -d '\r\n' \
