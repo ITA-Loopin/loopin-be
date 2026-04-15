@@ -20,6 +20,7 @@ import com.loopone.loopinbe.domain.chat.chatMessage.dto.ChatAttachment;
 import com.loopone.loopinbe.domain.chat.chatRoom.service.ChatRoomService;
 import com.loopone.loopinbe.domain.loop.loop.service.LoopService;
 import com.loopone.loopinbe.domain.notification.dto.NotificationPayload;
+import com.loopone.loopinbe.domain.team.team.service.TeamInvitationService;
 import com.loopone.loopinbe.domain.team.team.service.TeamService;
 import com.loopone.loopinbe.global.common.response.PageResponse;
 import com.loopone.loopinbe.global.exception.ReturnCode;
@@ -73,6 +74,7 @@ class MemberServiceTest {
     @MockitoBean CacheManager cacheManager;
     @MockitoBean ChatRoomService chatRoomService;
     @MockitoBean TeamService teamService;
+    @MockitoBean TeamInvitationService teamInvitationService;
     @MockitoBean LoopService loopService;
     @MockitoBean NotificationEventPublisher notificationEventPublisher;
     @MockitoBean AuthEventPublisher authEventPublisher;

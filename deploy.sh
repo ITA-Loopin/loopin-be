@@ -5,7 +5,7 @@ set -euo pipefail
 # Config
 # -----------------------------
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker/compose.prod.yml}"
 DEPLOY_MODE="${DEPLOY_MODE:-app}"
 
 cd "$APP_DIR"

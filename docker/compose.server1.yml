@@ -65,7 +65,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
-      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json
+      - ../firebase-adminsdk.json:/app/firebase-adminsdk.json
     depends_on:
       redis:
         condition: service_healthy
@@ -84,10 +84,10 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - ./nginx/docker-entrypoint.sh:/docker-entrypoint-custom.sh:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./letsencrypt:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot:ro
+      - ../nginx/docker-entrypoint.sh:/docker-entrypoint-custom.sh:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../letsencrypt:/etc/letsencrypt
+      - ../certbot/www:/var/www/certbot:ro
     depends_on:
       - app
     networks:
@@ -98,8 +98,8 @@ services:
     image: certbot/certbot:v5.5.0
     container_name: loopin-certbot-init
     volumes:
-      - ./letsencrypt:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ../letsencrypt:/etc/letsencrypt
+      - ../certbot/www:/var/www/certbot
     entrypoint: /bin/sh -c >
       "if [ ! -d /etc/letsencrypt/renewal ]; then
         echo '[certbot-init] Requesting initial certificate...';
@@ -122,8 +122,8 @@ services:
     container_name: loopin-certbot
     restart: unless-stopped
     volumes:
-      - ./letsencrypt:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ../letsencrypt:/etc/letsencrypt
+      - ../certbot/www:/var/www/certbot
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
     depends_on:
       certbot-init:
