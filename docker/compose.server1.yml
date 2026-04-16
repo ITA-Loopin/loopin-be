@@ -104,15 +104,15 @@ services:
       - /bin/sh
       - -c
       - |
-        if [ -d /etc/letsencrypt/renewal ] && [ "$(ls -A /etc/letsencrypt/renewal 2>/dev/null)" ]; then
+        if [ -d /etc/letsencrypt/renewal ] && [ "$$(ls -A /etc/letsencrypt/renewal 2>/dev/null)" ]; then
           echo '[certbot-init] Certificates already exist. Skipping.'
           exit 0
         fi
 
         echo '[certbot-init] Waiting for nginx to be ready...'
         TRIES=0
-        until wget -q --spider http://nginx:80/.well-known/acme-challenge/ 2>/dev/null || [ "$TRIES" -ge 30 ]; do
-          TRIES=$((TRIES + 1))
+        until wget -q --spider http://nginx:80/.well-known/acme-challenge/ 2>/dev/null || [ "$$TRIES" -ge 30 ]; do
+          TRIES=$$((TRIES + 1))
           sleep 2
         done
 
