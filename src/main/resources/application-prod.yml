@@ -16,12 +16,13 @@ spring:
     redis:
       host: loopin-redis
       port: 6379
+      password: ${REDIS_PASSWORD}
     mongodb:
-      uri: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@loopin-mongodb:27017/meta_db?authSource=admin
+      uri: mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@${MONGODB_HOST:loopin-mongodb}:27017/meta_db?authSource=admin
       database: meta_db
       auto-index-creation: true
   kafka:
-    bootstrap-servers: loopin-redpanda:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:loopin-redpanda:9092}
   ai:
     openai:
       api-key: ${GPT_API_KEY}

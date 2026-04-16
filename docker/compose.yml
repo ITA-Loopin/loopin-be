@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.8
     container_name: loopin-postgres
     environment:
       POSTGRES_USER: admin
@@ -14,7 +14,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   mongodb:
-    image: mongo:latest
+    image: mongo:8.0
     container_name: loopin-mongodb
     restart: always
     environment:
@@ -27,7 +27,7 @@ services:
       - mongo_data:/data/db
 
   redis:
-    image: redis:latest
+    image: redis:7.4-alpine
     container_name: loopin-redis
     restart: always
     ports:
@@ -36,7 +36,7 @@ services:
       - redis_data:/data
 
   redpanda-0:
-    image: docker.redpanda.com/redpandadata/redpanda:latest
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.7
     container_name: loopin-redpanda
     command:
       - redpanda

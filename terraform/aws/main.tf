@@ -1,9 +1,16 @@
 terraform {
-  // aws 라이브러리 불러옴
+  cloud {
+    organization = "loopone"
+
+    workspaces {
+      name = "loopin-aws"
+    }
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -107,15 +114,6 @@ resource "aws_security_group" "sg_1" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # NPM 접속
-  ingress {
-    description = "NPM admin"
-    from_port   = 81
-    to_port     = 81
-    protocol    = "tcp"
-    cidr_blocks = var.admin_allowed_cidrs
   }
 
   # HTTP/HTTPS 오픈
