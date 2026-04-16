@@ -45,7 +45,8 @@ public class NotProdService {
     // 2) 가데이터 정보 출력
     public void initDummyData() {
         long start = System.currentTimeMillis();
-        initDummyDataTransactional();   // 일반 가데이터
+        // 둘 중 하나만 활성화 - 유저 중복 생성으로 앱 종료됨
+//        initDummyDataTransactional();   // 일반 가데이터
         initTestDataTransactional();  // 성능 테스트용 가데이터
         long end = System.currentTimeMillis();
         long executionTimeMillis = end - start;
