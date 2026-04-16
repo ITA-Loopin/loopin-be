@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# openssl이 없으면 설치 (nginx:alpine 기본 이미지에 미포함)
+if ! command -v openssl > /dev/null 2>&1; then
+  apk add --no-cache openssl
+fi
+
 DOMAIN="api.loopin.co.kr"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 DUMMY_MARKER="$CERT_DIR/.dummy"
