@@ -100,16 +100,21 @@ services:
     volumes:
       - ../letsencrypt:/etc/letsencrypt
       - ../certbot/www:/var/www/certbot
-    entrypoint: /bin/sh -c >
-      "if [ ! -d /etc/letsencrypt/renewal ]; then
-        echo '[certbot-init] Requesting initial certificate...';
-        certbot certonly --webroot --webroot-path=/var/www/certbot
-          -d api.loopin.co.kr
-          --email ${CERTBOT_EMAIL}
-          --agree-tos --non-interactive;
-      else
-        echo '[certbot-init] Certificates already exist. Skipping.';
-      fi"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -d /etc/letsencrypt/renewal ]; then
+          echo '[certbot-init] Requesting initial certificate...'
+          rm -rf /etc/letsencrypt/live/api.loopin.co.kr
+          rm -rf /etc/letsencrypt/archive/api.loopin.co.kr
+          certbot certonly --webroot --webroot-path=/var/www/certbot \
+            -d api.loopin.co.kr \
+            --email ${CERTBOT_EMAIL} \
+            --agree-tos --non-interactive
+        else
+          echo '[certbot-init] Certificates already exist. Skipping.'
+        fi
     depends_on:
       - nginx
     networks:
