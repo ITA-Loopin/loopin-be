@@ -48,6 +48,14 @@ locals {
 
   base_user_data = <<-END_OF_BASE
 #!/bin/bash
+
+# Swap 설정 (DNF OOM kill 방지를 위해 가장 먼저 실행)
+dd if=/dev/zero of=/swapfile bs=128M count=32
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+grep -q '^/swapfile ' /etc/fstab || echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
 dnf update -y
 
 # Docker CE (upstream) 설치
@@ -63,12 +71,6 @@ usermod -aG docker opc
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-
-dd if=/dev/zero of=/swapfile bs=128M count=64
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-grep -q '^/swapfile ' /etc/fstab || echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
 END_OF_BASE
 
   # Server 1: App + Nginx (80, 443 허용)
