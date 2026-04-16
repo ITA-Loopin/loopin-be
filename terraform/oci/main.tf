@@ -74,10 +74,10 @@ ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
 END_OF_BASE
 
   # Server 1: App + Nginx (80, 443 허용)
-  server1_user_data = "${local.base_user_data}\n# OS 방화벽 설정\nfirewall-cmd --permanent --add-port=22/tcp\nfirewall-cmd --permanent --add-service=http\nfirewall-cmd --permanent --add-service=https\nfirewall-cmd --reload\n"
+  server1_user_data = "${local.base_user_data}\n# OS 방화벽 설정 (cloud-init 환경에서는 firewalld 데몬 없이 동작하는 offline-cmd 사용)\nfirewall-offline-cmd --add-port=22/tcp\nfirewall-offline-cmd --add-service=http\nfirewall-offline-cmd --add-service=https\nsystemctl enable firewalld\n"
 
   # Server 2: MongoDB + Kafka (27017, 9092 허용 — 내부 통신 전용)
-  server2_user_data = "${local.base_user_data}\n# OS 방화벽 설정\nfirewall-cmd --permanent --add-port=22/tcp\nfirewall-cmd --permanent --add-port=27017/tcp\nfirewall-cmd --permanent --add-port=9092/tcp\nfirewall-cmd --reload\n"
+  server2_user_data = "${local.base_user_data}\n# OS 방화벽 설정 (cloud-init 환경에서는 firewalld 데몬 없이 동작하는 offline-cmd 사용)\nfirewall-offline-cmd --add-port=22/tcp\nfirewall-offline-cmd --add-port=27017/tcp\nfirewall-offline-cmd --add-port=9092/tcp\nsystemctl enable firewalld\n"
 
   user_data_by_index = [local.server1_user_data, local.server2_user_data]
 }
