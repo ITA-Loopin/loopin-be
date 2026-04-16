@@ -7,7 +7,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
       MONGO_INITDB_DATABASE: meta_db
-    command: mongod --wiredTigerCacheSizeGB 0.128 --bind_ip_all
+    command: mongod --wiredTigerCacheSizeGB 0.25 --bind_ip_all
     ports:
       - "27017:27017"
     volumes:
