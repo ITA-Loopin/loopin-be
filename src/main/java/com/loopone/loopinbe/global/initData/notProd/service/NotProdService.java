@@ -46,7 +46,7 @@ public class NotProdService {
     public void initDummyData() {
         long start = System.currentTimeMillis();
         initDummyDataTransactional();   // 일반 가데이터
-//        initTestDataTransactional();  // 성능 테스트용 가데이터
+        initTestDataTransactional();  // 성능 테스트용 가데이터
         long end = System.currentTimeMillis();
         long executionTimeMillis = end - start;
         NotProdPrintService.printTestAccounts(
