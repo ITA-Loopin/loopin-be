@@ -104,16 +104,29 @@ services:
       - /bin/sh
       - -c
       - |
-        if [ ! -d /etc/letsencrypt/renewal ]; then
-          echo '[certbot-init] Requesting initial certificate...'
-          rm -rf /etc/letsencrypt/live/api.loopin.co.kr
-          rm -rf /etc/letsencrypt/archive/api.loopin.co.kr
-          certbot certonly --webroot --webroot-path=/var/www/certbot \
-            -d api.loopin.co.kr \
-            --email ${CERTBOT_EMAIL} \
-            --agree-tos --non-interactive
-        else
+        if [ -d /etc/letsencrypt/renewal ] && [ "$(ls -A /etc/letsencrypt/renewal 2>/dev/null)" ]; then
           echo '[certbot-init] Certificates already exist. Skipping.'
+          exit 0
+        fi
+
+        echo '[certbot-init] Waiting for nginx to be ready...'
+        TRIES=0
+        until wget -q --spider http://nginx:80/.well-known/acme-challenge/ 2>/dev/null || [ "$TRIES" -ge 30 ]; do
+          TRIES=$((TRIES + 1))
+          sleep 2
+        done
+
+        echo '[certbot-init] Requesting initial certificate...'
+        rm -rf /etc/letsencrypt/live/api.loopin.co.kr
+        rm -rf /etc/letsencrypt/archive/api.loopin.co.kr
+        if certbot certonly --webroot --webroot-path=/var/www/certbot \
+          -d api.loopin.co.kr \
+          --email ${CERTBOT_EMAIL} \
+          --agree-tos --non-interactive; then
+          echo '[certbot-init] Certificate issued successfully.'
+        else
+          echo '[certbot-init] WARNING: certbot failed. Nginx will continue with the dummy certificate.'
+          echo '[certbot-init] The renewal service will retry later.'
         fi
     depends_on:
       - nginx
@@ -130,8 +143,7 @@ services:
       - ../certbot/www:/var/www/certbot
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
     depends_on:
-      certbot-init:
-        condition: service_completed_successfully
+      - nginx
 
 volumes:
   postgres-data:
