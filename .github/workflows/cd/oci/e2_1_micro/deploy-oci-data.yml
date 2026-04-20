@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy compose.server2.yml & deploy.sh to OCI server2
+      - name: Copy compose files & deploy.sh to OCI server2
         uses: appleboy/scp-action@v0.1.7
         with:
           # Reach server2 through server1 instead of relying on direct public SSH to server2.
@@ -25,7 +25,7 @@ jobs:
           proxy_host: ${{ secrets.OCI_HOST }}
           proxy_username: ${{ secrets.OCI_USER }}
           proxy_key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-          source: "docker/compose.server2.yml,deploy.sh"
+          source: "docker/oci/e2_1_micro/compose.server2.yml,deploy.sh"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
@@ -42,4 +42,4 @@ jobs:
             set -e
             cd ~/deploy
             chmod +x deploy.sh
-            COMPOSE_FILE=docker/compose.server2.yml DEPLOY_MODE=data ./deploy.sh
+            COMPOSE_FILE=docker/oci/e2_1_micro/compose.server2.yml DEPLOY_MODE=data ./deploy.sh

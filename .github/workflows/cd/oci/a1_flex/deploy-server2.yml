@@ -1,0 +1,39 @@
+name: CD - OCI A1.Flex Deploy (Server2 - Loki)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-server2:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy compose files & deploy.sh to server2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_A1_S2_PRIVATE_IP }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.OCI_HOST }}
+          proxy_username: ${{ secrets.OCI_USER }}
+          proxy_key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          source: "docker/oci/a1_flex/compose.server2.yml,docker/oci/a1_flex/monitoring/,deploy.sh"
+          target: "~/deploy/"
+
+      - name: SSH 접속 및 배포
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.OCI_A1_S2_PRIVATE_IP }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.OCI_HOST }}
+          proxy_username: ${{ secrets.OCI_USER }}
+          proxy_key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ~/deploy
+            chmod +x deploy.sh
+            COMPOSE_FILE=docker/oci/a1_flex/compose.server2.yml DEPLOY_MODE=data ./deploy.sh

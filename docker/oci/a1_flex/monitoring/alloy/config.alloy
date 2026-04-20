@@ -1,0 +1,64 @@
+// ============================================================
+// Node Exporter 메트릭 수집
+// ============================================================
+prometheus.scrape "node_exporter" {
+  targets = [{
+    __address__ = "loopin-node-exporter:9100",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
+// ============================================================
+// cAdvisor 메트릭 수집
+// ============================================================
+prometheus.scrape "cadvisor" {
+  targets = [{
+    __address__ = "loopin-cadvisor:8080",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
+// ============================================================
+// Spring Boot Actuator 메트릭 수집
+// ============================================================
+prometheus.scrape "spring_app" {
+  targets = [{
+    __address__ = "loopin-app:8080",
+  }]
+  metrics_path = "/actuator/prometheus"
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
+// ============================================================
+// Prometheus Remote Write
+// ============================================================
+prometheus.remote_write "default" {
+  endpoint {
+    url = concat(sys.env("PROMETHEUS_HOST"), "/api/v1/write")
+  }
+}
+
+// ============================================================
+// Docker 컨테이너 로그 수집
+// ============================================================
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.docker.containers.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// ============================================================
+// Loki 로그 전송
+// ============================================================
+loki.write "default" {
+  endpoint {
+    url = concat(sys.env("LOKI_HOST"), "/loki/api/v1/push")
+  }
+}

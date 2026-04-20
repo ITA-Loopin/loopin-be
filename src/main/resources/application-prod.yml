@@ -77,5 +77,14 @@ resilience4j:
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 2
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health
+  endpoint:
+    health:
+      show-details: never
+
 server:
   forward-headers-strategy: framework

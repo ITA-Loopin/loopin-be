@@ -1,0 +1,14 @@
+services:
+  loki:
+    image: grafana/loki:3.5.0
+    container_name: loopin-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+
+volumes:
+  loki-data:
