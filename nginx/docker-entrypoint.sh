@@ -6,7 +6,7 @@ if ! command -v openssl > /dev/null 2>&1; then
   apk add --no-cache openssl
 fi
 
-DOMAIN="api.loopin.co.kr"
+DOMAIN="${NGINX_DOMAIN:?NGINX_DOMAIN env is required}"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 
 # 유효한 CA 발급 인증서인지 확인 (자체 서명이 아닌지)

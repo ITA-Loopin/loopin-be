@@ -30,6 +30,15 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
+data "oci_objectstorage_namespace" "ns" {
+  compartment_id = var.tenancy_ocid
+}
+
+data "oci_objectstorage_bucket" "loopin_bucket" {
+  namespace = data.oci_objectstorage_namespace.ns.namespace
+  name      = "loopin-bucket-v1"
+}
+
 data "oci_core_images" "oracle_linux" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Oracle Linux"

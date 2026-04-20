@@ -44,13 +44,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy compose.prod.yml & deploy.sh to AWS server
+      - name: Copy compose.yml & deploy.sh to AWS server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          source: "docker/compose.prod.yml,deploy.sh,nginx/"
+          source: "docker/aws/compose.yml,deploy.sh,nginx/"
           target: "~/deploy/"
 
       - name: SSH 접속 및 배포
@@ -71,4 +71,4 @@ jobs:
               | tr -d '\r\n' \
               | base64 --decode --ignore-garbage \
               > firebase-adminsdk.json
-            COMPOSE_FILE=docker/compose.prod.yml ./deploy.sh
+            COMPOSE_FILE=docker/aws/compose.yml ./deploy.sh
