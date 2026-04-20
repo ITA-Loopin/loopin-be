@@ -40,8 +40,8 @@ jobs:
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
       GHCR_USER: ${{ secrets.GHCR_USER }}
       CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
-      PROMETHEUS_HOST: ${{ secrets.OCI_A1_S1_PRIVATE_IP }}
-      LOKI_HOST: ${{ secrets.OCI_A1_S2_PRIVATE_IP }}
+      PROMETHEUS_HOST: ${{ format('http://{0}:9090', secrets.OCI_A1_S1_PRIVATE_IP) }}
+      LOKI_HOST: ${{ format('http://{0}:3100', secrets.OCI_A1_S2_PRIVATE_IP) }}
       APP_IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
 
     steps:
